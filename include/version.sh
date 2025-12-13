@@ -18,7 +18,7 @@ Boost_Ver='boost_1_59_0'
 Boost_New_Ver='boost_1_67_0'
 Openssl_Ver='openssl-1.0.2u'
 Openssl_New_Ver='openssl-1.1.1w'
-Openssl_3_Ver='openssl-3.0.17'
+Openssl_3_Ver='openssl-3.0.18'
 Nghttp2_Ver='nghttp2-1.52.0'
 Libzip_Ver='libzip-1.5.2'
 Libxml2_Ver='libxml2-2.9.14'
@@ -86,7 +86,7 @@ if [[ "${PHPSelect}" =~ ^[123]$ ]]; then
 elif [[ "${PHPSelect}" =~ ^[456]$ ]]; then
     PhpMyAdmin_Ver='phpMyAdmin-4.9.11-all-languages'
 else
-    PhpMyAdmin_Ver='phpMyAdmin-5.2.2-all-languages'
+    PhpMyAdmin_Ver='phpMyAdmin-5.2.3-all-languages'
 fi
 APR_Ver='apr-1.7.4'
 APR_Util_Ver='apr-util-1.6.3'
