@@ -1,121 +1,155 @@
-#! /bin/sh
-# chkconfig: 2345 55 25
-# Description: Startup script for nginx webserver on Debian. Place in /etc/init.d and
-# run 'update-rc.d -f nginx defaults', or use the appropriate command on your
-# distro. For CentOS/Redhat run: 'chkconfig --add nginx'
-
+#!/bin/sh
 ### BEGIN INIT INFO
 # Provides:          nginx
-# Required-Start:    $all
-# Required-Stop:     $all
+# Required-Start:    $network $remote_fs $local_fs 
+# Required-Stop:     $network $remote_fs $local_fs
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: starts the nginx web server
-# Description:       starts nginx using start-stop-daemon
+# Short-Description: Start and stop the custom compiled NGINX server
 ### END INIT INFO
 
-# Author:   licess
-# website:  https://lnmp.org
+# Author:   getlnmp
+# website:  https://getlnmp.com
 
-NGINX_BIN='/usr/local/nginx/sbin/nginx'
-CONFIG='/usr/local/nginx/conf/nginx.conf'
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
 
+# --- PATHS FOR YOUR CUSTOM NGINX ---
+NAME="nginx"
+DESC="Nginx Web Server"
+CONFFILE="/usr/local/nginx/conf/nginx.conf"
+DAEMON="/usr/local/nginx/sbin/nginx"
+PIDFILE="/usr/local/nginx/logs/nginx.pid"
+
+# Default variables
+SLEEPSEC=1
+CHECKSLEEP=3
+RETVAL=0
+
+# Check if the daemon exists
+[ -x $DAEMON ] || exit 0
+
+# --- CORE FUNCTIONS ---
+
+# Function to test the config file
+do_configtest() {
+    $DAEMON -t -c $CONFFILE
+    RETVAL="$?"
+    return $RETVAL
+}
+
+# Function to start the service
+do_start()
+{
+    # Check 1: If the PID file exists and process is running
+    if [ -f $PIDFILE ] && /bin/ps -p $(/bin/cat $PIDFILE) > /dev/null; then
+        echo "$DESC is already running (PID $(/bin/cat $PIDFILE))."
+        return 0 # Success: already running
+    fi
+
+    do_configtest || return 6 # Check config before starting
+
+    echo -n "Starting $DESC: "
+    # Run the daemon, specify the config file, and ensure it runs in the background (-g 'daemon on;')
+    $DAEMON -c $CONFFILE
+    RETVAL="$?"
+    if [ "$RETVAL" = 0 ]; then
+        echo "OK"
+    else
+        echo "FAILED"
+    fi
+    return $RETVAL
+}
+
+# Function to stop the service gracefully
+do_stop()
+{
+    echo -n "Stopping $DESC: "
+    
+    # Check 1: If the PID file doesn't exist OR process is NOT running
+    if ! [ -f $PIDFILE ] || ! /bin/ps -p $(/bin/cat $PIDFILE) > /dev/null; then
+        echo "NOT RUNNING"
+        /bin/rm -f $PIDFILE # Clean up any stale PID file
+        return 0 # Success: already stopped
+    fi
+
+    # If we reach here, the service is running. Proceed with graceful stop.
+    
+    # Send SIGTERM (graceful stop)
+    /bin/kill -s TERM $(/bin/cat $PIDFILE)
+    
+    # Wait for the process to exit
+    COUNT=0
+    while [ $COUNT -lt 15 ] && /bin/ps -p $(/bin/cat $PIDFILE) > /dev/null; do
+        /bin/sleep 1
+        COUNT=$((COUNT + 1))
+    done
+
+    if /bin/ps -p $(/bin/cat $PIDFILE) > /dev/null; then
+        echo -n "FAILED (forcing kill) "
+        # If still running, send SIGKILL
+        /bin/kill -s KILL $(/bin/cat $PIDFILE)
+        RETVAL=2
+    else
+        echo "OK"
+        RETVAL=0
+    fi
+    /bin/rm -f $PIDFILE
+    return $RETVAL
+}
+
+# Function to reload the configuration
+do_reload() {
+    do_configtest || return 6 # Check config before reloading
+    echo -n "Reloading $DESC configuration: "
+    if [ -f $PIDFILE ]; then
+        # Send SIGHUP (graceful reload)
+        /bin/kill -s HUP $(/bin/cat $PIDFILE)
+        echo "OK"
+        RETVAL=0
+    else
+        echo "NOT RUNNING (cannot reload)"
+        RETVAL=1
+    fi
+    return $RETVAL
+}
+
+# --- CONTROL FLOW ---
 case "$1" in
     start)
-        echo -n "Starting nginx... "
-
-        PID=$(ps -ef | grep "$NGINX_BIN" | grep -v grep | awk '{print $2}')
-        if [ "$PID" != "" ]; then
-            echo "nginx (pid $PID) already running."
-            exit 1
-        fi
-
-        $NGINX_BIN -c $CONFIG
-
-        if [ "$?" != 0 ]; then
-            echo " failed"
-            exit 1
-        else
-            echo " done"
-        fi
+        do_start
         ;;
-
     stop)
-        echo -n "Stoping nginx... "
-
-        PID=$(ps -ef | grep "$NGINX_BIN" | grep -v grep | awk '{print $2}')
-        if [ "$PID" = "" ]; then
-            echo "nginx is not running."
-            exit 1
-        fi
-
-        $NGINX_BIN -s stop
-
-        if [ "$?" != 0 ] ; then
-            echo " failed. Use force-quit"
-            $0 force-quit
-        else
-            echo " done"
-        fi
+        do_stop
         ;;
-
     status)
-        PID=$(ps -ef | grep "$NGINX_BIN" | grep -v grep | awk '{print $2}')
-        if [ "$PID" != "" ]; then
-            echo "nginx (pid $PID) is running..."
-        else
-            echo "nginx is stopped."
+        # Check if the PID file exists and the process is running
+        if [ -f $PIDFILE ] && /bin/ps -p $(/bin/cat $PIDFILE) > /dev/null; then
+            echo "$NAME is running."
             exit 0
-        fi
-        ;;
-
-    force-quit|kill)
-        echo -n "Terminating nginx... "
-
-        PID=$(ps -ef | grep "$NGINX_BIN" | grep -v grep | awk '{print $2}')
-        if [ "$PID" = "" ]; then
-            echo "nginx is is stopped."
-            exit 1
-        fi
-
-        kill $PID
-
-        if [ "$?" != 0 ]; then
-            echo " failed"
-            exit 1
         else
-            echo " done"
+            echo "$NAME is NOT running."
+            exit 3
         fi
         ;;
-
-    restart)
-        $0 stop
-        sleep 1
-        $0 start
-        ;;
-
-    reload)
-        echo -n "Reload nginx... "
-
-        PID=$(ps -ef | grep "$NGINX_BIN" | grep -v grep | awk '{print $2}')
-        if [ "$PID" != "" ]; then
-            $NGINX_BIN -s reload
-            echo " done"
-        else
-            echo "nginx is not running, can't reload."
-            exit 1
-        fi
-        ;;
-
     configtest)
-        echo -n "Test nginx configure files... "
-
-        $NGINX_BIN -t
+        do_configtest
         ;;
-
+    reload)
+        do_reload
+        ;;
+    restart)
+        do_stop
+        sleep 1
+        do_start
+        ;;
+    check-reload)
+        do_checkreload
+        RETVAL=0
+        ;;
     *)
-        echo "Usage: $0 {start|stop|restart|reload|status|configtest|force-quit|kill}"
-        exit 1
+        echo "Usage: $NAME {start|stop|status|restart|reload|configtest}" >&2
+        exit 3
         ;;
-
 esac
+
+exit $RETVAL

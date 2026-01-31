@@ -1,45 +1,65 @@
 #!/usr/bin/env bash
 
-DB_Info=('MySQL 5.1.73' 'MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.37' 'MariaDB 5.5.68' 'MariaDB 10.4.33' 'MariaDB 10.5.24' 'MariaDB 10.6.17' 'MariaDB 10.11.7' 'MySQL 8.4.0')
-PHP_Info=('PHP 5.2.17' 'PHP 5.3.29' 'PHP 5.4.45' 'PHP 5.5.38' 'PHP 5.6.40' 'PHP 7.0.33' 'PHP 7.1.33' 'PHP 7.2.34' 'PHP 7.3.33' 'PHP 7.4.33' 'PHP 8.0.30' 'PHP 8.1.33' 'PHP 8.2.29' 'PHP 8.3.24')
-Apache_Info=('Apache 2.2.34' 'Apache 2.4.57')
+#DB_Info=('MySQL 5.1.73' 'MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.37' 'MariaDB 5.5.68' 'MariaDB 10.4.33' 'MariaDB 10.5.24' 'MariaDB 10.6.17' 'MariaDB 10.11.7' 'MySQL 8.4.0')
+DB_Info=('MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.37' 'MySQL 8.4.7' 'MariaDB 5.5.68' 'MariaDB 10.4.33' 'MariaDB 10.5.29' 'MariaDB 10.6.24' 'MariaDB 10.11.15' 'MariaDB 11.4.9' 'MariaDB 11.8.5')
+PHP_Info=('PHP 5.2.17' 'PHP 5.3.29' 'PHP 5.4.45' 'PHP 5.5.38' 'PHP 5.6.40' 'PHP 7.0.33' 'PHP 7.1.33' 'PHP 7.2.34' 'PHP 7.3.33' 'PHP 7.4.33' 'PHP 8.0.30' 'PHP 8.1.34' 'PHP 8.2.30' 'PHP 8.3.30' 'PHP 8.4.17' 'PHP 8.5.2')
+Apache_Info=('Apache 2.2.34' 'Apache 2.4.66')
 
-Database_Selection()
-{
-#which MySQL Version do you want to install?
+Database_Selection() {
+    #which MySQL Version do you want to install?
     if [ -z ${DBSelect} ]; then
-        DBSelect="2"
-        Echo_Yellow "You have 11 options for your DataBase install."
-        echo "1: Install ${DB_Info[0]}"
-        echo "2: Install ${DB_Info[1]} (Default)"
-        echo "3: Install ${DB_Info[2]}"
+        DBSelect="11"
+        Echo_Yellow "You have 8 options for your Database install."
+        echo "3: Install ${DB_Info[2]} (EOL)"
         echo "4: Install ${DB_Info[3]}"
         echo "5: Install ${DB_Info[4]}"
-        echo "6: Install ${DB_Info[5]}"
-        echo "7: Install ${DB_Info[6]}"
-        echo "8: Install ${DB_Info[7]}"
+        echo "7: Install ${DB_Info[6]} (EOL)"
+        echo "8: Install ${DB_Info[7]} (EOL)"
         echo "9: Install ${DB_Info[8]}"
         echo "10: Install ${DB_Info[9]}"
-        echo "11: Install ${DB_Info[10]}"
+        echo "11: Install ${DB_Info[10]} (Default)"
+        echo "12: Install ${DB_Info[11]}"
         echo "0: DO NOT Install MySQL/MariaDB"
-        read -p "Enter your choice (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 or 0): " DBSelect
+        read -p "Enter your choice (3, 4, 5, 7, 8, 9, 10, 11, 12 or 0): " DBSelect
     fi
 
     case "${DBSelect}" in
     1)
         echo "You will install ${DB_Info[0]}"
-        ;;
-    2)
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
             if [ -z ${Bin} ]; then
                 read -p "Using Generic Binaries [y/n]: " Bin
             fi
             case "${Bin}" in
-            [yY][eE][sS]|[yY])
+            [yY][eE][sS] | [yY])
+                echo "You will install ${DB_Info[0]} Using Generic Binaries."
+                Bin="y"
+                ;;
+            [nN][oO] | [nN])
+                echo "You will install ${DB_Info[0]} from Source."
+                Bin="n"
+                ;;
+            *)
+                Bin="n"
+                ;;
+            esac
+        else
+            echo "Default install ${DB_Info[0]} from Source."
+            Bin="n"
+        fi
+        ;;
+    2)
+        echo "You will install ${DB_Info[1]}"
+        if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
+            if [ -z ${Bin} ]; then
+                read -p "Using Generic Binaries [y/n]: " Bin
+            fi
+            case "${Bin}" in
+            [yY][eE][sS] | [yY])
                 echo "You will install ${DB_Info[1]} Using Generic Binaries."
                 Bin="y"
                 ;;
-            [nN][oO]|[nN])
+            [nN][oO] | [nN])
                 echo "You will install ${DB_Info[1]} from Source."
                 Bin="n"
                 ;;
@@ -53,16 +73,17 @@ Database_Selection()
         fi
         ;;
     3)
+        echo "You will install ${DB_Info[2]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
             if [ -z ${Bin} ]; then
                 read -p "Using Generic Binaries [y/n]: " Bin
             fi
             case "${Bin}" in
-            [yY][eE][sS]|[yY])
+            [yY][eE][sS] | [yY])
                 echo "You will install ${DB_Info[2]} Using Generic Binaries."
                 Bin="y"
                 ;;
-            [nN][oO]|[nN])
+            [nN][oO] | [nN])
                 echo "You will install ${DB_Info[2]} from Source."
                 Bin="n"
                 ;;
@@ -81,16 +102,17 @@ Database_Selection()
         fi
         ;;
     4)
+        echo "You will install ${DB_Info[3]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
             if [ -z ${Bin} ]; then
                 read -p "Using Generic Binaries [y/n]: " Bin
             fi
             case "${Bin}" in
-            [yY][eE][sS]|[yY])
+            [yY][eE][sS] | [yY])
                 echo "You will install ${DB_Info[3]} Using Generic Binaries."
                 Bin="y"
                 ;;
-            [nN][oO]|[nN])
+            [nN][oO] | [nN])
                 echo "You will install ${DB_Info[3]} from Source."
                 Bin="n"
                 ;;
@@ -109,16 +131,17 @@ Database_Selection()
         fi
         ;;
     5)
-        if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" || "${DB_ARCH}" = "aarch64" ]]; then
+        echo "You will install ${DB_Info[4]}"
+        if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
             if [ -z ${Bin} ]; then
                 read -p "Using Generic Binaries [y/n]: " Bin
             fi
             case "${Bin}" in
-            [yY][eE][sS]|[yY])
+            [yY][eE][sS] | [yY])
                 echo "You will install ${DB_Info[4]} Using Generic Binaries."
                 Bin="y"
                 ;;
-            [nN][oO]|[nN])
+            [nN][oO] | [nN])
                 echo "You will install ${DB_Info[4]} from Source."
                 Bin="n"
                 ;;
@@ -143,11 +166,11 @@ Database_Selection()
                 read -p "Using Generic Binaries [y/n]: " Bin
             fi
             case "${Bin}" in
-            [yY][eE][sS]|[yY])
+            [yY][eE][sS] | [yY])
                 echo "You will install ${DB_Info[5]} Using Generic Binaries."
                 Bin="y"
                 ;;
-            [nN][oO]|[nN])
+            [nN][oO] | [nN])
                 echo "You will install ${DB_Info[5]} from Source."
                 Bin="n"
                 ;;
@@ -172,11 +195,11 @@ Database_Selection()
                 read -p "Using Generic Binaries [y/n]: " Bin
             fi
             case "${Bin}" in
-            [yY][eE][sS]|[yY])
+            [yY][eE][sS] | [yY])
                 echo "You will install ${DB_Info[6]} Using Generic Binaries."
                 Bin="y"
                 ;;
-            [nN][oO]|[nN])
+            [nN][oO] | [nN])
                 echo "You will install ${DB_Info[6]} from Source."
                 Bin="n"
                 ;;
@@ -201,11 +224,11 @@ Database_Selection()
                 read -p "Using Generic Binaries [y/n]: " Bin
             fi
             case "${Bin}" in
-            [yY][eE][sS]|[yY])
+            [yY][eE][sS] | [yY])
                 echo "You will install ${DB_Info[7]} Using Generic Binaries."
                 Bin="y"
                 ;;
-            [nN][oO]|[nN])
+            [nN][oO] | [nN])
                 echo "You will install ${DB_Info[7]} from Source."
                 Bin="n"
                 ;;
@@ -230,11 +253,11 @@ Database_Selection()
                 read -p "Using Generic Binaries [y/n]: " Bin
             fi
             case "${Bin}" in
-            [yY][eE][sS]|[yY])
+            [yY][eE][sS] | [yY])
                 echo "You will install ${DB_Info[8]} Using Generic Binaries."
                 Bin="y"
                 ;;
-            [nN][oO]|[nN])
+            [nN][oO] | [nN])
                 echo "You will install ${DB_Info[8]} from Source."
                 Bin="n"
                 ;;
@@ -259,11 +282,11 @@ Database_Selection()
                 read -p "Using Generic Binaries [y/n]: " Bin
             fi
             case "${Bin}" in
-            [yY][eE][sS]|[yY])
+            [yY][eE][sS] | [yY])
                 echo "You will install ${DB_Info[9]} Using Generic Binaries."
                 Bin="y"
                 ;;
-            [nN][oO]|[nN])
+            [nN][oO] | [nN])
                 echo "You will install ${DB_Info[9]} from Source."
                 Bin="n"
                 ;;
@@ -283,16 +306,16 @@ Database_Selection()
         ;;
     11)
         echo "You will install ${DB_Info[10]}"
-        if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" || "${DB_ARCH}" = "aarch64" ]]; then
+        if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
             if [ -z ${Bin} ]; then
                 read -p "Using Generic Binaries [y/n]: " Bin
             fi
             case "${Bin}" in
-            [yY][eE][sS]|[yY])
+            [yY][eE][sS] | [yY])
                 echo "You will install ${DB_Info[10]} Using Generic Binaries."
                 Bin="y"
                 ;;
-            [nN][oO]|[nN])
+            [nN][oO] | [nN])
                 echo "You will install ${DB_Info[10]} from Source."
                 Bin="n"
                 ;;
@@ -310,24 +333,54 @@ Database_Selection()
             Bin="n"
         fi
         ;;
+    12)
+        echo "You will install ${DB_Info[11]}"
+        if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
+            if [ -z ${Bin} ]; then
+                read -p "Using Generic Binaries [y/n]: " Bin
+            fi
+            case "${Bin}" in
+            [yY][eE][sS] | [yY])
+                echo "You will install ${DB_Info[11]} Using Generic Binaries."
+                Bin="y"
+                ;;
+            [nN][oO] | [nN])
+                echo "You will install ${DB_Info[11]} from Source."
+                Bin="n"
+                ;;
+            *)
+                if [ "${CheckMirror}" != "n" ]; then
+                    echo "Default install ${DB_Info[11]} Using Generic Binaries."
+                    Bin="y"
+                else
+                    echo "Default install ${DB_Info[11]} from Source."
+                    Bin="n"
+                fi
+                ;;
+            esac
+        else
+            Bin="n"
+        fi
+        ;;
     0)
         echo "Do not install MySQL/MariaDB!"
         ;;
     *)
-        echo "No input,You will install ${DB_Info[1]}"
-        DBSelect="2"
+        echo "No input,You will install ${DB_Info[10]}"
+        DBSelect="11"
+        ;;
     esac
 
-    if [ "${Bin}" != "y" ] && [[ "${DBSelect}" =~ ^(5|[7-9]|1[0-1])$ ]] && [ $(awk '/MemTotal/ {printf( "%d\n", $2 / 1024 )}' /proc/meminfo) -le 1024 ]; then
+    if [ "${Bin}" != "y" ] && [[ "${DBSelect}" =~ ^(4|5|[7-9]|1[0-2])$ ]] && [ $(awk '/MemTotal/ {printf( "%d\n", $2 / 1024 )}' /proc/meminfo) -le 1024 ]; then
         echo "Memory less than 1GB, can't install MySQL 8.0 or MairaDB 10.3+!"
         exit 1
     fi
 
-    if [[ "${DBSelect}" =~ ^([6789]|10)$ ]]; then
+    if [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
         MySQL_Bin="/usr/local/mariadb/bin/mysql"
         MySQL_Config="/usr/local/mariadb/bin/mysql_config"
         MySQL_Dir="/usr/local/mariadb"
-    elif [[ "${DBSelect}" =~ ^([12345]|11)$ ]]; then
+    elif [[ "${DBSelect}" =~ ^[1-5]$ ]]; then
         MySQL_Bin="/usr/local/mysql/bin/mysql"
         MySQL_Config="/usr/local/mysql/bin/mysql_config"
         MySQL_Dir="/usr/local/mysql"
@@ -346,55 +399,59 @@ Database_Selection()
             fi
         fi
         echo "MySQL root password: ${DB_Root_Password}"
+        
+        if [ "${Bin}" != "y" ] ; then
+            #do you want to enable or disable the InnoDB Storage Engine?
+            echo "==========================="
 
-        #do you want to enable or disable the InnoDB Storage Engine?
-        echo "==========================="
+            if [ -z ${InstallInnodb} ]; then
+                InstallInnodb="y"
+                Echo_Yellow "Do you want to enable or disable the InnoDB Storage Engine?"
+                read -p "Default enable,Enter your choice [Y/n]: " InstallInnodb
+            fi
 
-        if [ -z ${InstallInnodb} ]; then
-            InstallInnodb="y"
-            Echo_Yellow "Do you want to enable or disable the InnoDB Storage Engine?"
-            read -p "Default enable,Enter your choice [Y/n]: " InstallInnodb
+            case "${InstallInnodb}" in
+            [yY][eE][sS] | [yY])
+                echo "You will enable the InnoDB Storage Engine"
+                InstallInnodb="y"
+                ;;
+            [nN][oO] | [nN])
+                echo "You will disable the InnoDB Storage Engine!"
+                InstallInnodb="n"
+                ;;
+            *)
+                echo "No input,The InnoDB Storage Engine will enable."
+                InstallInnodb="y"
+                ;;
+            esac
         fi
-
-        case "${InstallInnodb}" in
-        [yY][eE][sS]|[yY])
-            echo "You will enable the InnoDB Storage Engine"
-            InstallInnodb="y"
-            ;;
-        [nN][oO]|[nN])
-            echo "You will disable the InnoDB Storage Engine!"
-            InstallInnodb="n"
-            ;;
-        *)
-            echo "No input,The InnoDB Storage Engine will enable."
-            InstallInnodb="y"
-        esac
     fi
 }
 
-PHP_Selection()
-{
-#which PHP Version do you want to install?
+PHP_Selection() {
+    #which PHP Version do you want to install?
     if [ -z ${PHPSelect} ]; then
         echo "==========================="
 
-        PHPSelect="3"
-        Echo_Yellow "You have 9 options for your PHP install."
-        echo "1: Install ${PHP_Info[0]}"
-        echo "2: Install ${PHP_Info[1]}"
-        echo "3: Install ${PHP_Info[2]}"
-        echo "4: Install ${PHP_Info[3]}"
-        echo "5: Install ${PHP_Info[4]} (Default)"
-        echo "6: Install ${PHP_Info[5]}"
-        echo "7: Install ${PHP_Info[6]}"
+        PHPSelect="14"
+        Echo_Yellow "You have 12 options for your PHP install."
+        #echo "1: Install ${PHP_Info[0]}"
+        #echo "2: Install ${PHP_Info[1]}"
+        #echo "3: Install ${PHP_Info[2]}"
+        #echo "4: Install ${PHP_Info[3]}"
+        echo "5: Install ${PHP_Info[4]}"
+        #echo "6: Install ${PHP_Info[5]}"
+        #echo "7: Install ${PHP_Info[6]}"
         echo "8: Install ${PHP_Info[7]}"
         echo "9: Install ${PHP_Info[8]}"
         echo "10: Install ${PHP_Info[9]}"
         echo "11: Install ${PHP_Info[10]}"
         echo "12: Install ${PHP_Info[11]}"
         echo "13: Install ${PHP_Info[12]}"
-        echo "14: Install ${PHP_Info[13]}"
-        read -p "Enter your choice (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14): " PHPSelect
+        echo "14: Install ${PHP_Info[13]} (Default)"
+        echo "15: Install ${PHP_Info[14]}"
+        echo "16: Install ${PHP_Info[15]}"
+        read -p "Enter your choice (5, 8, 9, 10, 11, 12, 13, 14, 15, 16): " PHPSelect
     fi
 
     case "${PHPSelect}" in
@@ -444,15 +501,21 @@ PHP_Selection()
     14)
         echo "You will install ${PHP_Info[13]}"
         ;;
+    15)
+        echo "You will install ${PHP_Info[14]}"
+        ;;
+    16)
+        echo "You will install ${PHP_Info[15]}"
+        ;;
     *)
-        echo "No input,You will install ${PHP_Info[4]}"
-        PHPSelect="5"
+        echo "No input,You will install ${PHP_Info[13]}"
+        PHPSelect="14"
+        ;;
     esac
 }
 
-MemoryAllocator_Selection()
-{
-#which Memory Allocator do you want to install?
+MemoryAllocator_Selection() {
+    #which Memory Allocator do you want to install?
     if [ -z ${SelectMalloc} ]; then
         echo "==========================="
 
@@ -477,18 +540,19 @@ MemoryAllocator_Selection()
     *)
         echo "No input,You will not install Memory Allocator."
         SelectMalloc="1"
+        ;;
     esac
 
-    if [ "${SelectMalloc}" =  "1" ]; then
+    if [ "${SelectMalloc}" = "1" ]; then
         MySQL51MAOpt=''
         MySQLMAOpt=''
         NginxMAOpt=''
-    elif [ "${SelectMalloc}" =  "2" ]; then
+    elif [ "${SelectMalloc}" = "2" ]; then
         MySQL51MAOpt='--with-mysqld-ldflags=-ljemalloc'
         MySQLMAOpt='[mysqld_safe]
 malloc-lib=/usr/lib/libjemalloc.so'
         NginxMAOpt="--with-ld-opt='-ljemalloc'"
-    elif [ "${SelectMalloc}" =  "3" ]; then
+    elif [ "${SelectMalloc}" = "3" ]; then
         MySQL51MAOpt='--with-mysqld-ldflags=-ltcmalloc'
         MySQLMAOpt='[mysqld_safe]
 malloc-lib=/usr/lib/libtcmalloc.so'
@@ -496,15 +560,13 @@ malloc-lib=/usr/lib/libtcmalloc.so'
     fi
 }
 
-Dispaly_Selection()
-{
+Dispaly_Selection() {
     Database_Selection
     PHP_Selection
     MemoryAllocator_Selection
 }
 
-Apache_Selection()
-{
+Apache_Selection() {
     echo "==========================="
     #set Server Administrator Email Address
     if [ -z ${ServerAdmin} ]; then
@@ -521,9 +583,9 @@ Apache_Selection()
     fi
     echo "==========================="
 
-#which Apache Version do you want to install?
+    #which Apache Version do you want to install?
     if [ -z ${ApacheSelect} ]; then
-        ApacheSelect="1"
+        ApacheSelect="2"
         Echo_Yellow "You have 2 options for your Apache install."
         echo "1: Install ${Apache_Info[0]}"
         echo "2: Install ${Apache_Info[1]} (Default)"
@@ -545,50 +607,125 @@ Apache_Selection()
     fi
 }
 
-Kill_PM()
-{
-    if ps aux | grep -E "yum|dnf" | grep -qv "grep"; then
-        kill -9 $(ps -ef|grep -E "yum|dnf"|grep -v grep|awk '{print $2}')
-        if [ -s /var/run/yum.pid ]; then
-            rm -f /var/run/yum.pid
-        fi
-    elif ps aux | grep -E "apt-get|dpkg|apt" | grep -qv "grep"; then
-        kill -9 $(ps -ef|grep -E "apt-get|apt|dpkg"|grep -v grep|awk '{print $2}')
-        if [[ -s /var/lib/dpkg/lock-frontend || -s /var/lib/dpkg/lock ]]; then
-            rm -f /var/lib/dpkg/lock-frontend
-            rm -f /var/lib/dpkg/lock
-            dpkg --configure -a
-        fi
+Check_PM_Lock() {
+    if [ "$PM" = "apt" ]; then
+        Check_APT_Lock
+    elif [ "$PM" = "yum" ]; then
+        Check_DNF_Lock
+    else
+        echo "Unknown package manager"
+        return 1
     fi
 }
 
-Press_Install()
-{
+Kill_PM() {
+    echo "Checking for package manager locks..."
+
+    # 1. Handle RedHat/CentOS/Fedora
+    # pgrep -f looks for the pattern in the full command line
+    if pgrep -f "yum|dnf" >/dev/null; then
+        echo "Terminating yum/dnf processes..."
+        pkill -TERM -f "yum|dnf"
+        sleep 3
+
+        if pgrep -f "yum|dnf" >/dev/null; then
+            echo "Force killing yum/dnf..."
+            pkill -KILL -f "yum|dnf"
+        fi
+        # Remove PID file regardless of size
+        rm -f /var/run/yum.pid
+    fi
+
+    # 2. Handle Debian/Ubuntu
+    if pgrep -f "apt-get|apt|dpkg|unattended-upgrade" >/dev/null; then
+        echo "Terminating apt/dpkg processes..."
+        pkill -TERM -f "apt-get|apt|dpkg|unattended-upgrade"
+        sleep 3
+
+        if pgrep -f "apt-get|apt|dpkg|unattended-upgrade" >/dev/null; then
+            echo "Force killing apt/dpkg..."
+            pkill -KILL -f "apt-get|apt|dpkg|unattended-upgrade"
+        fi
+
+        # Remove locks using a wildcard to catch lock-frontend, etc.
+        rm -f /var/lib/dpkg/lock*
+        rm -f /var/lib/apt/lists/lock
+        rm -f /var/cache/apt/archives/lock
+
+        echo "Repairing interrupted dpkg configuration..."
+        dpkg --configure -a
+    fi
+}
+
+Wait_For_PM_Lock() {
+    local lock_files=()
+    local processes=""
+
+    if [ "${PM}" = "apt" ]; then
+        # Debian/Ubuntu targets
+        lock_files=(
+            "/var/lib/dpkg/lock-frontend"
+            "/var/lib/dpkg/lock"
+            "/var/lib/apt/lists/lock"
+        )
+        processes="apt|apt-get|dpkg|unattended-upgr"
+    elif [ "${PM}" = "yum" ]; then
+        # RHEL/Rocky/Alma targets
+        lock_files=(
+            "/var/lib/rpm/.rpm.lock"
+            "/var/run/yum.pid"
+        )
+        processes="dnf|yum|rpm|dnf-automatic|PackageKit"
+    else
+        echo "Unknown package manager, exited..."
+        return 1
+    fi
+
+    # 1. Check Lock Files
+    for lock in "${lock_files[@]}"; do
+        [ ! -f "$lock" ] && continue
+        while fuser "$lock" >/dev/null 2>&1; do
+            echo " [!] Waiting for lock file: $lock..."
+            sleep 5
+        done
+    done
+
+    # 2. Check Process Names (Fallback safety)
+    while pgrep -f "^($processes)" >/dev/null; do
+        echo " [!] Waiting for background process ($processes)..."
+        sleep 5
+    done
+    
+    echo "No Running Background Process Manager"
+    echo "System is ready for updates."
+
+}
+
+Press_Install() {
     if [ -z ${LNMP_Auto} ]; then
         echo ""
         Echo_Green "Press any key to install...or Press Ctrl+c to cancel"
-        OLDCONFIG=`stty -g`
+        OLDCONFIG=$(stty -g)
         stty -icanon -echo min 1 time 0
         dd count=1 2>/dev/null
         stty ${OLDCONFIG}
     fi
     . include/version.sh
     . include/downloadlink.sh
-    Kill_PM
+    Wait_For_PM_Lock
+    #Kill_PM
 }
 
-Press_Start()
-{
+Press_Start() {
     echo ""
     Echo_Green "Press any key to start...or Press Ctrl+c to cancel"
-    OLDCONFIG=`stty -g`
+    OLDCONFIG=$(stty -g)
     stty -icanon -echo min 1 time 0
     dd count=1 2>/dev/null
     stty ${OLDCONFIG}
 }
 
-Install_LSB()
-{
+Install_LSB() {
     echo "[+] Installing lsb..."
     if [ "$PM" = "yum" ]; then
         yum -y install redhat-lsb
@@ -598,10 +735,9 @@ Install_LSB()
     fi
 }
 
-Get_Dist_Version()
-{
+Get_Dist_Version() {
     if command -v lsb_release >/dev/null 2>&1; then
-        DISTRO_Version=$(lsb_release -sr)
+        DISTRO_Version=$(lsb_release -sr 2>/dev/null)
     elif [ -f /etc/lsb-release ]; then
         . /etc/lsb-release
         DISTRO_Version="$DISTRIB_RELEASE"
@@ -616,14 +752,13 @@ Get_Dist_Version()
             DISTRO_Version=$(python3 -c 'import platform; print(platform.linux_distribution()[1])')
         else
             Install_LSB
-            DISTRO_Version=`lsb_release -rs`
+            DISTRO_Version=$(lsb_release -rs)
         fi
     fi
     printf -v "${DISTRO}_Version" '%s' "${DISTRO_Version}"
 }
 
-Get_Dist_Name()
-{
+Get_Dist_Name() {
     if grep -Eqi "Alibaba" /etc/issue || grep -Eq "Alibaba Cloud Linux" /etc/*-release; then
         DISTRO='Alibaba'
         PM='yum'
@@ -703,8 +838,7 @@ Get_Dist_Name()
     Get_OS_Bit
 }
 
-Get_RHEL_Version()
-{
+Get_RHEL_Version() {
     Get_Dist_Name
     if [ "${DISTRO}" = "RHEL" ]; then
         if grep -Eqi "release 5." /etc/redhat-release; then
@@ -722,14 +856,16 @@ Get_RHEL_Version()
         elif grep -Eqi "release 9." /etc/redhat-release; then
             echo "Current Version: RHEL Ver 9"
             RHEL_Ver='9'
+        elif grep -Eqi "release 10." /etc/redhat-release; then
+            echo "Current Version: RHEL Ver 10"
+            RHEL_Ver='10'
         fi
         RHEL_Version="$(cat /etc/redhat-release | sed 's/.*release\ //' | sed 's/\ .*//')"
     fi
 }
 
-Get_OS_Bit()
-{
-    if [[ `getconf WORD_BIT` = '32' && `getconf LONG_BIT` = '64' ]] ; then
+Get_OS_Bit() {
+    if [[ $(getconf WORD_BIT) = '32' && $(getconf LONG_BIT) = '64' ]]; then
         Is_64bit='y'
         ARCH='x86_64'
         DB_ARCH='x86_64'
@@ -752,8 +888,7 @@ Get_OS_Bit()
     fi
 }
 
-Download_Files()
-{
+Download_Files() {
     local URL=$1
     local FileName=$2
     if [ -s "${FileName}" ]; then
@@ -764,8 +899,7 @@ Download_Files()
     fi
 }
 
-Download_O_Files()
-{
+Download_O_Files() {
     local URL=$1
     local FileName=$2
     if [ -s "${FileName}" ]; then
@@ -776,8 +910,7 @@ Download_O_Files()
     fi
 }
 
-Tar_Cd()
-{
+Tar_Cd() {
     local FileName=$1
     local DirName=$2
     local extension=${FileName##*.}
@@ -797,8 +930,7 @@ Tar_Cd()
     fi
 }
 
-Check_LNMPConf()
-{
+Check_LNMPConf() {
     if [ ! -s "${cur_dir}/lnmp.conf" ]; then
         Echo_Red "lnmp.conf was not exsit!"
         exit 1
@@ -813,16 +945,15 @@ Check_LNMPConf()
     fi
 }
 
-Print_APP_Ver()
-{
+Print_APP_Ver() {
     echo "You will install ${Stack} stack."
     if [ "${Stack}" != "lamp" ]; then
         echo "${Nginx_Ver}"
     fi
 
-    if [[ "${DBSelect}" =~ ^([12345]|11)$ ]]; then
+    if [[ "${DBSelect}" =~ ^[12345]$ ]]; then
         echo "${Mysql_Ver}"
-    elif [[ "${DBSelect}" =~ ^([6789]|10)$ ]]; then
+    elif [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
         echo "${Mariadb_Ver}"
     elif [ "${DBSelect}" = "0" ]; then
         echo "Do not install MySQL/MariaDB!"
@@ -850,9 +981,9 @@ Print_APP_Ver()
     if [ "${Enable_Nginx_Lua}" = "y" ]; then
         echo "enable Nginx Lua."
     fi
-    if [[ "${DBSelect}" =~ ^([12345]|11)$ ]]; then
+    if [[ "${DBSelect}" =~ ^[12345]$ ]]; then
         echo "Database Directory: ${MySQL_Data_Dir}"
-    elif [[ "${DBSelect}" =~ ^([6789]|10)$ ]]; then
+    elif [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
         echo "Database Directory: ${MariaDB_Data_Dir}"
     elif [ "${DBSelect}" = "0" ]; then
         echo "Do not install MySQL/MariaDB!"
@@ -860,9 +991,8 @@ Print_APP_Ver()
     echo "Default Website Directory: ${Default_Website_Dir}"
 }
 
-Print_Sys_Info()
-{
-    echo "LNMP Version: ${LNMP_Ver}"
+Print_Sys_Info() {
+    echo "GetLNMP Version: ${GetLNMP_Ver}"
     eval echo "${DISTRO} \${${DISTRO}_Version}"
     cat /etc/issue
     cat /etc/*-release
@@ -879,8 +1009,7 @@ Print_Sys_Info()
     fi
 }
 
-StartUp()
-{
+StartUp() {
     init_name=$1
     echo "Add ${init_name} service at system startup..."
     [[ "${isWSL}" = "" ]] && Check_WSL
@@ -888,36 +1017,34 @@ StartUp()
     if [ "${isWSL}" = "n" ] && [ "${isDocker}" = "n" ] && command -v systemctl >/dev/null 2>&1 && [[ -s /etc/systemd/system/${init_name}.service || -s /lib/systemd/system/${init_name}.service || -s /usr/lib/systemd/system/${init_name}.service ]]; then
         systemctl daemon-reload
         systemctl enable ${init_name}.service
-    else
-        if [ "$PM" = "yum" ]; then
-            chkconfig --add ${init_name}
-            chkconfig ${init_name} on
-        elif [ "$PM" = "apt" ]; then
-            update-rc.d -f ${init_name} defaults
-        fi
+        # else
+        #     if [ "$PM" = "yum" ]; then
+        #         chkconfig --add ${init_name}
+        #         chkconfig ${init_name} on
+        #     elif [ "$PM" = "apt" ]; then
+        #         update-rc.d -f ${init_name} defaults
+        #     fi
     fi
 }
 
-Remove_StartUp()
-{
+Remove_StartUp() {
     init_name=$1
     echo "Removing ${init_name} service at system startup..."
     [[ "${isWSL}" = "" ]] && Check_WSL
     [[ "${isDocker}" = "" ]] && Check_Docker
     if [ "${isWSL}" = "n" ] && [ "${isDocker}" = "n" ] && command -v systemctl >/dev/null 2>&1 && [[ -s /etc/systemd/system/${init_name}.service || -s /lib/systemd/system/${init_name}.service || -s /usr/lib/systemd/system/${init_name}.service ]]; then
         systemctl disable ${init_name}.service
-    else
-        if [ "$PM" = "yum" ]; then
-            chkconfig ${init_name} off
-            chkconfig --del ${init_name}
-        elif [ "$PM" = "apt" ]; then
-            update-rc.d -f ${init_name} remove
-        fi
+    #else
+    #    if [ "$PM" = "yum" ]; then
+    #        chkconfig ${init_name} off
+    #        chkconfig --del ${init_name}
+    #    elif [ "$PM" = "apt" ]; then
+    #        update-rc.d -f ${init_name} remove
+    #    fi
     fi
 }
 
-Get_Country()
-{
+Get_Country() {
     if command -v curl >/dev/null 2>&1; then
         country=$(curl -sSk --connect-timeout 30 -m 60 "https://ipinfo.io/country")
         if [ $? -ne 0 ]; then
@@ -928,8 +1055,7 @@ Get_Country()
     fi
 }
 
-Check_Mirror()
-{
+Check_Mirror() {
     if ! command -v curl >/dev/null 2>&1; then
         if [ "$PM" = "yum" ]; then
             yum install -y curl
@@ -939,47 +1065,49 @@ Check_Mirror()
             apt-get install -y curl
         fi
     fi
-    if [ "${Download_Mirror}" = "https://soft.vpser.net" ]; then
-        echo "Try http://soft.vpser.net ..."
-        mirror_code=$(curl -o /dev/null -m 20 --connect-timeout 20 -sk -w %{http_code} http://soft.vpser.net)
+    # u
+    if [[ "${Download_Mirror}" = "https://files.getlnmp.com" ]]; then
+        Download_Mirror='https://files.getlnmp.com'
+        echo "Try ${Download_Mirror} ..."
+        mirror_code=$(curl -o /dev/null -m 20 --connect-timeout 20 -sk -w %{http_code} ${Download_Mirror})
         if [[ "${mirror_code}" = "200" || "${mirror_code}" = "302" ]]; then
-            echo "http://soft.vpser.net http code: ${mirror_code}"
-            ping -c 3 soft.vpser.net
+            echo "https://files.getlnmp.com http code: ${mirror_code}"
+            ping -c 3 files.getlnmp.com
         else
-            ping -c 3 soft.vpser.net
+            ping -c 3 files.getlnmp.com
             if [ "${country}" = "CN" ]; then
-                echo "Try http://soft1.vpser.net ..."
-                mirror_code=$(curl -o /dev/null -m 20 --connect-timeout 20 -sk -w %{http_code} http://soft1.vpser.net)
+                echo "Try https://files1.getlnmp.com ..."
+                mirror_code=$(curl -o /dev/null -m 20 --connect-timeout 20 -sk -w %{http_code} https://files1.getlnmp.com)
                 if [[ "${mirror_code}" = "200" || "${mirror_code}" = "302" ]]; then
-                    echo "Change to mirror http://soft1.vpser.net"
-                    Download_Mirror='http://soft1.vpser.net'
+                    echo "Change to mirror https://files1.getlnmp.com"
+                    Download_Mirror='https://files1.getlnmp.com'
                 else
-                    echo "Try http://soft2.vpser.net ..."
-                    mirror_code=$(curl -o /dev/null -m 20 --connect-timeout 20 -sk -w %{http_code} http://soft2.vpser.net)
+                    echo "Try https://files2.getlnmp.com ..."
+                    mirror_code=$(curl -o /dev/null -m 20 --connect-timeout 20 -sk -w %{http_code} https://files2.getlnmp.com)
                     if [[ "${mirror_code}" = "200" || "${mirror_code}" = "302" ]]; then
-                        echo "Change to mirror http://soft2.vpser.net"
-                        Download_Mirror='http://soft2.vpser.net'
+                        echo "Change to mirror https://files2.getlnmp.com"
+                        Download_Mirror='https://files2.getlnmp.com'
                     else
                         echo "Can not connect to download mirror,Please modify lnmp.conf manually."
-                        echo "More info,please visit https://lnmp.org/faq/download-url.html"
+                        echo "More info,please visit https://getlnmp.com"
                         exit 1
                     fi
                 fi
             else
-                echo "Try http://soft2.vpser.net ..."
-                mirror_code=$(curl -o /dev/null -m 20 --connect-timeout 20 -sk -w %{http_code} http://soft2.vpser.net)
+                echo "Try https://files2.getlnmp.com ..."
+                mirror_code=$(curl -o /dev/null -m 20 --connect-timeout 20 -sk -w %{http_code} https://files2.getlnmp.com)
                 if [[ "${mirror_code}" = "200" || "${mirror_code}" = "302" ]]; then
-                    echo "Change to mirror http://soft2.vpser.net"
-                    Download_Mirror='http://soft2.vpser.net'
+                    echo "Change to mirror https://files2.getlnmp.com"
+                    Download_Mirror='https://files2.getlnmp.com'
                 else
-                    echo "Try http://soft1.vpser.net ..."
-                    mirror_code=$(curl -o /dev/null -m 20 --connect-timeout 20 -sk -w %{http_code} http://soft1.vpser.net)
+                    echo "Try https://files1.getlnmp.com ..."
+                    mirror_code=$(curl -o /dev/null -m 20 --connect-timeout 20 -sk -w %{http_code} https://files1.getlnmp.com)
                     if [[ "${mirror_code}" = "200" || "${mirror_code}" = "302" ]]; then
-                        echo "Change to mirror http://soft1.vpser.net"
-                        Download_Mirror='http://soft1.vpser.net'
+                        echo "Change to mirror https://files1.getlnmp.com"
+                        Download_Mirror='https://files1.getlnmp.com'
                     else
                         echo "Can not connect to download mirror,Please modify lnmp.conf manually."
-                        echo "More info,please visit https://lnmp.org/faq/download-url.html"
+                        echo "More info,please visit https://getlnmp.com"
                         exit 1
                     fi
                 fi
@@ -988,16 +1116,15 @@ Check_Mirror()
     fi
 }
 
-Check_CMPT()
-{
-    if [[ "${DBSelect}" = "5" && "${Bin}" != "y" ]]; then
-        if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-7]"  || echo "${RHEL_Version}" | grep -Eqi "^[4-7]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
+Check_CMPT() {
+    if [[ "${DBSelect}" =~ ^[45]$ && "${Bin}" != "y" ]]; then
+        if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-7]" || echo "${RHEL_Version}" | grep -Eqi "^[4-7]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
             Echo_Red "MySQL 8.0 please use latest linux distributions!"
             exit 1
         fi
     fi
-    if [[ "${PHPSelect}" =~ ^1[0-4]$ ]]; then
-        if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-6]"  || echo "${RHEL_Version}" | grep -Eqi "^[4-6]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
+    if [[ "${PHPSelect}" =~ ^1[0-6]$ ]]; then
+        if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-6]" || echo "${RHEL_Version}" | grep -Eqi "^[4-6]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
             Echo_Red "PHP 7.4 and PHP 8.* please use latest linux distributions!"
             exit 1
         fi
@@ -1010,39 +1137,37 @@ Check_CMPT()
     fi
 }
 
-Color_Text()
-{
-  echo -e " \e[0;$2m$1\e[0m"
+Color_Text() {
+    echo -e " \e[0;$2m$1\e[0m"
 }
 
-Echo_Red()
-{
-  echo $(Color_Text "$1" "31")
+Echo_Red() {
+    echo $(Color_Text "$1" "31")
 }
 
-Echo_Green()
-{
-  echo $(Color_Text "$1" "32")
+Echo_Green() {
+    echo $(Color_Text "$1" "32")
 }
 
-Echo_Yellow()
-{
-  echo $(Color_Text "$1" "33")
+Echo_Yellow() {
+    echo $(Color_Text "$1" "33")
 }
 
-Echo_Blue()
-{
-  echo $(Color_Text "$1" "34")
+Echo_Blue() {
+    echo $(Color_Text "$1" "34")
 }
 
-Get_PHP_Ext_Dir()
-{
-    Cur_PHP_Version="$(/usr/local/php/bin/php-config --version)"
-    zend_ext_dir="$(/usr/local/php/bin/php-config --extension-dir)/"
+Get_PHP_Ext_Dir() {
+    if [ -s /usr/local/php/bin/php-config ]; then
+        Cur_PHP_Version="$(/usr/local/php/bin/php-config --version)"
+        zend_ext_dir="$(/usr/local/php/bin/php-config --extension-dir)/"
+    else
+        Cur_PHP_Version="unknow"
+        zend_ext_dir="unknow"
+    fi
 }
 
-Check_Stack()
-{
+Check_Stack() {
     if [[ -s /usr/local/php/sbin/php-fpm && -s /usr/local/php/etc/php-fpm.conf && -s /etc/init.d/php-fpm && -s /usr/local/nginx/sbin/nginx ]]; then
         Get_Stack="lnmp"
     elif [[ -s /usr/local/nginx/sbin/nginx && -s /usr/local/apache/bin/httpd && -s /usr/local/apache/conf/httpd.conf && -s /etc/init.d/httpd && ! -s /usr/local/php/sbin/php-fpm ]]; then
@@ -1054,11 +1179,10 @@ Check_Stack()
     fi
 }
 
-Check_DB()
-{
-    if [[ -s /usr/local/mariadb/bin/mysql && -s /usr/local/mariadb/bin/mysqld_safe && -s /etc/my.cnf ]]; then
-        MySQL_Bin="/usr/local/mariadb/bin/mysql"
-        MySQL_Config="/usr/local/mariadb/bin/mysql_config"
+Check_DB() {
+    if [[ -s /usr/local/mariadb/bin/mariadb && -s /usr/local/mariadb/bin/mariadbd-safe && -s /etc/my.cnf ]]; then
+        MySQL_Bin="/usr/local/mariadb/bin/mariadb"
+        MySQL_Config="/usr/local/mariadb/bin/mariadb_config"
         MySQL_Dir="/usr/local/mariadb"
         Is_MySQL="n"
         DB_Name="mariadb"
@@ -1074,17 +1198,15 @@ Check_DB()
     fi
 }
 
-Do_Query()
-{
+Do_Query() {
     echo "$1" >/tmp/.mysql.tmp
     Check_DB
     ${MySQL_Bin} --defaults-file=~/.my.cnf </tmp/.mysql.tmp
     return $?
 }
 
-Make_TempMycnf()
-{
-    cat >~/.my.cnf<<EOF
+Make_TempMycnf() {
+    cat >~/.my.cnf <<EOF
 [client]
 user=root
 password='$1'
@@ -1092,8 +1214,7 @@ EOF
     chmod 600 ~/.my.cnf
 }
 
-Verify_DB_Password()
-{
+Verify_DB_Password() {
     Check_DB
     status=1
     while [ $status -eq 1 ]; do
@@ -1105,8 +1226,7 @@ Verify_DB_Password()
     echo "OK, MySQL root password correct."
 }
 
-TempMycnf_Clean()
-{
+TempMycnf_Clean() {
     if [ -s ~/.my.cnf ]; then
         rm -f ~/.my.cnf
     fi
@@ -1115,21 +1235,20 @@ TempMycnf_Clean()
     fi
 }
 
-StartOrStop()
-{
+StartOrStop() {
     local action=$1
     local service=$2
     [[ "${isWSL}" = "" ]] && Check_WSL
     [[ "${isDocker}" = "" ]] && Check_Docker
     if [ "${isWSL}" = "n" ] && [ "${isDocker}" = "n" ] && command -v systemctl >/dev/null 2>&1 && [[ -s /etc/systemd/system/${service}.service ]]; then
         systemctl ${action} ${service}.service
-    else
-        /etc/init.d/${service} ${action}
+    #else
+    #    /etc/init.d/${service} ${action}
     fi
 }
 
 Check_WSL() {
-    if [[ "$(< /proc/sys/kernel/osrelease)" == *[Mm]icrosoft* ]]; then
+    if [[ "$(</proc/sys/kernel/osrelease)" == *[Mm]icrosoft* ]]; then
         echo "running on WSL"
         isWSL="y"
     else
@@ -1152,8 +1271,7 @@ Check_Docker() {
     fi
 }
 
-Check_Openssl()
-{
+Check_Openssl() {
     if ! command -v openssl >/dev/null 2>&1; then
         Echo_Blue "[+] Installing openssl..."
         if [ "${PM}" = "yum" ]; then
@@ -1164,14 +1282,24 @@ Check_Openssl()
             apt-get install -y openssl
         fi
     fi
-    openssl version
+    #openssl version
     if openssl version | grep -Eqi "OpenSSL 3.*"; then
         isOpenSSL3='y'
-    fi
+        if openssl version | grep -Eqi "OpenSSL 3\.5\.*"; then
+            isOpenSSL35='y'
+        else
+            isOpenSSL35='n'
+        fi
+    elif openssl version | grep -Eqi "OpenSSL 1\.1\.*"; then
+        isOpenSSL111='y'
+        isOpenSSL3='n'
+    else
+        isOpenSSL3='n'
+        isOpenSSL111='n'
+    fi  
 }
 
-Get_ICU_Version()
-{
+Get_ICU_Version() {
     echo "Detecting system ICU version"
     # step 1 pkg-config
     if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists icu-i18n; then
@@ -1191,8 +1319,121 @@ Get_ICU_Version()
             detected_icu=""
             detected_icu_method="none"
         fi
-   fi
+    fi
 
-   local_icu_version=${detected_icu%%.*}
-   local_icu_version=${local_icu_version:-0}
+    local_icu_version=${detected_icu%%.*}
+    local_icu_version=${local_icu_version:-0}
+}
+
+Gcc14_Check() {
+    if ! command -v gcc >/dev/null 2>&1; then
+        apt-get install gcc g++ -y
+    fi
+    gcc_major_version=$(gcc -dumpversion | cut -f1 -d.)
+    if [ "${gcc_major_version}" -eq "14" ]; then
+        apt-get install gcc-13 g++-13 -y
+        if [ -f "/usr/bin/gcc-13" ]; then
+            export CC=/usr/bin/gcc-13
+        fi
+        if [ -f "/usr/bin/g++-13" ]; then
+            export CXX=/usr/bin/g++-13
+        fi
+    fi
+}
+
+PHP-FPM_notify_support() {
+    /usr/local/php/sbin/php-fpm -i 2>/dev/null |
+        awk -F'=> ' '/^systemd/ {print $2}' |
+        grep -qx 'enabled'
+}
+
+Block_Dist_Name() {
+    if [[ $PM = "yum" ]]; then
+        if [[ ${DISTRO} != "RHEL" && ${DISTRO} != "Rocky" && ${DISTRO} != "Alma" && ${DISTRO} != "Oracle" ]]; then
+            Echo_Red "Only RHEL/Rocky Linux/AlmaLinux/Oracle Linux are supported!"
+            Echo_Red "Exit"
+            exit 1
+        fi
+    elif [[ $PM = "apt" ]]; then
+        if [[ ${DISTRO} != "Debian" && ${DISTRO} != "Ubuntu" ]]; then
+            Echo_Red "Only Debian/Ubuntu are supported!"
+            Echo_Red "Exit"
+            exit 1
+        fi
+    else
+        Echo_Red "GetLNMP does not support your OS!"
+        Echo_Red "Exit"
+        exit 1
+    fi
+}
+
+Libaio_Check() {
+    if [ -f "/usr/lib/x86_64-linux-gnu/libaio.so.1t64" ] && [ ! -e "/usr/lib/x86_64-linux-gnu/libaio.so.1" ]; then
+        echo "libaio.so.1 does not exist, linking libaio.so.1t64 to libaio.so.1 ..."
+        ln -sf "/usr/lib/x86_64-linux-gnu/libaio.so.1t64" "/usr/lib/x86_64-linux-gnu/libaio.so.1"
+    elif [ -f "/usr/lib/i386-linux-gnu/libaio.so.1t32" ] && [ ! -e "/usr/lib/i386-linux-gnu/libaio.so.1" ]; then
+        echo "libaio.so.1 does not exist, linking libaio.so.1t32 to libaio.so.1 ..."
+        ln -sf "/usr/lib/i386-linux-gnu/libaio.so.1t32" "/usr/lib/i386-linux-gnu/libaio.so.1"
+    else
+        echo "Checking: libaio.so.1...yes!"
+    fi
+}
+
+DB_BIN_Opt() {
+    if [[ $Bin = "y" ]]; then
+        if [[ $PM = "apt" ]]; then
+            Libaio_Check
+        fi
+    fi
+
+}
+
+Install_Ncurses5_Compat()
+{
+    Echo_Blue "[+] Installing ncurses5 compatibility library..."
+    cd ${cur_dir}/src
+    if [ ! -f ncurses-6.5.tar.gz ]; then
+        wget -c https://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.5.tar.gz
+    fi
+    Tar_Cd ncurses-6.5.tar.gz ncurses-6.5
+    # --with-shared: Build shared libraries (.so)
+    # --with-termlib: Split out libtinfo (Critical for MySQL compatibility)
+    # --with-abi-version=5: The magic flag to create .so.5 files
+    # --without-cxx-binding: We only need C libs for MySQL, skips C++ issues
+    # --without-normal: Critical. This tells the compiler NOT to build the static libncurses.a files.
+    # --without-progs: This prevents building the command-line tools (like tic, tset, infocmp).
+    # --without-profile: Skips building profiling libraries
+    # --without-ada: Skips checking for or building Ada language bindings
+    # --without-manpages: Skips generating documentation
+    ./configure --prefix=/usr/local/ncurses5 \
+                --with-shared \
+                --with-termlib \
+                --with-abi-version=5 \
+                --without-normal \
+                --without-debug \
+                --without-profile \
+                --without-cxx-binding \
+                --without-ada \
+                --without-manpages \
+                --without-progs
+    Make_Install
+    if [ -f /usr/local/ncurses5/lib/libncurses.so.5 ] && [ ! -e /usr/lib/x86_64-linux-gnu/libncurses.so.5 ]; then
+        ln -sf /usr/local/ncurses5/lib/libncurses.so.5 /usr/lib/x86_64-linux-gnu/libncurses.so.5
+        ln -sf /usr/local/ncurses5/lib/libtinfo.so.5 /usr/lib/x86_64-linux-gnu/libtinfo.so.5
+        echo "ncurses5 compatibility library installed successfully."
+    fi
+}
+
+
+Ncurses5_Compat_Check()
+{   
+    if [[ $Bin = "y" ]]; then
+        if [ -f /usr/lib/x86_64-linux-gnu/libncurses.so.5 ] || [ -f /usr/lib/i386-linux-gnu/libncurses.so.5 ]; then
+            echo "ncurses5 compatibility library found."
+        else
+            echo "ncurses5 compatibility library not found."
+            Install_Ncurses5_Compat
+        fi
+    fi
+
 }

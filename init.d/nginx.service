@@ -1,13 +1,29 @@
+# /etc/systemd/system/nginx.service
+# Nginx systemd unit for compiled Nginx
+# Works on Debian / Ubuntu / RHEL / AlmaLinux / Rocky
+
+# Author:   getlnmp
+# website:  https://getlnmp.com
+
 [Unit]
-Description=The NGINX HTTP and reverse proxy server
-After=network.target remote-fs.target nss-lookup.target
+Description=nginx - high performance web server
+Documentation=https://nginx.org/en/docs/
+After=network-online.target remote-fs.target nss-lookup.target
+Wants=network-online.target
 
 [Service]
 Type=forking
+
+# nginx PID file
 PIDFile=/usr/local/nginx/logs/nginx.pid
-ExecStart=/usr/local/nginx/sbin/nginx -c /usr/local/nginx/conf/nginx.conf
-ExecReload=/usr/local/nginx/sbin/nginx -s reload
-ExecStop=/bin/kill -s QUIT $MAINPID
+Environment="CONFFILE=/usr/local/nginx/conf/nginx.conf"
+
+# Start / reload / stop
+ExecStart=/usr/local/nginx/sbin/nginx -c ${CONFFILE}
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+
+# Safety & robustness
 PrivateTmp=false
 
 [Install]

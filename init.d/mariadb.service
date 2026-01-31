@@ -1,16 +1,85 @@
+# /etc/systemd/system/mariadb.service
+# Mariadb systemd unit for compiled Mariadb
+# Works on Debian / Ubuntu / RHEL / AlmaLinux / Rocky
+
+# Author:   getlnmp
+# website:  https://getlnmp.com
+
 [Unit]
-Description=MariaDB Server
-After=network.target syslog.target
+Description=MariaDB Database Server
+Documentation=https://mariadb.com/kb/en/library/systemd/
+After=network.target
 
 [Service]
-Type=forking
 
-ExecStart=/etc/init.d/mariadb start
-ExecStop=/etc/init.d/mariadb stop
-ExecReload=/etc/init.d/mariadb reload
+##############################################################################
+## Core requirements
+##
+Type=notify
 
-Restart=no
+# Setting this to true can break replication and the Type=notify settings
+# See also bind-address mariadbd option.
+PrivateNetwork=false
+
+User=mariadb
+Group=mariadb
+
+# CAP_IPC_LOCK To allow memlock to be used as non-root user
+# These are enabled by default
+AmbientCapabilities=CAP_IPC_LOCK
+
+# We must explicitly set the PIDFile path
+PIDFile=/usr/local/mariadb/data/mariadb.pid
+
+# ExecStartPre: Check for systemd tmpfile directory
+# ExecStartPre=/bin/mkdir -p /run/mysqld
+# ExecStartPre=/bin/chown mariadb:mariadb /run/mysqld
+
+# Start main service using the custom path
+# The daemon will read the configuration from /etc/my.cnf or /usr/local/mariadb/my.cnf
+ExecStart=/usr/local/mariadb/bin/mariadbd --pid-file=/usr/local/mariadb/data/mariadb.pid
+ExecReload=/bin/kill -s HUP $MAINPID
+
+KillSignal=SIGTERM
+
+# Don't want to see an automated SIGKILL ever
+SendSIGKILL=no
+
+# Restart crashed server only, on-failure would also restart, for example, when
+# my.cnf contains unknown option
+Restart=on-abnormal
+RestartSec=5s
+
+UMask=007
+
+
+# Clean up the PID file on stop/failure
+# ExecStopPost=/bin/rm -f /usr/local/mariadb/data/mariadb.pid
+
+
+# Number of files limit. previously [mysqld_safe] open-files-limit
+LimitNOFILE=32768
+# For liburing and io_uring_setup()
+LimitMEMLOCK=524288
+
+# Set the maximium number of tasks (threads) to 99% of what the system can
+# handle as set by the kernel, reserve the 1% for a remote ssh connection,
+# some monitoring, or that backup cron job. Without the directive this would
+# be 15% (see DefaultTasksMax in systemd man pages).
+TasksMax=99%
+
+# Set an explicit Start and Stop timeout of 900 seconds (15 minutes!)
+# this is the same value as used in SysV init scripts in the past
+# Galera might need a longer timeout, check the KB if you want to change this:
+# https://mariadb.com/kb/en/library/systemd/#configuring-the-systemd-service-timeout
+TimeoutStartSec=900
+TimeoutStopSec=900
+
+# If you don't use the /tmp directory for SELECT ... OUTFILE and
+# LOAD DATA INFILE you can enable PrivateTmp=true for a little more security.
 PrivateTmp=false
+
+
 
 [Install]
 WantedBy=multi-user.target

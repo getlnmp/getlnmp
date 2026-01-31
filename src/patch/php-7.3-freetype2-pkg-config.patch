@@ -1,0 +1,19 @@
+--- a/ext/gd/config.m4
++++ b/ext/gd/config.m4
+@@ -182,7 +182,15 @@
+ ])
+ 
+ AC_DEFUN([PHP_GD_FREETYPE2],[
+-  if test "$PHP_FREETYPE_DIR" != "no"; then
++  if test "$PHP_FREETYPE_DIR" != "no" && test -x "$PKG_CONFIG" && $PKG_CONFIG --exists freetype2; then
++    FREETYPE2_CFLAGS=`$PKG_CONFIG --cflags-only-I freetype2`
++    FREETYPE2_LIBS=`$PKG_CONFIG --libs freetype2`
++
++    PHP_EVAL_INCLINE($FREETYPE2_CFLAGS)
++    PHP_EVAL_LIBLINE($FREETYPE2_LIBS, GD_SHARED_LIBADD)
++    AC_DEFINE(HAVE_LIBFREETYPE, 1, [ ])
++    AC_DEFINE(HAVE_GD_FREETYPE, 1, [ ])
++  elif test "$PHP_FREETYPE_DIR" != "no"; then
+ 
+     for i in $PHP_FREETYPE_DIR /usr/local /usr; do
+       if test -f "$i/bin/freetype-config"; then

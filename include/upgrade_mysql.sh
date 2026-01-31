@@ -4,20 +4,22 @@ Backup_MySQL()
 {
     echo "Starting backup all databases..."
     echo "If the database is large, the backup time will be longer."
-    /usr/local/mysql/bin/mysqldump --defaults-file=~/.my.cnf --all-databases > /root/mysql_all_backup${Upgrade_Date}.sql
+    if [ -s /usr/local/mysql/bin/mysqldump ]; then
+        /usr/local/mysql/bin/mysqldump --defaults-file=~/.my.cnf --all-databases > /root/mysql_all_backup${Upgrade_Date}.sql
+    else
+        echo "mysqldump not found, please check if MySQL is installed correctly."
+    fi
     if [ $? -eq 0 ]; then
         echo "MySQL databases backup successfully.";
     else
         echo "MySQL databases backup failed,Please backup databases manually!"
-        exit 1
     fi
     lnmp stop
-    mv /usr/local/mysql /usr/local/oldmysql${Upgrade_Date}
-    mv /etc/init.d/mysql /usr/local/oldmysql${Upgrade_Date}/init.d.mysql.bak.${Upgrade_Date}
-    mv /etc/my.cnf /usr/local/oldmysql${Upgrade_Date}/my.cnf.bak.${Upgrade_Date}
-    if [ "${MySQL_Data_Dir}" != "/usr/local/mysql/var" ]; then
+    if [[ ! "${MySQL_Data_Dir}" =~ ^/usr/local/mysql/ ]]; then
         mv ${MySQL_Data_Dir} ${MySQL_Data_Dir}${Upgrade_Date}
     fi
+    mv /usr/local/mysql /usr/local/oldmysql${Upgrade_Date}
+    mv /etc/my.cnf /usr/local/oldmysql${Upgrade_Date}/my.cnf.bak.${Upgrade_Date}
     if echo "${mysql_version}" | grep -Eqi '^5\.5\.' &&  echo "${cur_mysql_version}" | grep -Eqi '^5\.6\.';then
         sed -i 's/STATS_PERSISTENT=0//g' /root/mysql_all_backup${Upgrade_Date}.sql
     fi
@@ -115,7 +117,6 @@ EOF
 
     cat > /etc/ld.so.conf.d/mysql.conf<<EOF
 /usr/local/mysql/lib
-/usr/local/lib
 EOF
     ldconfig
     ln -sf /usr/local/mysql/lib/mysql /usr/lib/mysql
@@ -230,7 +231,6 @@ EOF
 
     cat > /etc/ld.so.conf.d/mysql.conf<<EOF
 /usr/local/mysql/lib
-/usr/local/lib
 EOF
     ldconfig
     ln -sf /usr/local/mysql/lib/mysql /usr/lib/mysql
@@ -376,7 +376,6 @@ EOF
 
     cat > /etc/ld.so.conf.d/mysql.conf<<EOF
 /usr/local/mysql/lib
-/usr/local/lib
 EOF
 
     ldconfig
@@ -385,31 +384,53 @@ EOF
 }
 
 Upgrade_MySQL57()
-{
+{   
+    Ncurses5_Compat_Check
+    rm -rf /etc/my.cnf
     if [ "${Bin}" = "y" ]; then
         Echo_Blue "Starting upgrade MySQL ${mysql_version} Using Generic Binaries..."
+        if [ -d mysql-${mysql_version}-linux-glibc2.12-${DB_ARCH} ]; then
+            rm -rf mysql-${mysql_version}-linux-glibc2.12-${DB_ARCH}
+        fi
         Tar_Cd ${mysql_src}
         mkdir /usr/local/mysql
         mv mysql-${mysql_version}-linux-glibc2.12-${DB_ARCH}/* /usr/local/mysql/
     else
         Echo_Blue "Starting upgrade MySQL ${mysql_version} Using Source code..."
+        if [ -d ${Mysql_Ver} ]; then
+            rm -rf ${Mysql_Ver}
+        fi
         if [ "${isOpenSSL3}" = "y" ]; then
             Install_Openssl_New
             MySQL_WITH_SSL='-DWITH_SSL=/usr/local/openssl1.1.1'
         else
-            MySQL_WITH_SSL=''
+            MySQL_WITH_SSL='-DWITH_SSL=system'
         fi
         Tar_Cd ${mysql_src} mysql-${mysql_version}
-        Install_Boost
+        #Install_Boost
         if echo "${Rocky_Version}" | grep -Eqi "^9"; then
             sed -i 's@^INCLUDE(cmake/abi_check.cmake)@#INCLUDE(cmake/abi_check.cmake)@' CMakeLists.txt
         fi
-        cmake -DCMAKE_INSTALL_PREFIX=/usr/local/mysql -DSYSCONFDIR=/etc -DWITH_MYISAM_STORAGE_ENGINE=1 -DWITH_INNOBASE_STORAGE_ENGINE=1 -DWITH_PARTITION_STORAGE_ENGINE=1 -DWITH_FEDERATED_STORAGE_ENGINE=1 -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 ${MySQL_WITH_SSL} ${MySQL_WITH_BOOST}
+        mkdir -p mysql-build && cd mysql-build
+        cmake .. \
+            -DCMAKE_INSTALL_PREFIX=/usr/local/mysql \
+            -DSYSCONFDIR=/etc \
+            -DWITH_MYISAM_STORAGE_ENGINE=1 \
+            -DWITH_INNOBASE_STORAGE_ENGINE=1 \
+            -DWITH_PARTITION_STORAGE_ENGINE=1 \
+            -DWITH_FEDERATED_STORAGE_ENGINE=1 \
+            -DEXTRA_CHARSETS=all \
+            -DDEFAULT_CHARSET=utf8mb4 \
+            -DDEFAULT_COLLATION=utf8mb4_general_ci \
+            -DWITH_EMBEDDED_SERVER=1 \
+            -DENABLED_LOCAL_INFILE=1 \
+            -DWITH_SYSTEMD=1 \
+            -DDOWNLOAD_BOOST=ON \
+			-DWITH_BOOST=/usr/local/mysql57_boost \
+            ${MySQL_WITH_SSL}
         Make_Install
     fi
 
-    groupadd mysql
-    useradd -s /sbin/nologin -M -g mysql mysql
 
 cat > /etc/my.cnf<<EOF
 [client]
@@ -418,36 +439,43 @@ port        = 3306
 socket      = /tmp/mysql.sock
 
 [mysqld]
+# Basic
 port        = 3306
 socket      = /tmp/mysql.sock
 datadir = ${MySQL_Data_Dir}
-skip-external-locking
-key_buffer_size = 16M
+log_error = ${MySQL_Data_Dir}/mysqld.err
+pid-file = ${MySQL_Data_Dir}/mysqld.pid
+
+# Network / buffers
 max_allowed_packet = 1M
-table_open_cache = 64
 sort_buffer_size = 512K
 net_buffer_length = 8K
 read_buffer_size = 256K
 read_rnd_buffer_size = 512K
 myisam_sort_buffer_size = 8M
-thread_cache_size = 8
-query_cache_size = 8M
 tmp_table_size = 16M
-performance_schema_max_table_instances = 500
 
-explicit_defaults_for_timestamp = true
-#skip-networking
+# connections
 max_connections = 500
 max_connect_errors = 100
-open_files_limit = 65535
+open_files_limit = 10000
+table_open_cache       = 1024
+thread_cache_size      = 32
 
-log-bin=mysql-bin
-binlog_format=mixed
-server-id   = 1
-expire_logs_days = 10
-early-plugin-load = ""
+# Binary logging
+log_bin            = mysql-bin
+server-id          = 1
+binlog_format      = ROW
+expire_logs_days   = 10
 
+# Performance Schema
+performance_schema = ON
+performance_schema_max_table_instances = 500
+
+# Default engine
 default_storage_engine = InnoDB
+
+innodb_file_per_table = 1
 innodb_data_home_dir = ${MySQL_Data_Dir}
 innodb_data_file_path = ibdata1:10M:autoextend
 innodb_log_group_home_dir = ${MySQL_Data_Dir}
@@ -456,6 +484,10 @@ innodb_log_file_size = 5M
 innodb_log_buffer_size = 8M
 innodb_flush_log_at_trx_commit = 1
 innodb_lock_wait_timeout = 50
+
+# MyISAM (legacy)
+key_buffer_size                = 8M
+myisam_sort_buffer_size        = 8M
 
 [mysqldump]
 quick
@@ -470,15 +502,13 @@ sort_buffer_size = 20M
 read_buffer_size = 2M
 write_buffer_size = 2M
 
-[mysqlhotcopy]
-interactive-timeout
-
 ${MySQLMAOpt}
 EOF
 
     MySQL_Opt
     if [ -d "${MySQL_Data_Dir}" ]; then
-        rm -rf ${MySQL_Data_Dir}/*
+        rm -rf ${MySQL_Data_Dir}
+        mkdir -p ${MySQL_Data_Dir}
     else
         mkdir -p ${MySQL_Data_Dir}
     fi
@@ -486,9 +516,17 @@ EOF
     /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir=${MySQL_Data_Dir} --user=mysql
     chown -R mysql:mysql ${MySQL_Data_Dir}
 
+    rm -rf /etc/systemd/system/mysql.service
+    rm -rf /etc/systemd/system/mysqld.service
+    \cp ${cur_dir}/init.d/mysql.service5.7 /etc/systemd/system/mysql.service
+    ln -sf /etc/systemd/system/mysql.service /etc/systemd/system/mysqld.service
+    if [ -s /usr/local/mysql/bin/mysqld_pre_systemd ]; then
+        sed -i 's/^#ExecStartPre=/ExecStartPre=/g' /etc/systemd/system/mysql.service
+    fi
+    systemctl daemon-reload
+
     cat > /etc/ld.so.conf.d/mysql.conf<<EOF
 /usr/local/mysql/lib
-/usr/local/lib
 EOF
 
     ldconfig
@@ -498,22 +536,37 @@ EOF
 
 Upgrade_MySQL80()
 {
+    rm -f /etc/my.cnf
     if [ "${Bin}" = "y" ]; then
-        Echo_Blue "Starting upgrade MySQL ${mysql_version} Using Generic Binaries..."
-        Tar_Cd ${mysql_src}
+        Echo_Blue "[+] Installing ${Mysql_Ver} Using Generic Binaries..."
+        if [ -d ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH} ]; then
+            rm -rf ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}
+        fi
+        Tar_Cd ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
         mkdir /usr/local/mysql
-        mv mysql-${mysql_version}-linux-glibc${mysql8_glibc_ver}-${DB_ARCH}/* /usr/local/mysql/
+        mv ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}/* /usr/local/mysql/
     else
-        Echo_Blue "Starting upgrade MySQL ${mysql_version} Using Source code..."
-        Tar_Cd ${mysql_src} mysql-${mysql_version}
-        Install_Boost
-        mkdir build && cd build
-        cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/mysql -DSYSCONFDIR=/etc -DWITH_MYISAM_STORAGE_ENGINE=1 -DWITH_INNOBASE_STORAGE_ENGINE=1 -DWITH_PARTITION_STORAGE_ENGINE=1 -DWITH_FEDERATED_STORAGE_ENGINE=1 -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 ${MySQL_WITH_BOOST}
+        Echo_Blue "[+] Installing ${Mysql_Ver} Using Source code..."
+        if [ -d ${Mysql_Ver} ]; then
+            rm -rf ${Mysql_Ver}
+        fi
+        Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
+        #Install_Boost
+        mkdir -p mysql-build && cd mysql-build
+        cmake .. \
+            -DCMAKE_INSTALL_PREFIX=/usr/local/mysql \
+            -DSYSCONFDIR=/etc \
+            -DWITH_MYISAM_STORAGE_ENGINE=1 \
+            -DWITH_INNOBASE_STORAGE_ENGINE=1 \
+            -DWITH_FEDERATED_STORAGE_ENGINE=1 \
+            -DDEFAULT_CHARSET=utf8mb4 \
+            -DDEFAULT_COLLATION=utf8mb4_general_ci \
+            -DENABLED_LOCAL_INFILE=1 \
+            -DWITH_SYSTEMD=1 \
+            -DDOWNLOAD_BOOST=ON \
+			-DWITH_BOOST=/usr/local/mysql80_boost
         Make_Install
     fi
-
-    groupadd mysql
-    useradd -s /sbin/nologin -M -g mysql mysql
 
 cat > /etc/my.cnf<<EOF
 [client]
@@ -522,44 +575,63 @@ port        = 3306
 socket      = /tmp/mysql.sock
 
 [mysqld]
+# Basic
 port        = 3306
 socket      = /tmp/mysql.sock
 datadir = ${MySQL_Data_Dir}
-skip-external-locking
-key_buffer_size = 16M
+log_error = ${MySQL_Data_Dir}/mysqld.err
+pid-file = ${MySQL_Data_Dir}/mysqld.pid
+
+# Network / buffers
 max_allowed_packet = 1M
-table_open_cache = 64
 sort_buffer_size = 512K
 net_buffer_length = 8K
 read_buffer_size = 256K
 read_rnd_buffer_size = 512K
 myisam_sort_buffer_size = 8M
-thread_cache_size = 8
 tmp_table_size = 16M
-performance_schema_max_table_instances = 500
 
 explicit_defaults_for_timestamp = true
-#skip-networking
+
+# connections
 max_connections = 500
 max_connect_errors = 100
-open_files_limit = 65535
-default_authentication_plugin = mysql_native_password
+open_files_limit = 10000
+table_open_cache       = 1024
+thread_cache_size      = 32
 
-log-bin=mysql-bin
-binlog_format=mixed
-server-id   = 1
+
+# Authentication (allowed but legacy)
+#default_authentication_plugin = mysql_native_password
+
+# Binary logging
+log_bin                    = mysql-bin
+server-id                  = 1
+#binlog_format              = ROW
 binlog_expire_logs_seconds = 864000
-early-plugin-load = ""
 
+# Performance Schema
+performance_schema = ON
+performance_schema_max_table_instances = 500
+
+# Default engine
 default_storage_engine = InnoDB
+
+innodb_file_per_table = 1
 innodb_data_home_dir = ${MySQL_Data_Dir}
 innodb_data_file_path = ibdata1:10M:autoextend
 innodb_log_group_home_dir = ${MySQL_Data_Dir}
 innodb_buffer_pool_size = 16M
-innodb_log_file_size = 5M
+#innodb_log_file_size = 5M (deprecated since mysql 8.4)
 innodb_log_buffer_size = 8M
 innodb_flush_log_at_trx_commit = 1
 innodb_lock_wait_timeout = 50
+
+# NEW redo log configuration (replaces log_file_size + files_in_group)
+innodb_redo_log_capacity       = 128M
+
+# MyISAM (legacy, minimal)
+key_buffer_size                = 8M
 
 [mysqldump]
 quick
@@ -574,25 +646,37 @@ sort_buffer_size = 20M
 read_buffer_size = 2M
 write_buffer_size = 2M
 
-[mysqlhotcopy]
-interactive-timeout
 
 ${MySQLMAOpt}
 EOF
 
     MySQL_Opt
     if [ -d "${MySQL_Data_Dir}" ]; then
-        rm -rf ${MySQL_Data_Dir}/*
+        rm -rf ${MySQL_Data_Dir}
+        mkdir -p ${MySQL_Data_Dir}
     else
         mkdir -p ${MySQL_Data_Dir}
     fi
     chown -R mysql:mysql /usr/local/mysql/
     /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir=${MySQL_Data_Dir} --user=mysql
     chown -R mysql:mysql ${MySQL_Data_Dir}
-
+    
+    rm -rf /etc/systemd/system/mysql.service
+    rm -rf /etc/systemd/system/mysqld.service
+    # compiled mysql provides systemd service file
+    # binary package only provides mysql.server init script, therefore we copy our own service file
+    if [ -s /usr/local/mysql/lib/systemd/system/mysqld.service ]; then
+        \cp /usr/local/mysql/lib/systemd/system/mysqld.service /etc/systemd/system/mysql.service
+    elif [ -s /usr/local/mysql/usr/lib/systemd/system/mysqld.service ]; then
+        \cp /usr/local/mysql/usr/lib/systemd/system/mysqld.service /etc/systemd/system/mysql.service
+    else
+        \cp ${cur_dir}/init.d/mysql.service8.0 /etc/systemd/system/mysql.service
+    fi
+    ln -sf /etc/systemd/system/mysql.service /etc/systemd/system/mysqld.service
+    systemctl daemon-reload
+    
     cat > /etc/ld.so.conf.d/mysql.conf<<EOF
 /usr/local/mysql/lib
-/usr/local/lib
 EOF
 
     ldconfig
@@ -602,22 +686,35 @@ EOF
 
 Upgrade_MySQL84()
 {
+    rm -f /etc/my.cnf
     if [ "${Bin}" = "y" ]; then
-        Echo_Blue "Starting upgrade MySQL ${mysql_version} Using Generic Binaries..."
-        Tar_Cd ${mysql_src}
+        Echo_Blue "[+] Installing ${Mysql_Ver} Using Generic Binaries..."
+        if [ -d ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH} ]; then
+            rm -rf ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}
+        fi
+        Tar_Cd ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
         mkdir /usr/local/mysql
-        mv mysql-${mysql_version}-linux-glibc2.17-${DB_ARCH}/* /usr/local/mysql/
+        mv ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}/* /usr/local/mysql/
     else
-        Echo_Blue "Starting upgrade MySQL ${mysql_version} Using Source code..."
-        Tar_Cd ${mysql_src} mysql-${mysql_version}
-        Install_Boost
-        mkdir build && cd build
-        cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/mysql -DSYSCONFDIR=/etc -DWITH_MYISAM_STORAGE_ENGINE=1 -DWITH_INNOBASE_STORAGE_ENGINE=1 -DWITH_PARTITION_STORAGE_ENGINE=1 -DWITH_FEDERATED_STORAGE_ENGINE=1 -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 ${MySQL_WITH_BOOST}
+        Echo_Blue "[+] Installing ${Mysql_Ver} Using Source code..."
+        if [ -d ${Mysql_Ver} ]; then
+            rm -rf ${Mysql_Ver}
+        fi
+        Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
+        mkdir -p mysql-build && cd mysql-build
+        cmake .. \
+        -DCMAKE_INSTALL_PREFIX=/usr/local/mysql \
+        -DSYSCONFDIR=/etc \
+        -DWITH_MYISAM_STORAGE_ENGINE=1 \
+        -DWITH_INNOBASE_STORAGE_ENGINE=1 \
+        -DWITH_FEDERATED_STORAGE_ENGINE=1 \
+        -DDEFAULT_CHARSET=utf8mb4 \
+        -DDEFAULT_COLLATION=utf8mb4_general_ci \
+        -DENABLED_LOCAL_INFILE=1 \
+        -DWITH_SYSTEMD=1 
+        
         Make_Install
     fi
-
-    groupadd mysql
-    useradd -s /sbin/nologin -M -g mysql mysql
 
 cat > /etc/my.cnf<<EOF
 [client]
@@ -626,44 +723,64 @@ port        = 3306
 socket      = /tmp/mysql.sock
 
 [mysqld]
+# basic settings
 port        = 3306
 socket      = /tmp/mysql.sock
 datadir = ${MySQL_Data_Dir}
-skip-external-locking
-key_buffer_size = 16M
+log_error = ${MySQL_Data_Dir}/mysqld.err
+pid-file = ${MySQL_Data_Dir}/mysqld.pid
+
+# Network / buffers
 max_allowed_packet = 1M
-table_open_cache = 64
 sort_buffer_size = 512K
 net_buffer_length = 8K
 read_buffer_size = 256K
 read_rnd_buffer_size = 512K
 myisam_sort_buffer_size = 8M
-thread_cache_size = 8
 tmp_table_size = 16M
-performance_schema_max_table_instances = 500
 
 explicit_defaults_for_timestamp = true
-#skip-networking
+
+# connections
 max_connections = 500
 max_connect_errors = 100
-open_files_limit = 65535
-mysql_native_password=ON
+open_files_limit = 10000
+table_open_cache       = 1024
+thread_cache_size      = 32
 
+# MyISAM (legacy, keep minimal)
+key_buffer_size                = 8M
+
+# Character set / auth
+# mysql_native_password  = ON
+# (recommended long term: remove this and migrate users to caching_sha2_password)
+
+# Binary logging
 log-bin=mysql-bin
-binlog_format=mixed
+# binlog_format deprecated since mysql 8.4
+#binlog_format=mixed
 server-id   = 1
 binlog_expire_logs_seconds = 864000
-early-plugin-load = ""
 
+# Performance Schema
+performance_schema = ON
+performance_schema_max_table_instances = 500
+
+# Default engine
 default_storage_engine = InnoDB
+
+innodb_file_per_table = 1
 innodb_data_home_dir = ${MySQL_Data_Dir}
 innodb_data_file_path = ibdata1:10M:autoextend
 innodb_log_group_home_dir = ${MySQL_Data_Dir}
 innodb_buffer_pool_size = 16M
-innodb_log_file_size = 5M
+#innodb_log_file_size = 5M (deprecated since mysql 8.4)
 innodb_log_buffer_size = 8M
 innodb_flush_log_at_trx_commit = 1
 innodb_lock_wait_timeout = 50
+
+# NEW redo log configuration (replaces log_file_size + files_in_group)
+innodb_redo_log_capacity       = 128M
 
 [mysqldump]
 quick
@@ -673,30 +790,44 @@ max_allowed_packet = 16M
 no-auto-rehash
 
 [myisamchk]
-key_buffer_size = 20M
-sort_buffer_size = 20M
-read_buffer_size = 2M
-write_buffer_size = 2M
+key_buffer_size = 8M
+sort_buffer_size = 8M
+read_buffer_size = 1M
+write_buffer_size = 1M
 
-[mysqlhotcopy]
-interactive-timeout
 
 ${MySQLMAOpt}
 EOF
 
     MySQL_Opt
     if [ -d "${MySQL_Data_Dir}" ]; then
-        rm -rf ${MySQL_Data_Dir}/*
+        rm -rf ${MySQL_Data_Dir}
+        mkdir -p ${MySQL_Data_Dir}
     else
         mkdir -p ${MySQL_Data_Dir}
     fi
     chown -R mysql:mysql /usr/local/mysql/
+    echo "Initializing MySQL data directory..."
     /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir=${MySQL_Data_Dir} --user=mysql
     chown -R mysql:mysql ${MySQL_Data_Dir}
 
+    rm -rf /etc/systemd/system/mysql.service
+    rm -rf /etc/systemd/system/mysqld.service
+    # compiled mysql provides systemd service file
+    # binary package only provides mysql.server init script, therefore we copy our own service file
+    echo "Setting up MySQL systemd service..."
+    if [ -s /usr/local/mysql/lib/systemd/system/mysqld.service ]; then
+        \cp /usr/local/mysql/lib/systemd/system/mysqld.service /etc/systemd/system/mysql.service
+    elif [ -s /usr/local/mysql/usr/lib/systemd/system/mysqld.service ]; then
+        \cp /usr/local/mysql/usr/lib/systemd/system/mysqld.service /etc/systemd/system/mysql.service
+    else
+        \cp ${cur_dir}/init.d/mysql.service8.4 /etc/systemd/system/mysql.service
+    fi
+    ln -sf /etc/systemd/system/mysql.service /etc/systemd/system/mysqld.service
+    systemctl daemon-reload
+
     cat > /etc/ld.so.conf.d/mysql.conf<<EOF
 /usr/local/mysql/lib
-/usr/local/lib
 EOF
 
     ldconfig
@@ -707,21 +838,19 @@ EOF
 Restore_Start_MySQL()
 {
     chgrp -R mysql /usr/local/mysql/.
-    \cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysql
-    chmod 755 /etc/init.d/mysql
-
     ldconfig
-
     MySQL_Sec_Setting
-    /etc/init.d/mysql start
 
     echo "Restore backup databases..."
+    echo "Starting MySQL..."
+    systemctl start mysql
+    echo "Starting importing..."
     /usr/local/mysql/bin/mysql --defaults-file=~/.my.cnf < /root/mysql_all_backup${Upgrade_Date}.sql
     echo "Repair databases..."
     MySQL_Ver_Com=$(${cur_dir}/include/version_compare 8.0.16 ${mysql_version})
     if [ "${MySQL_Ver_Com}" != "1" ]; then
-        /etc/init.d/mysql stop
-        echo "Upgring MySQL..."
+        systemctl stop mysql
+        echo "Upgrading MySQL..."
         /usr/local/mysql/bin/mysqld --user=mysql --upgrade=FORCE &
         echo "Waiting for upgrade to start..."
         sleep 180
@@ -730,12 +859,12 @@ Restore_Start_MySQL()
         /usr/local/mysql/bin/mysql_upgrade -u root -p${DB_Root_Password}
     fi
 
-    /etc/init.d/mysql stop
+    systemctl stop mysql
     TempMycnf_Clean
     cd ${cur_dir} && rm -rf ${cur_dir}/src/mysql-${mysql_version}
 
     lnmp start
-    if [[ -s /usr/local/mysql/bin/mysql && -s /usr/local/mysql/bin/mysqld_safe && -s /etc/my.cnf ]]; then
+    if [[ -s /usr/local/mysql/bin/mysql && -s /etc/my.cnf ]]; then
         Echo_Green "======== upgrade MySQL completed ======"
     else
         Echo_Red "======== upgrade MySQL failed ======"
@@ -758,8 +887,9 @@ Upgrade_MySQL()
     mysql_version=""
     echo "Current MYSQL Version:${cur_mysql_version}"
     echo "You can get version number from http://dev.mysql.com/downloads/mysql/"
+    echo "We only support upgrade MySQL to 8.0.x and 8.4.x"
     Echo_Yellow "Please input MySQL Version you want."
-    read -p "(example: 5.5.60 ): " mysql_version
+    read -p "(example: 8.4.7 ): " mysql_version
     if [ "${mysql_version}" = "" ]; then
         echo "Error: You must input MySQL Version!!"
         exit 1
@@ -767,6 +897,14 @@ Upgrade_MySQL()
 
     if [ "${mysql_version}" == "${cur_mysql_version}" ]; then
         echo "Error: The upgrade MYSQL Version is the same as the old Version!!"
+        exit 1
+    fi
+
+    if echo "${mysql_version}" | grep -Eqi '^(8\.0\.|8\.4\.)';then
+        echo "You will upgrade MySQL to version:$mysql_version"
+    else
+        Echo_Red "Error: You input MySQL Version was:${mysql_version}"
+        Echo_Red "We only support to upgrade MySQL to 8.0.x and 8.4.x"
         exit 1
     fi
 
@@ -805,30 +943,34 @@ Upgrade_MySQL()
     else
         Bin="n"
     fi
+    if [ "${Bin}" != "y" ] ; then
+        #do you want to install the InnoDB Storage Engine?
+        echo "==========================="
 
-    #do you want to install the InnoDB Storage Engine?
-    echo "==========================="
-
-    InstallInnodb="y"
-    Echo_Yellow "Do you want to install the InnoDB Storage Engine?"
-    read -p "(Default yes,if you want please enter: y , if not please enter: n): " InstallInnodb
-
-    case "${InstallInnodb}" in
-    [yY][eE][sS]|[yY])
-        echo "You will install the InnoDB Storage Engine"
         InstallInnodb="y"
-        ;;
-    [nN][oO]|[nN])
-        echo "You will NOT install the InnoDB Storage Engine!"
-        InstallInnodb="n"
-        ;;
-    *)
-        echo "No input, The InnoDB Storage Engine will enable."
-        InstallInnodb="y"
-        ;;
-    esac
+        Echo_Yellow "Do you want to install the InnoDB Storage Engine?"
+        read -p "(Default yes,if you want please enter: y , if not please enter: n): " InstallInnodb
+
+        case "${InstallInnodb}" in
+        [yY][eE][sS]|[yY])
+            echo "You will install the InnoDB Storage Engine"
+            InstallInnodb="y"
+           ;;
+        [nN][oO]|[nN])
+            echo "You will NOT install the InnoDB Storage Engine!"
+           InstallInnodb="n"
+           ;;
+        *)
+            echo "No input, The InnoDB Storage Engine will enable."
+           InstallInnodb="y"
+           ;;
+        esac
+    fi
 
     mysql_short_version=$(echo ${mysql_version} | cut -d. -f1-2)
+    if [ ${mysql_version} != '' ]; then
+        Mysql_Ver=mysql-${mysql_version}
+    fi
 
     echo "=================================================="
     echo "You will upgrade MySQL Version to ${mysql_version}"
@@ -850,18 +992,13 @@ Upgrade_MySQL()
     echo "============================check files=================================="
     cd ${cur_dir}/src
     if [[ "${Bin}" = "y" && "${mysql_short_version}" = "8.0" ]]; then
-        [[ "${DB_ARCH}" = "aarch64" ]] && mysql8_glibc_ver="2.17" || mysql8_glibc_ver="2.12"
-        mysql_src="mysql-${mysql_version}-linux-glibc${mysql8_glibc_ver}-${DB_ARCH}.tar.xz"
+        mysql_src="mysql-${mysql_version}-linux-glibc2.28-${DB_ARCH}.tar.xz"
     elif [[ "${Bin}" = "y" && "${mysql_short_version}" = "8.4" ]]; then
-        mysql_src="mysql-${mysql_version}-linux-glibc2.17-${DB_ARCH}.tar.xz"
+        mysql_src="mysql-${mysql_version}-linux-glibc2.28-${DB_ARCH}.tar.xz"
     elif [[ "${Bin}" = "y" && "${mysql_short_version}" =~ ^5\.[5-7]$ ]]; then
         mysql_src="mysql-${mysql_version}-linux-glibc2.12-${DB_ARCH}.tar.gz"
     else
-        if [[ "${mysql_short_version}" = "5.7" || "${mysql_short_version}" = "8.0" ]]; then
-            mysql_src="mysql-boost-${mysql_version}.tar.gz"
-        else
             mysql_src="mysql-${mysql_version}.tar.gz"
-        fi
     fi
     if [ -s "${mysql_src}" ]; then
         echo "${mysql_src} [found]"
@@ -880,6 +1017,7 @@ Upgrade_MySQL()
         fi
     fi
     Check_Openssl
+    DB_BIN_Opt
     if [ "${Bin}" != "y" ]; then
         Echo_Blue "Install dependent packages..."
         . ${cur_dir}/include/only.sh
@@ -888,18 +1026,13 @@ Upgrade_MySQL()
     echo "============================check files=================================="
 
     Backup_MySQL
-    if [ "${mysql_short_version}" = "5.1" ]; then
-        Upgrade_MySQL51
-    elif [ "${mysql_short_version}" = "5.5" ]; then
-        Upgrade_MySQL55
-    elif [ "${mysql_short_version}" = "5.6" ]; then
-        Upgrade_MySQL56
-    elif [ "${mysql_short_version}" = "5.7" ]; then
-        Upgrade_MySQL57
-    elif [ "${mysql_short_version}" = "8.0" ]; then
+    if [ "${mysql_short_version}" = "8.0" ]; then
         Upgrade_MySQL80
     elif [ "${mysql_short_version}" = "8.4" ]; then
         Upgrade_MySQL84
+    else
+        Echo_Red "We only support to upgrade MySQL to 8.0.x and 8.4.x"
+        exit 1
     fi
     Restore_Start_MySQL
 }

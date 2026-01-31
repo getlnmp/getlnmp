@@ -15,13 +15,21 @@ Upgrade_Nginx()
     Nginx_Version=""
     echo "Current Nginx Version:${Cur_Nginx_Version}"
     echo "You can get version number from https://nginx.org/en/download.html"
-    read -p "Please enter nginx version you want, (example: 1.20.2): " Nginx_Version
+    echo "Nginx version format must be like: 1.22.1, 1.23.3, 1.24.0, 1.28.1 etc"
+    echo "Minor version (the middle number) must be 22 or higher."
+    read -p "Please enter nginx version you want, (example: 1.28.1): " Nginx_Version
     if [ "${Nginx_Version}" = "" ]; then
         echo "Error: You must enter a nginx version!!"
         exit 1
     fi
+    Nginx_Second_Digit="${Nginx_Version#*.}"
+    Nginx_Second_Digit="${Nginx_Second_Digit%%.*}"
+    if [ "${Nginx_Second_Digit}" -lt 22 ]; then
+        echo "Error: Nginx version must be 1.22.0 or higher and in correct format!!"
+        exit 1
+    fi
     echo "+---------------------------------------------------------+"
-    echo "|        You will upgrade nginx version to ${Nginx_Version}         |"
+    echo "|    You will upgrade nginx version to ${Nginx_Version}   |"
     echo "|   YOU MAY NEED TO MODIFY YOUR NGINX.CONF AFTER UPGRADE  |"  
     echo "+---------------------------------------------------------+"
 
@@ -46,25 +54,51 @@ Upgrade_Nginx()
     echo "============================check files=================================="
 
     Install_Nginx_Openssl
-    Install_Nginx_Pcre
+    Install_Nginx_Pcre2
     Install_Nginx_Lua
     Install_Ngx_FancyIndex
     rm -rf nginx-${Nginx_Version}
     Tar_Cd nginx-${Nginx_Version}.tar.gz nginx-${Nginx_Version}
     Get_Dist_Version
-    if [[ "${DISTRO}" = "Fedora" && ${Fedora_Version} -ge 28 ]]; then
-        patch -p1 < ${cur_dir}/src/patch/nginx-libxcrypt.patch
-    fi
     Nginx_Ver_Com=$(${cur_dir}/include/version_compare 1.14.2 ${Nginx_Version})
     if gcc -dumpversion|grep -q "^[8]" && [ "${Nginx_Ver_Com}" == "1" ]; then
         patch -p1 < ${cur_dir}/src/patch/nginx-gcc8.patch
     fi
-    Nginx_Ver_Com=$(${cur_dir}/include/version_compare 1.9.4 ${Nginx_Version})
-    if [[ "${Nginx_Ver_Com}" == "0" ||  "${Nginx_Ver_Com}" == "1" ]]; then
-        ./configure --user=www --group=www --prefix=/usr/local/nginx --with-http_stub_status_module --with-http_ssl_module --with-http_spdy_module --with-http_gzip_static_module --with-ipv6 --with-http_sub_module --with-http_realip_module ${Nginx_With_Openssl} ${Nginx_With_Pcre} ${Nginx_Module_Lua} ${NginxMAOpt} ${Ngx_FancyIndex} ${Nginx_Modules_Options}
-    else
-        ./configure --user=www --group=www --prefix=/usr/local/nginx --with-http_stub_status_module --with-http_ssl_module --with-http_v2_module --with-http_v3_module --with-http_gzip_static_module --with-http_sub_module --with-stream --with-stream_ssl_module --with-stream_ssl_preread_module --with-http_realip_module ${Nginx_With_Openssl} ${Nginx_With_Pcre} ${Nginx_Module_Lua} ${NginxMAOpt} ${Ngx_FancyIndex} ${Nginx_Modules_Options}
-    fi
+    echo "Starting configure nginx..."
+    ./configure \
+        --user=www \
+        --group=www \
+        --prefix=/usr/local/nginx \
+        --with-compat \
+        --with-file-aio \
+        --with-threads \
+        --with-http_addition_module \
+        --with-http_auth_request_module \
+        --with-http_gunzip_module \
+        --with-http_gzip_static_module \
+        --with-http_sub_module \
+        --with-http_random_index_module \
+        --with-http_realip_module \
+        --with-http_secure_link_module \
+        --with-http_slice_module \
+        --with-http_ssl_module \
+        --with-http_stub_status_module \
+        --with-http_sub_module \
+        --with-http_v2_module \
+        --with-http_v3_module \
+        --with-stream \
+        --with-stream_realip_module \
+        --with-stream_ssl_module \
+        --with-stream_ssl_preread_module \
+        ${Nginx_With_Openssl} \
+        ${Nginx_With_Pcre} \
+        ${Nginx_Module_Lua} \
+        ${NginxMAOpt} \
+        ${Ngx_FancyIndex} \
+        ${Nginx_Modules_Options} \
+        --with-ld-opt='-Wl,-z,relro -Wl,-z,now -pie' \
+        --with-cc-opt="-O2 -g -fstack-protector-strong -Wp,-D_FORTIFY_SOURCE=2 -fPIC"
+        
     make -j"$(nproc)"
     if [ $? -ne 0 ]; then
         make
@@ -95,11 +129,10 @@ Upgrade_Nginx()
         Echo_Red "Error: Nginx upgrade failed."
     fi
 
-    ## start cleaning
+   ## cleaning
     cd ${cur_dir}/src && rm -rf ${cur_dir}/src/${Nginx_Ver}
-    [[ -d "${Openssl_3_Ver}" ]] && rm -rf ${Openssl_3_Ver}
-    [[ -d "${Openssl_New_Ver}" ]] && rm -rf ${Openssl_New_Ver}
-    [[ -d "${Openssl_Ver}" ]] && rm -rf ${Openssl_Ver}
+    [[ -d "${Custom_Openssl_Ver}" ]] && rm -rf ${Custom_Openssl_Ver}
+    [[ -d "${Pcre2_Ver}" ]] &&rm -rf ${Pcre2_Ver}
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
         rm -rf ${cur_dir}/src/luajit
         rm -rf ${LuaNginxModule}
@@ -108,4 +141,5 @@ Upgrade_Nginx()
         rm -rf ${LuaRestyLrucache}
     fi
     [[ -d "${NgxFancyIndex_Ver}" ]] && rm -rf ${NgxFancyIndex_Ver}
+
 }

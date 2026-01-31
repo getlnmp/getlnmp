@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+Compile_Redis() {
+    Get_OS_Bit
+    if [ "${Is_ARM}" = "y" ]; then
+            sed -i 's/FINAL_LIBS=-lm/FINAL_LIBS=-lm -latomic/' src/Makefile
+    fi
+    # cd "${cur_dir}/src/${Redis_Stable_Ver}" || return
+    # Export the recommended build environment variables
+    export BUILD_TLS=yes BUILD_WITH_MODULES=yes INSTALL_RUST_TOOLCHAIN=yes DISABLE_WERRORS=yes
+    
+    # Compile Redis using all available CPU cores (-j "$(nproc)")
+    make -j"$(nproc)" all
+    #make test || echo " Redis Tests failed, continuing..."
+
+    # Unset environment variables to avoid leakage
+    unset BUILD_TLS BUILD_WITH_MODULES INSTALL_RUST_TOOLCHAIN DISABLE_WERRORS
+}
+
 
 Install_Redis()
 {
@@ -23,21 +40,25 @@ Install_Redis()
         Download_Files https://download.redis.io/releases/${Redis_Stable_Ver}.tar.gz ${Redis_Stable_Ver}.tar.gz
         Tar_Cd ${Redis_Stable_Ver}.tar.gz ${Redis_Stable_Ver}
 
-        Get_OS_Bit
-        if [ "${Is_ARM}" = "y" ]; then
-            sed -i 's/FINAL_LIBS=-lm/FINAL_LIBS=-lm -latomic/' src/Makefile
-        fi
-        if [[ "${Is_64bit}" = "y" || "${Is_ARM}" = "y" ]]; then
-            make PREFIX=/usr/local/redis install
-        else
-            make CFLAGS="-march=i686" PREFIX=/usr/local/redis install
-        fi
+        # compile redis
+        Compile_Redis
+        # Use the PREFIX variable to specify the custom installation path
+        # This tells 'make install' where to place the binaries and script files
+        make PREFIX=/usr/local/redis install
+        
+        #if [[ "${Is_64bit}" = "y" || "${Is_ARM}" = "y" ]]; then
+        #    make PREFIX=/usr/local/redis install
+        #else
+        #    make CFLAGS="-march=i686" PREFIX=/usr/local/redis install
+        #fi
+
         mkdir -p /usr/local/redis/etc/
         \cp redis.conf  /usr/local/redis/etc/
-        sed -i 's/daemonize no/daemonize yes/g' /usr/local/redis/etc/redis.conf
+        #sed -i 's/daemonize no/daemonize yes/g' /usr/local/redis/etc/redis.conf
         if ! grep -Eqi '^bind[[:space:]]*127.0.0.1' /usr/local/redis/etc/redis.conf; then
             sed -i 's/^# bind 127.0.0.1/bind 127.0.0.1/g' /usr/local/redis/etc/redis.conf
         fi
+        sed -i 's/^# supervised auto/supervised auto/' /usr/local/redis/etc/redis.conf
         sed -i 's#^pidfile /var/run/redis_6379.pid#pidfile /var/run/redis.pid#g' /usr/local/redis/etc/redis.conf
         cd ../
         rm -rf ${cur_dir}/src/${Redis_Stable_Ver}
@@ -84,9 +105,9 @@ Install_Redis()
 extension = "redis.so"
 EOF
 
-    \cp ${cur_dir}/init.d/init.d.redis /etc/init.d/redis
+    #\cp ${cur_dir}/init.d/init.d.redis /etc/init.d/redis
     \cp ${cur_dir}/init.d/redis.service /etc/systemd/system/redis.service
-    chmod +x /etc/init.d/redis
+    #chmod +x /etc/init.d/redis
     echo "Add to auto startup..."
     StartUp redis
     Restart_PHP

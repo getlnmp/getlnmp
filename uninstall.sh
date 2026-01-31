@@ -10,7 +10,7 @@ fi
 cur_dir=$(pwd)
 Stack=$1
 
-LNMP_Ver='2.0'
+LNMP_Ver='1.0'
 
 . lnmp.conf
 . include/main.sh
@@ -22,7 +22,7 @@ Get_Dist_Name
 
 clear
 echo "+------------------------------------------------------------------------+"
-echo "|     LNMP V${LNMP_Ver} for ${DISTRO} Linux Server, Written by Licess    |"
+echo "|   GetLNMP V${LNMP_Ver} for ${DISTRO} Linux Server, Written by Licess   |"
 echo "+------------------------------------------------------------------------+"
 echo "|        A tool to auto-compile & install Nginx+MySQL+PHP on Linux       |"
 echo "+------------------------------------------------------------------------+"
@@ -43,7 +43,7 @@ Sleep_Sec()
 
 Uninstall_LNMP()
 {
-    echo "Stoping LNMP..."
+    echo "Stopping LNMP..."
     lnmp kill
     lnmp stop
 
@@ -98,7 +98,7 @@ Uninstall_LNMP()
 
 Uninstall_LNMPA()
 {
-    echo "Stoping LNMPA..."
+    echo "Stopping LNMPA..."
     lnmp kill
     lnmp stop
     
@@ -141,7 +141,7 @@ Uninstall_LNMPA()
 
 Uninstall_LAMP()
 {
-    echo "Stoping LAMP..."
+    echo "Stopping LAMP..."
     lnmp kill
     lnmp stop
 

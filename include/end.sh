@@ -35,6 +35,139 @@ Add_Iptables_Rules()
     fi
 }
 
+Add_Firewall_Rules() {
+    Get_Managemanet_IP
+    if [ "${PM}" = "apt" ]; then
+        Apply_Firewalld
+    elif [ "${PM}" = "yum" ]; then
+        Apply_UFW
+    else
+        echo "Error: Unsupported OS. Script supports RHEL-family or Debian-family only."
+        exit 1
+    fi    
+}
+
+Get_Managemanet_IP() {
+    # --- CONFIGURATION: AUTO-DETECT IP ---
+    # This block attempts to find the IP you are SSHing from.
+    # It tries SSH_CLIENT first, then falls back to 'who am i'.
+
+    # 1. Try environment variable (works if sudo -E is used)
+    DETECTED_IP=$(echo $SSH_CLIENT | awk '{print $1}')
+
+    # 2. If empty, try 'who am i' (works in standard sudo)
+    if [[ -z "$DETECTED_IP" ]]; then
+        DETECTED_IP=$(who am i | awk '{print $NF}' | tr -d '()')
+    fi
+
+    # 3. Validation: Ensure it looks like an IP (simple check)
+    if [[ "$DETECTED_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        MANAGEMENT_IPS="$DETECTED_IP"
+        echo "-> Auto-detected Management IP: $MANAGEMENT_IPS"
+    else
+        MANAGEMENT_IPS=""
+        echo "-> Warning: Could not detect SSH IP. Management whitelist will be disabled."
+        echo "   (This is normal if you are on the console/KVM, not SSH)"
+    fi
+}
+
+Apply_Firewalld() {
+    echo "--- Configuring Firewalld (RHEL/Rocky/Alma) ---"
+
+    # Ensure firewalld is installed (just in case it's a minimal cloud image)
+    if ! command -v firewall-cmd &> /dev/null; then
+        echo "Firewalld not found. Installing..."
+        dnf install -y firewalld
+    fi
+
+    # Enable and Start
+    systemctl enable --now firewalld
+
+    # Default zone: public
+    firewall-cmd --set-default-zone=public
+
+    # --- Management IPs (Trusted Zone) ---
+    if [[ -n "$MANAGEMENT_IPS" ]]; then
+        for ip in $MANAGEMENT_IPS; do
+            echo "Whitelisting Management IP: $ip"
+            firewall-cmd --permanent --zone=trusted --add-source="$ip"
+        done
+    fi
+
+    # --- Standard Rules ---
+    # Note: Loopback & Established connections are handled automatically by firewalld core.
+
+    # Rules 3, 4, 5: Allow SSH, HTTP, HTTPS
+    echo "Opening SSH, HTTP, HTTPS..."
+    firewall-cmd --permanent --add-service=ssh
+    firewall-cmd --permanent --add-service=http
+    firewall-cmd --permanent --add-service=https
+
+    # Rule 6: Explicitly Drop MySQL (3306)
+    # We remove the port first (in case it was added previously) then add a rich rule to reject it.
+    firewall-cmd --permanent --remove-port=3306/tcp &> /dev/null
+    firewall-cmd --permanent --add-rich-rule='rule family="ipv4" port port="3306" protocol="tcp" reject'
+    firewall-cmd --permanent --add-rich-rule='rule family="ipv6" port port="3306" protocol="tcp" reject'
+
+    # Rule 7: Ensure ICMP (Ping) is allowed
+    firewall-cmd --permanent --remove-icmp-block=echo-request &> /dev/null
+
+    # Reload to apply changes
+    echo "Reloading Firewall..."
+    firewall-cmd --reload
+    echo "[SUCCESS] Firewalld configured."    
+}
+
+Apply_UFW() {
+    echo "--- Configuring UFW (Debian/Ubuntu) ---"
+
+    # Check if UFW is installed
+    if ! command -v ufw &> /dev/null; then
+        echo "UFW not found. Installing..."
+        apt-get update
+        apt-get install -y ufw
+    fi
+
+    # Reset UFW to ensure a clean slate (User iptables rules implied a specific state)
+    echo "Resetting UFW rules..."
+    ufw --force reset
+
+    # --- Management IPs ---
+    if [[ -n "$MANAGEMENT_IPS" ]]; then
+        for ip in $MANAGEMENT_IPS; do
+            echo "Whitelisting Management IP: $ip"
+            ufw allow from "$ip"
+        done
+    fi
+
+    # --- Standard Rules ---
+    # Default Policies (Drop Incoming, Allow Outgoing)
+    # This covers your IPTables Rule 2 (Established) automatically.
+    ufw default deny incoming
+    ufw default allow outgoing
+
+    # Rule 3, 4, 5: Allow SSH, HTTP, HTTPS
+    echo "Opening SSH, HTTP, HTTPS..."
+    ufw allow ssh
+    ufw allow 80/tcp
+    ufw allow 443/tcp
+
+    # Rule 6: Drop MySQL (3306)
+    # Explicitly deny 3306.
+    ufw deny 3306/tcp
+
+    # Rule 7: ICMP
+    # UFW allows ping by default via /etc/ufw/before.rules configuration.
+    # Allow ping
+    sed -i 's/^-A ufw-before-input -p icmp --icmp-type echo-request -j DROP/-A ufw-before-input -p icmp --icmp-type echo-request -j ACCEPT/' \
+        /etc/ufw/before.rules || true
+
+    # Enable Firewall (force 'yes' to confirmation prompts)
+    echo "Enabling UFW..."
+    ufw --force enable   
+    echo "[SUCCESS] UFW configured."    
+}
+
 Add_LNMP_Startup()
 {
     echo "Add Startup and Starting LNMP..."
@@ -42,21 +175,16 @@ Add_LNMP_Startup()
     chmod +x /bin/lnmp
     StartUp nginx
     StartOrStop start nginx
-    if [[ "${DBSelect}" =~ ^([6789]|10)$ ]]; then
+    if [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
         StartUp mariadb
         StartOrStop start mariadb
-        sed -i 's#/etc/init.d/mysql#/etc/init.d/mariadb#' /bin/lnmp
-    elif [[ "${DBSelect}" =~ ^([12345]|11)$ ]]; then
+       # sed -i 's#/etc/init.d/mysql#/etc/init.d/mariadb#' /bin/lnmp
+    elif [[ "${DBSelect}" =~ [1-5]$ ]]; then
         StartUp mysql
         StartOrStop start mysql
-    elif [ "${DBSelect}" = "0" ]; then
-        sed -i 's#/etc/init.d/mysql.*##' /bin/lnmp
     fi
     StartUp php-fpm
     StartOrStop start php-fpm
-    if [ "${PHPSelect}" = "1" ]; then
-        sed -i 's#/usr/local/php/var/run/php-fpm.pid#/usr/local/php/logs/php-fpm.pid#' /bin/lnmp
-    fi
 }
 
 Add_LNMPA_Startup()
@@ -66,15 +194,12 @@ Add_LNMPA_Startup()
     chmod +x /bin/lnmp
     StartUp nginx
     StartOrStop start nginx
-    if [[ "${DBSelect}" =~ ^([6789]|10)$ ]]; then
+    if [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
         StartUp mariadb
         StartOrStop start mariadb
-        sed -i 's#/etc/init.d/mysql#/etc/init.d/mariadb#' /bin/lnmp
-    elif [[ "${DBSelect}" =~ ^([12345]|11)$ ]]; then
+    elif [[ "${DBSelect}" =~ ^[1-5]$ ]]; then
         StartUp mysql
         StartOrStop start mysql
-    elif [ "${DBSelect}" = "0" ]; then
-        sed -i 's#/etc/init.d/mysql.*##' /bin/lnmp
     fi
     StartUp httpd
     StartOrStop start httpd
@@ -87,15 +212,12 @@ Add_LAMP_Startup()
     chmod +x /bin/lnmp
     StartUp httpd
     StartOrStop start httpd
-    if [[ "${DBSelect}" =~ ^([6789]|10)$ ]]; then
+    if [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
         StartUp mariadb
         StartOrStop start mariadb
-        sed -i 's#/etc/init.d/mysql#/etc/init.d/mariadb#' /bin/lnmp
-    elif [[ "${DBSelect}" =~ ^([12345]|11)$ ]]; then
+    elif [[ "${DBSelect}" =~ ^[1-5]$ ]]; then
         StartUp mysql
         StartOrStop start mysql
-    elif [ "${DBSelect}" = "0" ]; then
-        sed -i 's#/etc/init.d/mysql.*##' /bin/lnmp
     fi
 }
 
@@ -115,15 +237,15 @@ Check_Nginx_Files()
 Check_DB_Files()
 {
     isDB=""
-    if [[ "${DBSelect}" =~ ^([6789]|10)$ ]]; then
-        if [[ -s /usr/local/mariadb/bin/mysql && -s /usr/local/mariadb/bin/mysqld_safe && -s /etc/my.cnf ]]; then
+    if [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
+        if [[ -s /usr/local/mariadb/bin/mariadb && -s /etc/my.cnf ]]; then
             Echo_Green "MariaDB: OK"
             isDB="ok"
         else
             Echo_Red "Error: MariaDB install failed."
         fi
-    elif [[ "${DBSelect}" =~ ^([12345]|11)$ ]]; then
-        if [[ -s /usr/local/mysql/bin/mysql && -s /usr/local/mysql/bin/mysqld_safe && -s /etc/my.cnf ]]; then
+    elif [[ "${DBSelect}" =~ ^[1-5]$ ]]; then
+        if [[ -s /usr/local/mysql/bin/mysql && -s /etc/my.cnf ]]; then
             Echo_Green "MySQL: OK"
             isDB="ok"
         else
@@ -166,7 +288,7 @@ Check_Apache_Files()
         else
             Echo_Red "Error: Apache install failed."
         fi
-    elif [[ "${PHPSelect}" =~ ^1[1-4]$ ]]; then
+    elif [[ "${PHPSelect}" =~ ^1[1-5]$ ]]; then
         if [[ -s /usr/local/apache/bin/httpd && -s /usr/local/apache/modules/libphp.so && -s /usr/local/apache/conf/httpd.conf ]]; then
             Echo_Green "Apache: OK"
             isApache="ok"
@@ -186,15 +308,15 @@ Check_Apache_Files()
 Clean_DB_Src_Dir()
 {
     echo "Clean database src directory..."
-    if [[ "${DBSelect}" =~ ^([12345]|11)$ ]]; then
+    if [[ "${DBSelect}" =~ ^[1-5]$ ]]; then
         rm -rf ${cur_dir}/src/${Mysql_Ver}
-    elif [[ "${DBSelect}" =~ ^([6789]|10)$ ]]; then
+    elif [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
         rm -rf ${cur_dir}/src/${Mariadb_Ver}
     fi
-    if [[ "${DBSelect}" = "4" ]]; then
+    if [[ "${DBSelect}" = "3" ]]; then
         [[ -d "${cur_dir}/src/${Boost_Ver}" ]] && rm -rf ${cur_dir}/src/${Boost_Ver}
-    elif [[ "${DBSelect}" = "5" ]]; then
-        [[ -d "${cur_dir}/src/${Boost_New_Ver}" ]] && rm -rf ${cur_dir}/src/${Boost_New_Ver}
+    elif [[ "${DBSelect}" = "4" ]] || [[ "${DBSelect}" = "5" ]]; then
+        [[ -d "${cur_dir}/src/${Get_Boost_Ver}" ]] && rm -rf ${cur_dir}/src/${Get_Boost_Ver}
     fi
 }
 
@@ -227,7 +349,7 @@ Print_Sucess_Info()
 {
     Clean_Web_Src_Dir
     echo "+------------------------------------------------------------------------+"
-    echo "|      LNMP V${LNMP_Ver} for ${DISTRO} Linux Server, Written by Licess   |"
+    echo "|  GetLNMP V${GetLNMP_Ver} for ${DISTRO} Linux Server, Written by Licess |"
     echo "+------------------------------------------------------------------------+"
     echo "|         For more information please visit https://www.getlnmp.com      |"
     echo "+------------------------------------------------------------------------+"
@@ -253,7 +375,7 @@ Print_Sucess_Info()
     fi
     stop_time=$(date +%s)
     echo "Install lnmp takes $(((stop_time-start_time)/60)) minutes."
-    Echo_Green "Install lnmp V${LNMP_Ver} completed! enjoy it."
+    Echo_Green "Install GetLNMP V${GetLNMP_Ver} completed! enjoy it."
 }
 
 Print_Failed_Info()
@@ -262,8 +384,8 @@ Print_Failed_Info()
         rm -f /bin/lnmp
     fi
     Echo_Red "Sorry, Failed to install LNMP!"
-    Echo_Red "Please visit https://github.com/getlnmp/lnmp feedback errors and logs."
-    Echo_Red "You can download /root/lnmp-install.log from your server,and upload lnmp-install.log to LNMP Forum."
+    Echo_Red "Please visit https://github.com/getlnmp/getlnmp feedback errors and logs."
+    Echo_Red "You can download /root/getlnmp-install.log from your server,and upload getlnmp-install.log to GetLNMP github."
 }
 
 Check_LNMP_Install()

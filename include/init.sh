@@ -1,47 +1,41 @@
 #!/usr/bin/env bash
 
 Set_Timezone() {
-    Echo_Blue "Setting timezone..."
+    Echo_Blue "[+] Setting timezone to New York Time..."
     rm -rf /etc/localtime
     ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
 }
 
-CentOS_InstallNTP() {
-    if [ "${CheckMirror}" != "n" ]; then
-        if command -v ntpdate >/dev/null 2>&1; then
-            ntpdate -u pool.ntp.org
-        elif command -v chronyd >/dev/null 2>&1; then
-            chronyd -d -q "server pool.ntp.org iburst"
-        else
-            yum info ntpdate && check_ntp="y"
-            if [ "${check_ntp}" = "y" ]; then
-                Echo_Blue "[+] Installing ntp..."
-                yum install -y ntpdate
-                ntpdate -u pool.ntp.org
-            else
-                Echo_Blue "[+] Installing chrony..."
-                yum install chrony -y
-                chronyd -d -q "server pool.ntp.org iburst"
-            fi
+Sync_Time() {
+    if ! command -v chronyd >/dev/null 2>&1; then
+        Echo_Blue "[+] Installing chrony..."
+        if [ "$PM" = "yum" ]; then
+            yum install chrony -y
+        elif [ "$PM" = "apt" ]; then
+            apt-get update --allow-releaseinfo-change -y
+            apt-get install -y chrony
         fi
     fi
-    date
-    start_time=$(date +%s)
-}
-
-Deb_InstallNTP() {
-    if [ "${CheckMirror}" != "n" ]; then
-        apt-get update -y
-        [[ $? -ne 0 ]] && apt-get update --allow-releaseinfo-change -y
-        Echo_Blue "[+] Installing ntp..."
-        apt-get install -y ntpdate
-        ntpdate -u pool.ntp.org
+    Echo_Blue "[+] Syncing system time..."
+    # Check if chronyd is already running
+    if pidof chronyd >/dev/null 2>&1; then
+        # Use chronyc instead of starting another chronyd
+        if command -v chronyc >/dev/null 2>&1; then
+            echo "Forcing time sync via chronyc"
+            chronyc -a makestep
+            chronyc tracking
+        else
+            echo "chronyc not available"
+        fi
+    else
+        echo "chronyd not running, doing one-shot sync"
+        chronyd -d -q "server pool.ntp.org iburst"
     fi
     date
     start_time=$(date +%s)
 }
 
-CentOS_RemoveAMP() {
+RHEL_RemoveAMP() {
     Echo_Blue "[-] Yum remove packages..."
     rpm -qa | grep httpd
     rpm -e httpd httpd-tools --nodeps
@@ -122,6 +116,7 @@ Check_Hosts() {
     fi
 }
 
+# not suggest using centos repository for RHEL
 RHEL_Modify_Source() {
     Get_RHEL_Version
     if [ "${RHELRepo}" = "local" ]; then
@@ -294,22 +289,25 @@ CentOS8_Modify_Source() {
 }
 
 Modify_Source() {
-    if [ "${DISTRO}" = "RHEL" ]; then
-        if subscription-manager status; then
-            Echo_Blue "RHEL subscription exists on the system, skip setting up third-party sources."
-            Get_RHEL_Version
-            if echo "${RHEL_Version}" | grep -Eqi "^[89]"; then
-                subscription-manager repos --enable codeready-builder-for-rhel-${RHEL_Version}-${DB_ARCH}-rpms
-            fi
-        else
-            RHEL_Modify_Source
-        fi
-    elif [ "${DISTRO}" = "Ubuntu" ]; then
-        Ubuntu_Modify_Source
-    elif [ "${DISTRO}" = "CentOS" ]; then
-        CentOS6_Modify_Source
-        CentOS8_Modify_Source
-    fi
+#    if [ "${DISTRO}" = "RHEL" ]; then
+#        if subscription-manager status; then
+#            Echo_Blue "RHEL subscription exists on the system, skip setting up third-party sources."
+#            Get_RHEL_Version
+#            if echo "${RHEL_Version}" | grep -Eqi "^[89]"; then
+#                subscription-manager repos --enable codeready-builder-for-rhel-${RHEL_Version}-${DB_ARCH}-rpms
+#            fi
+#        else
+#            RHEL_Modify_Source
+#        fi
+#    elif [ "${DISTRO}" = "Ubuntu" ]; then
+#        Ubuntu_Modify_Source
+#    elif [ "${DISTRO}" = "CentOS" ]; then
+#        CentOS6_Modify_Source
+#        CentOS8_Modify_Source
+#    fi
+    echo ''
+    Echo_Red "Please update repository sources manually if needed."
+    echo ''
 }
 
 Check_PowerTools() {
@@ -320,22 +318,22 @@ Check_PowerTools() {
 }
 
 Check_Codeready() {
-    repo_id=$(yum repolist all | grep -E "CodeReady" | head -n 1 | awk '{print $1}')
-    [ -z "${repo_id}" ] && repo_id="ol8_codeready_builder"
+    repo_id=$(yum repolist all | grep -E "CRB" | head -n 1 | awk '{print $1}')
+#    [ -z "${repo_id}" ] && repo_id="ol8_codeready_builder"
 }
 
-CentOS_Dependent() {
+RHEL_Dependent() {
     if [ -s /etc/yum.conf ]; then
         \cp /etc/yum.conf /etc/yum.conf.lnmp
         sed -i 's:exclude=.*:exclude=:g' /etc/yum.conf
     fi
 
     Echo_Blue "[+] Yum installing dependent packages..."
-    for packages in make cmake gcc gcc-c++ gcc-g77 kernel-headers glibc-headers flex bison file libtool libtool-libs autoconf patch wget crontabs libjpeg libjpeg-devel libjpeg-turbo-devel libpng libpng-devel libpng10 libpng10-devel gd gd-devel libxml2 libxml2-devel zlib zlib-devel glib2 glib2-devel unzip tar bzip2 bzip2-devel libzip-devel libevent libevent-devel ncurses ncurses-devel curl curl-devel libcurl libcurl-devel e2fsprogs e2fsprogs-devel krb5 krb5-devel libidn libidn-devel openssl openssl-devel pcre-devel gettext gettext-devel ncurses-devel gmp-devel pspell-devel unzip libcap diffutils ca-certificates net-tools libc-client-devel psmisc libXpm-devel git-core c-ares-devel libicu-devel libxslt libxslt-devel xz expat-devel libaio-devel rpcgen libtirpc-devel perl cyrus-sasl-devel sqlite-devel oniguruma-devel lsof re2c pkg-config libarchive hostname ncurses-libs numactl-devel libxcrypt libwebp-devel gnutls-devel initscripts iproute libxcrypt-compat git; do yum -y install $packages; done
+    for packages in make cmake gcc gcc-c++ gcc-g77 kernel-headers glibc-headers glibc-devel flex bison file libtool libtool-libs autoconf patch wget crontabs libjpeg libjpeg-devel libjpeg-turbo-devel libpng libpng-devel libpng10 libpng10-devel gd gd-devel libxml2 libxml2-devel zlib zlib-devel glib2 glib2-devel unzip tar bzip2 bzip2-devel libzip-devel libevent libevent-devel ncurses ncurses-devel curl curl-devel libcurl libcurl-devel e2fsprogs e2fsprogs-devel krb5 krb5-devel libidn libidn-devel openssl openssl-devel pcre2-devel gettext gettext-devel ncurses-devel gmp-devel pspell-devel unzip libcap diffutils ca-certificates net-tools libc-client-devel psmisc libXpm-devel git-core c-ares-devel libicu-devel libxslt libxslt-devel xz expat-devel libaio-devel rpcgen libtirpc-devel perl cyrus-sasl-devel sqlite-devel oniguruma-devel lsof re2c pkg-config libarchive hostname ncurses-libs numactl-devel libxcrypt libwebp-devel gnutls-devel initscripts iproute libxcrypt-compat git systemd-devel freetype-devel pkgconf libsodium-devel; do yum -y install $packages; done
 
     yum -y update nss
 
-    if echo "${CentOS_Version}" | grep -Eqi "^8" || echo "${RHEL_Version}" | grep -Eqi "^8" || echo "${Rocky_Version}" | grep -Eqi "^8" || echo "${Alma_Version}" | grep -Eqi "^8" || echo "${Anolis_Version}" | grep -Eqi "^8" || echo "${OpenCloudOS_Version}" | grep -Eqi "^8"; then
+    if echo "${RHEL_Version}" | grep -Eqi "^8" || echo "${Rocky_Version}" | grep -Eqi "^8" || echo "${Alma_Version}" | grep -Eqi "^8"; then
         Check_PowerTools
         if [ "${repo_id}" != "" ]; then
             echo "Installing packages in PowerTools repository..."
@@ -346,24 +344,9 @@ CentOS_Dependent() {
         dnf install gcc-toolset-10 -y
     fi
 
-    if echo "${CentOS_Version}" | grep -Eqi "^9"; then
-        crb_source_check=$(yum repolist all | grep -E '^crb' | awk '{print $1}')
-
-        if [[ ! -n "$crb_source_check" ]]; then
-            echo "Add crb source..."
-            cat >/etc/yum.repos.d/centos-crb.repo <<EOF
-[CRB]
-name=CentOS-\$releasever - CRB - mirrors.ustc.edu.cn
-#failovermethod=priority
-baseurl=https://mirrors.ustc.edu.cn/centos-stream/\$stream/CRB/\$basearch/os/
-gpgcheck=1
-gpgkey=https://mirrors.ustc.edu.cn/centos-stream/RPM-GPG-KEY-CentOS-Official
-EOF
-        fi
-    fi
-    if echo "${CentOS_Version}" | grep -Eqi "^9" || echo "${Alma_Version}" | grep -Eqi "^9" || echo "${Rocky_Version}" | grep -Eqi "^9"; then
+    if echo "${RHEL_Version}" | grep -Eqi "^9" || echo "${Alma_Version}" | grep -Eqi "^9" || echo "${Rocky_Version}" | grep -Eqi "^9"; then
         for cs9packages in oniguruma-devel libzip-devel libtirpc-devel libxcrypt-compat; do dnf --enablerepo=crb install ${cs9packages} -y; done
-        if [[ "${Bin}" != "y" && "${DBSelect}" = "5" ]]; then
+        if [[ "${Bin}" != "y" && "${DBSelect}" = "[45]" ]]; then
             dnf install gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-binutils gcc-toolset-12-annobin-annocheck gcc-toolset-12-annobin-plugin-gcc -y
         fi
     fi
@@ -377,41 +360,13 @@ EOF
     if [ "${DISTRO}" = "Oracle" ] && echo "${Oracle_Version}" | grep -Eqi "^9"; then
         Check_Codeready
         dnf --enablerepo=${repo_id} install libtirpc-devel -y
-        if [[ "${Bin}" != "y" && "${DBSelect}" = "5" ]]; then
+        if [[ "${Bin}" != "y" && "${DBSelect}" =~ "[45]" ]]; then
             dnf install gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-binutils gcc-toolset-12-annobin-annocheck gcc-toolset-12-annobin-plugin-gcc -y
         fi
     fi
 
-    if echo "${CentOS_Version}" | grep -Eqi "^7" || echo "${RHEL_Version}" | grep -Eqi "^7" || echo "${Aliyun_Version}" | grep -Eqi "^2" || echo "${Alibaba_Version}" | grep -Eqi "^2" || echo "${Oracle_Version}" | grep -Eqi "^7" || echo "${Anolis_Version}" | grep -Eqi "^7"; then
-        if [ "${DISTRO}" = "Oracle" ]; then
-            yum -y install oracle-epel-release
-            yum -y --enablerepo=*EPEL* install oniguruma-devel
-        else
-            yum -y install epel-release
-            if [ "${country}" = "CN" ]; then
-                sed -e 's!^metalink=!#metalink=!g' \
-                    -e 's!^#baseurl=!baseurl=!g' \
-                    -e 's!//download\.fedoraproject\.org/pub!//mirrors.ustc.edu.cn!g' \
-                    -e 's!//download\.example/pub!//mirrors.ustc.edu.cn!g' \
-                    -i /etc/yum.repos.d/epel*.repo
-            fi
-        fi
-        yum -y install oniguruma oniguruma-devel
-        if [ "${CheckMirror}" = "n" ]; then
-            rpm -ivh ${cur_dir}/src/oniguruma-6.8.2-2.el7.x86_64.rpm ${cur_dir}/src/oniguruma-devel-6.8.2-2.el7.x86_64.rpm
-        fi
-    fi
-
-    if [ "${DISTRO}" = "Fedora" ] || echo "${CentOS_Version}" | grep -Eqi "^9" || echo "${Alma_Version}" | grep -Eqi "^9" || echo "${Rocky_Version}" | grep -Eqi "^9" || echo "${Amazon_Version}" | grep -Eqi "^202[3-9]" || echo "${OpenCloudOS_Version}" | grep -Eqi "^9"; then
+    if  echo "${RHEL_Version}" | grep -Eqi "^9" || echo "${Alma_Version}" | grep -Eqi "^9" || echo "${Rocky_Version}" | grep -Eqi "^9" || echo "${Oracle_Version}" | grep -Eqi "^9"; then
         dnf install chkconfig -y
-    fi
-
-    if [ "${DISTRO}" = "UOS" ]; then
-        Check_PowerTools
-        if [ "${repo_id}" != "" ]; then
-            echo "Installing packages in PowerTools repository..."
-            for uospackages in rpcgen re2c oniguruma-devel; do dnf --enablerepo=${repo_id} install ${uospackages} -y; done
-        fi
     fi
 
     if [ -s /etc/yum.conf.lnmp ]; then
@@ -419,6 +374,8 @@ EOF
     fi
 }
 
+# libsystemd-dev for debian 12 and older
+# systemd-dev for debian 13
 Deb_Dependent() {
     Echo_Blue "[+] Apt-get installing dependent packages..."
     apt-get update -y
@@ -427,16 +384,12 @@ Deb_Dependent() {
     apt-get -fy install
     export DEBIAN_FRONTEND=noninteractive
     apt-get --no-install-recommends install -y build-essential gcc g++ make
-    for packages in debian-keyring debian-archive-keyring build-essential gcc g++ make cmake autoconf automake re2c wget cron bzip2 libzip-dev libc6-dev bison file rcconf flex bison m4 gawk less cpp binutils diffutils unzip tar bzip2 libbz2-dev libncurses5 libncurses5-dev libtool libevent-dev openssl libssl-dev zlibc libsasl2-dev libltdl3-dev libltdl-dev zlib1g zlib1g-dev libbz2-1.0 libbz2-dev libglib2.0-0 libglib2.0-dev libpng3 libjpeg-dev libpng-dev libpng12-0 libpng12-dev libkrb5-dev curl libcurl3-gnutls libcurl4-gnutls-dev libcurl4-openssl-dev libpcre3-dev libpq-dev libpq5 gettext libpng12-dev libxml2-dev libcap-dev ca-certificates libc-client2007e-dev psmisc patch git libc-ares-dev libicu-dev e2fsprogs libxslt1.1 libxslt1-dev libc-client-dev xz-utils libexpat1-dev libaio-dev libtirpc-dev libsqlite3-dev libonig-dev lsof pkg-config libtinfo-dev libnuma-dev libwebp-dev gnutls-dev iproute2 xz-utils gzip; do apt-get --no-install-recommends install -y $packages; done
+    for packages in debian-keyring debian-archive-keyring build-essential gcc g++ make cmake autoconf automake re2c wget cron bzip2 libzip-dev libc6-dev bison file flex bison m4 gawk less cpp binutils diffutils unzip tar bzip2 libbz2-dev libncurses-dev libtool libevent-dev openssl libssl-dev libsasl2-dev libltdl-dev zlib1g zlib1g-dev libbz2-1.0 libbz2-dev libglib2.0-dev libjpeg62-turbo-dev libpng-dev libkrb5-dev curl libcurl4-openssl-dev libpcre2-dev libpq-dev libpq5 gettext libxml2-dev libcap-dev ca-certificates psmisc patch git libc-ares-dev libicu-dev e2fsprogs libxslt1.1 libxslt1-dev xz-utils libexpat1-dev libaio-dev libtirpc-dev libsqlite3-dev libonig-dev lsof pkg-config libtinfo-dev libnuma-dev libwebp-dev gnutls-dev iproute2 xz-utils gzip libsystemd-dev libgd-dev lsb-release libgnutls28-dev systemd-dev libfreetype6-dev libsodium-dev; do apt-get --no-install-recommends install -y $packages; done
 }
 
 Check_Download() {
     Echo_Blue "[+] Downloading files..."
     cd ${cur_dir}/src
-    Download_Files ${Libiconv_DL} ${Libiconv_Ver}.tar.gz
-    Download_Files ${LibMcrypt_DL} ${LibMcrypt_Ver}.tar.gz
-    Download_Files ${Mcypt_DL} ${Mcypt_Ver}.tar.gz
-    Download_Files ${Mhash_DL} ${Mhash_Ver}.tar.bz2
     if [ "${SelectMalloc}" = "2" ]; then
         Download_Files ${Jemalloc_DL} ${Jemalloc_Ver}.tar.bz2
     elif [ "${SelectMalloc}" = "3" ]; then
@@ -446,23 +399,21 @@ Check_Download() {
     if [ "${Stack}" != "lamp" ]; then
         Download_Files ${Nginx_DL} ${Nginx_Ver}.tar.gz
     fi
-    if [[ "${DBSelect}" =~ ^([12345]|11)$ ]]; then
-        #       Mysql_Ver_Short=$(echo ${Mysql_Ver} | sed 's/mysql-//' | cut -d. -f1-2)
-        if [[ "${Bin}" = "y" && "${DBSelect}" =~ ^[2-4]$ ]]; then
+    if [[ "${DBSelect}" =~ ^[1-5]$ ]]; then
+        if [[ "${Bin}" = "y" && "${DBSelect}" =~ ^[2-3]$ ]]; then
             Download_Files https://cdn.mysql.com/Downloads/MySQL-${Mysql_Ver_Short}/${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}.tar.gz ${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}.tar.gz
             if [ $? -ne 0 ]; then
                 Download_Files https://cdn.mysql.com/archives/mysql-${Mysql_Ver_Short}/${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}.tar.gz ${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}.tar.gz
             fi
-        elif [[ "${Bin}" = "y" && "${DBSelect}" = "5" ]]; then
-            [[ "${DB_ARCH}" = "aarch64" ]] && mysql8_glibc_ver="2.17" || mysql8_glibc_ver="2.12"
-            Download_Files https://cdn.mysql.com/Downloads/MySQL-8.0/${Mysql_Ver}-linux-glibc${mysql8_glibc_ver}-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-glibc${mysql8_glibc_ver}-${DB_ARCH}.tar.xz
+        elif [[ "${Bin}" = "y" && "${DBSelect}" = "4" ]]; then
+            Download_Files https://cdn.mysql.com/Downloads/MySQL-8.0/${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
             if [ $? -ne 0 ]; then
-                Download_Files https://cdn.mysql.com/archives/mysql-8.0/${Mysql_Ver}-linux-glibc${mysql8_glibc_ver}-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-glibc${mysql8_glibc_ver}-${DB_ARCH}.tar.xz
+                Download_Files https://cdn.mysql.com/archives/mysql-8.0/${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
             fi
-        elif [[ "${Bin}" = "y" && "${DBSelect}" = "11" ]]; then
-            Download_Files https://cdn.mysql.com/Downloads/MySQL-8.4/${Mysql_Ver}-linux-glibc2.17-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-glibc2.17-${DB_ARCH}.tar.xz
+        elif [[ "${Bin}" = "y" && "${DBSelect}" = "5" ]]; then
+            Download_Files https://cdn.mysql.com/Downloads/MySQL-8.4/${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
             if [ $? -ne 0 ]; then
-                Download_Files https://cdn.mysql.com/archives/mysql-8.4/${Mysql_Ver}-linux-glibc2.17-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-glibc2.17-${DB_ARCH}.tar.xz
+                Download_Files https://cdn.mysql.com/archives/mysql-8.4/${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
             fi
         else
             Download_Files https://cdn.mysql.com/Downloads/MySQL-${Mysql_Ver_Short}/${Mysql_Ver}.tar.gz ${Mysql_Ver}.tar.gz
@@ -470,7 +421,7 @@ Check_Download() {
                 Download_Files https://cdn.mysql.com/archives/mysql-${Mysql_Ver_Short}/${Mysql_Ver}.tar.gz ${Mysql_Ver}.tar.gz
             fi
         fi
-    elif [[ "${DBSelect}" =~ ^([6789]|10)$ ]]; then
+    elif [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
         #    Mariadb_Version=$(echo ${Mariadb_Ver} | cut -d- -f2)
         if [ "${Bin}" = "y" ]; then
             MariaDB_FileName="${Mariadb_Ver}-linux-systemd-${DB_ARCH}"
@@ -495,12 +446,7 @@ Check_Download() {
     fi
     Download_Files ${Php_DL} ${Php_Ver}.tar.bz2
     if [ $? -ne 0 ]; then
-        Download_Files https://museum.php.net/php5/${Php_Ver}.tar.bz2 ${Php_Ver}.tar.bz2
-    fi
-
-    if [ ${PHPSelect} = "1" ]; then
-        #    Download_Files ${Download_Mirror}/web/phpfpm/${Php_Ver}-fpm-0.5.14.diff.gz ${Php_Ver}-fpm-0.5.14.diff.gz
-        Download_Files https://php-fpm.org/downloads/${Php_Ver}-fpm-0.5.14.diff.gz ${Php_Ver}-fpm-0.5.14.diff.gz
+        Download_Files https://museum.php.net/php${Php_Major_Ver}/${Php_Ver}.tar.bz2 ${Php_Ver}.tar.bz2
     fi
     Download_Files https://files.phpmyadmin.net/phpMyAdmin/${PhpMyAdmin_Ver_Short}/${PhpMyAdmin_Ver}.tar.xz ${PhpMyAdmin_Ver}.tar.xz
     Download_Files https://github.com/kmvan/x-prober/releases/download/8.20/prober.php prober.php
@@ -512,7 +458,7 @@ Check_Download() {
 }
 
 Make_Install() {
-    make -j $(grep 'processor' /proc/cpuinfo | wc -l)
+    make -j"$(nproc)"
     if [ $? -ne 0 ]; then
         make
     fi
@@ -520,26 +466,48 @@ Make_Install() {
 }
 
 PHP_Make_Install() {
-    make ZEND_EXTRA_LIBS='-liconv' -j $(grep 'processor' /proc/cpuinfo | wc -l)
+#    make ZEND_EXTRA_LIBS='-liconv' -j "$(nproc)"
+#    if [ $? -ne 0 ]; then
+#        make ZEND_EXTRA_LIBS='-liconv'
+#    fi
+#    make install
+    make -j"$(nproc)"
     if [ $? -ne 0 ]; then
-        make ZEND_EXTRA_LIBS='-liconv'
+        make
     fi
     make install
+    # resetting environment variable to avoid affecting other make processes
+    PHP_ENV_UNSET
 }
 
+# deprecated as only for php 5.2 which is dropped support
+# autoconf 2.69 is required for php 5.6
 Install_Autoconf() {
-    Echo_Blue "[+] Installing ${Autoconf_Ver}"
-    cd ${cur_dir}/src
-    Download_Files ${Autoconf_DL} ${Autoconf_Ver}.tar.gz
-    Tar_Cd ${Autoconf_Ver}.tar.gz ${Autoconf_Ver}
-    ./configure --prefix=/usr/local/autoconf-2.13
-    Make_Install
-    cd ${cur_dir}/src/
-    rm -rf ${cur_dir}/src/${Autoconf_Ver}
+    if [ -s /usr/local/autoconf-2.69/bin/autoconf ] && [ -s /usr/local/autoconf-2.69/bin/autoheader ]; then
+        Echo_Yellow "autoconf 2.69 already installed, skip."       
+    else
+        rm -rf /usr/local/autoconf-2.69
+        Echo_Blue "[+] Installing ${Autoconf_Ver}"
+        cd ${cur_dir}/src
+        Download_Files https://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz autoconf-2.69.tar.gz
+        Tar_Cd autoconf-2.69.tar.gz autoconf-2.69
+        ./configure --prefix=/usr/local/autoconf-2.69
+        Make_Install
+        cd ${cur_dir}/src/
+        rm -rf ${cur_dir}/src/${Autoconf_Ver}
+    fi
 }
 
+# iconv can be provided by system glibc or GNU libiconv
+# only compile and install libiconv when necessary for php <= 7.1
+# use "--with-iconv" flag when using systm glibc iconv for php compile
+# php 5.6 and php 7.0, 7.1 may have issue with system glibc iconv, needs test
+# use "--with-iconv=/usr/local" flag when using GNU libiconv
+# libxml2 needs recompiling if using GNU libiconv
 Install_Libiconv() {
     Echo_Blue "[+] Installing ${Libiconv_Ver}"
+    cd ${cur_dir}/src
+    Download_Files ${Libiconv_DL} ${Libiconv_Ver}.tar.gz
     Tar_Cd ${Libiconv_Ver}.tar.gz ${Libiconv_Ver}
     ./configure --enable-static
     Make_Install
@@ -547,8 +515,36 @@ Install_Libiconv() {
     rm -rf ${cur_dir}/src/${Libiconv_Ver}
 }
 
+# install it for php 5.6 - php 7.0, mcrypt extension deprecated from 7.1 and removed since 7.2
+# building flag --with-mcrypt for php <= 7.0
+# not maintained since 2007, use at your own risk
+# for debian, apt-get install libmcrypt-dev
+# for RHEL, yum install epel-release yum install libmcrypt-devel
 Install_Libmcrypt() {
+    if [[ "${php_version}" =~ ^(5\.6\.|7\.[01]\.) ]] || [[ "${Php_Ver}" =~ (php-5\.6\.|php-7\.[01]\.) ]]; then
+        if [ -s /usr/lib/x86_64-linux-gnu/libmcrypt.so ] || [ -s /usr/lib64/libmcrypt.so ]; then
+            Echo_Yellow "libmcrypt already installed, skip."
+        else
+            if [ "${PM}" = "yum" ]; then
+                Echo_Blue "[+] Installing epel-release for libmcrypt"
+                yum -y install epel-release
+                yum -y install libmcrypt-devel
+            elif [ "${PM}" = "apt" ]; then
+                Echo_Blue "[+] Installing libmcrypt-dev from apt repository"
+                apt-get -y install libmcrypt-dev
+            else
+                Compile_Libmcrypt                
+            fi
+        fi
+    else
+        Echo_Yellow "PHP ${Php_Ver}${php_version} does not require libmcrypt, skip."
+        return
+    fi
+}
+Compile_Libmcrypt() {
     Echo_Blue "[+] Installing ${LibMcrypt_Ver}"
+    cd ${cur_dir}/src
+    Download_Files ${LibMcrypt_DL} ${LibMcrypt_Ver}.tar.gz
     Tar_Cd ${LibMcrypt_Ver}.tar.gz ${LibMcrypt_Ver}
     ./configure
     Make_Install
@@ -565,8 +561,11 @@ Install_Libmcrypt() {
     rm -rf ${cur_dir}/src/${LibMcrypt_Ver}
 }
 
+# not need to compile if libmcrypt installed from OS repository
 Install_Mcrypt() {
     Echo_Blue "[+] Installing ${Mcypt_Ver}"
+    cd ${cur_dir}/src
+    Download_Files ${Mcypt_DL} ${Mcypt_Ver}.tar.gz
     Tar_Cd ${Mcypt_Ver}.tar.gz ${Mcypt_Ver}
     ./configure
     Make_Install
@@ -574,8 +573,29 @@ Install_Mcrypt() {
     rm -rf ${cur_dir}/src/${Mcypt_Ver}
 }
 
+
+# only for php 5.2. As of PHP 5.3.0, the mhash extension is emulated thru the Hash extension
+# for php 5.3 - php 7.3, '--with-mhash' flag is required and mhash() enabled via the Hash extension.
+# for php 7.4 - php 8.0, '--with-mhash' flag is required and legacy function names is enabled.
+# for php 8.1+, '--with-mhash' flag is removed and mhash extension function removed.
 Install_Mhash() {
+    if [[ "${php_version}" =~ ^(5\.2\.) ]] || [[ "${Php_Ver}" =~ (php-5\.2\.) ]]; then
+        if [ -s /usr/lib/libmhash.a ] || [ -s /usr/lib64/libmhash.a ]; then
+            Echo_Yellow "libmhash already installed, skip."
+        else
+            Compile_Mhash
+        fi
+    else
+        Echo_Yellow "PHP ${Php_Ver}${php_version} does not require libmhash, skip."
+        return
+    fi
+}
+
+
+Compile_Mhash() {
     Echo_Blue "[+] Installing ${Mhash_Ver}"
+    cd ${cur_dir}/src
+    Download_Files ${Mhash_DL} ${Mhash_Ver}.tar.bz2
     Tar_Cd ${Mhash_Ver}.tar.bz2 ${Mhash_Ver}
     ./configure
     Make_Install
@@ -589,7 +609,23 @@ Install_Mhash() {
     rm -rf ${cur_dir}/src/${Mhash_Ver}
 }
 
+# install using system repo
+# for debian, apt-get install libfreetype6-dev
+# for RHEL, yum install freetype-devel
+# for php <=7.3, use flag --with-gd --with-freetype-dir=/usr --with-jpeg-dir=/usr --with-png-dir=/usr
+# for php >=7.4, use flag --enable-gd --with-freetype --with-jpeg --with-png
 Install_Freetype() {
+    if [ "${PM}" = "yum" ]; then
+        Echo_Blue "[+] Installing freetype-devel from yum repository"
+        yum -y install freetype-devel
+    elif [ "${PM}" = "apt" ]; then
+        Echo_Blue "[+] Installing libfreetype6-dev from apt repository"
+        apt-get -y install libfreetype6-dev
+    else
+        Compile_Freetype
+    fi
+}
+Compile_Freetype() {
     if echo "${Ubuntu_Version}" | grep -Eqi "^(1[89]\.|2[0-9]\.)" || echo "${Mint_Version}" | grep -Eqi "^(19|2[0-9])" || echo "${Deepin_Version}" | grep -Eqi "^(15\.[7-9]|15.1[0-9]|1[6-9]|2[0-9])" || echo "${Debian_Version}" | grep -Eqi "^(9|1[0-9])" || echo "${Raspbian_Version}" | grep -Eqi "^(9|1[0-9])" || echo "${Kali_Version}" | grep -Eqi "^202[0-9]" || echo "${UOS_Version}" | grep -Eqi "^2[0-9]" || echo "${CentOS_Version}" | grep -Eqi "^(8|9)" || echo "${RHEL_Version}" | grep -Eqi "^(8|9)" || echo "${Oracle_Version}" | grep -Eqi "^(8|9)" || echo "${Fedora_Version}" | grep -Eqi "^(3[0-9]|29)" || echo "${Rocky_Version}" | grep -Eqi "^(8|9)" || echo "${Alma_Version}" | grep -Eqi "^(8|9)" || echo "${openEuler_Version}" | grep -Eqi "^2[0-9]" || echo "${Anolis_Version}" | grep -Eqi "^(8|9)" || echo "${Kylin_Version}" | grep -Eqi "^V1[0-9]" || echo "${Amazon_Version}" | grep -Eqi "^202[3-9]" || echo "${OpenCloudOS_Version}" | grep -Eqi "^(8|9|23)" || echo "${HCE_Version}" | grep -Eqi "^2\.[0-9]"; then
         Download_Files ${Freetype_New_DL} ${Freetype_New_Ver}.tar.xz
         Echo_Blue "[+] Installing ${Freetype_New_Ver}"
@@ -614,28 +650,44 @@ EOF
 }
 
 Install_Curl() {
-    if [ -d /usr/local/curl ]; then
-        rm -rf /usr/local/curl
-    fi
-    Echo_Blue "[+] Installing ${Curl_Ver}"
-    cd ${cur_dir}/src
-    Download_Files ${Curl_DL} ${Curl_Ver}.tar.bz2
-    Tar_Cd ${Curl_Ver}.tar.bz2 ${Curl_Ver}
-    if [ -s ${Curl_Openssl_Path}/bin/openssl ] ; then
-         ./configure --prefix=/usr/local/curl --enable-ares --without-nss --with-zlib --with-ssl=${Curl_Openssl_Path}
+    if [ -s /usr/local/curl/bin/curl ]; then
+        echo "Custom curl already compiled with Openssl 1.1.1, skip."
     else
-        ./configure --prefix=/usr/local/curl --enable-ares --without-nss --with-zlib --with-ssl
+        Echo_Blue "[+] Installing ${Curl_Ver} with Openssl 1.1.1"
+        cd ${cur_dir}/src
+        Download_Files ${Curl_DL} ${Curl_Ver}.tar.bz2
+        Tar_Cd ${Curl_Ver}.tar.bz2 ${Curl_Ver}
+        if [ "${BuildOpenssl}" = "y"  ] ; then
+             ./configure --prefix=/usr/local/curl --enable-ares --without-nss --with-zlib --disable-ldap --disable-ldaps --with-ssl=${Custom_Openssl_Path}
+        else
+            ./configure --prefix=/usr/local/curl --enable-ares --without-nss --with-zlib --with-ssl
+        fi
+        Make_Install
+        cd ${cur_dir}/src/
+        rm -rf ${cur_dir}/src/${Curl_Ver}
+        Remove_Error_Libcurl
     fi
-    Make_Install
-    cd ${cur_dir}/src/
-    rm -rf ${cur_dir}/src/${Curl_Ver}
-    ## Set environment variables for PHP to find custom curl
-    if [ "${PHP_Use_PKG}" = "y" ]; then
-        PKG_CONFIG_PATH_TEMP="$PKG_CONFIG_PATH_TEMP:/usr/local/curl/lib/pkgconfig"
-        CPPFLAGS_TEMP="$CPPFLAGS_TEMP -I/usr/local/curl/include"
-        LDFLAGS_TEMP="$LDFLAGS_TEMP -L/usr/local/curl/lib"
+
+}
+
+Install_OldCurl() {
+    if [ -s /usr/local/oldcurl/bin/curl ]; then
+        echo "Custom old curl already compiled with Openssl 1.0.2, skip."
+    else
+        Echo_Blue "[+] Installing ${Curl_Ver} with Openssl 1.0.2"
+        cd ${cur_dir}/src
+        Download_Files ${Curl_DL} ${Curl_Ver}.tar.bz2
+        Tar_Cd ${Curl_Ver}.tar.bz2 ${Curl_Ver}
+        if [ "${BuildOpenssl}" = "y"  ] ; then
+            ./configure --prefix=/usr/local/oldcurl --enable-ares --without-nss --with-zlib --disable-ldap --disable-ldaps --with-ssl=${Custom_Openssl_Path}
+        else
+            ./configure --prefix=/usr/local/oldcurl --enable-ares --without-nss --with-zlib --with-ssl
+        fi
+        Make_Install
+        cd ${cur_dir}/src/
+        rm -rf ${cur_dir}/src/${Curl_Ver}
     fi
-    Remove_Error_Libcurl
+
 }
 
 Install_Pcre() {
@@ -648,6 +700,7 @@ Install_Pcre() {
     fi
 }
 
+# by default, prefix is /usr/local, jemalloc installs to /usr/local/lib
 Install_Jemalloc() {
     Echo_Blue "[+] Installing ${Jemalloc_Ver}"
     cd ${cur_dir}/src
@@ -696,25 +749,24 @@ Install_Icu4c() {
             ln -s /usr/include/locale.h /usr/include/xlocale.h
         fi
         Make_Install
-        cd ${cur_dir}/src/
+
         rm -rf ${cur_dir}/src/icu
 
-        mkdir -p /usr/local/icu583/runtime
-        ln -sf /usr/local/icu583/lib/*.so.*.* /usr/local/icu583/runtime/
-
-        if [ -s /etc/ld.so.conf.d/icu583.conf ]; then
+        if [ -f /etc/ld.so.conf.d/icu583.conf ]; then
             rm -rf /etc/ld.so.conf.d/icu583.conf
         fi
 
-        echo "/usr/local/icu583/runtime" >/etc/ld.so.conf.d/icu583.conf
+        echo "/usr/local/icu583/lib" >/etc/ld.so.conf.d/icu583.conf
         ldconfig
     fi
 }
 
 Install_Icu522() {
-    if [ -s /usr/local/icu522/bin/icu-config ]; then
+    if [ -s /usr/local/icu522/bin/icu-config ] && [ -s /etc/ld.so.conf.d/icu522.conf ]; then
+        echo "ICU 52.2 is already installed."
+    else
         rm -rf /usr/local/icu522
-    fi
+        rm -rf /etc/ld.so.conf.d/icu522.conf
         Echo_Blue "[+] Installing icu4c-52_2..."
         cd ${cur_dir}/src
         Download_Files ${Libicu4c_52_2_DL} icu4c-52_2-src.tgz
@@ -724,172 +776,130 @@ Install_Icu522() {
             ln -s /usr/include/locale.h /usr/include/xlocale.h
         fi
         Make_Install
-        cd ${cur_dir}/src/
+
         rm -rf ${cur_dir}/src/icu
 
-        mkdir -p /usr/local/icu522/runtime
-        ln -sf /usr/local/icu522/lib/*.so.*.* /usr/local/icu522/runtime/
-
-        if [ -s /etc/ld.so.conf.d/icu522.conf ]; then
-            rm -rf /etc/ld.so.conf.d/icu522.conf
-        fi
-
-        echo "/usr/local/icu522/runtime" >/etc/ld.so.conf.d/icu522.conf
+        echo "/usr/local/icu522/lib" >/etc/ld.so.conf.d/icu522.conf
         ldconfig
-}
-
-Install_Icu582() {
-    if [ -s /usr/local/icu582/bin/icu-config ]; then
-        rm -rf /usr/local/icu582
     fi
-        Echo_Blue "[+] Installing icu4c-58_2..."
-        cd ${cur_dir}/src
-        Download_Files ${Libicu4c_58_2_DL} icu4c-58_2-src.tgz
-        Tar_Cd icu4c-58_2-src.tgz icu/source
-        ./configure --prefix=/usr/local/icu582
-        if [ ! -s /usr/include/xlocale.h ]; then
-            ln -s /usr/include/locale.h /usr/include/xlocale.h
-        fi
-        Make_Install
-        cd ${cur_dir}/src/
-        rm -rf ${cur_dir}/src/icu
-
-        mkdir -p /usr/local/icu582/runtime
-        ln -sf /usr/local/icu582/lib/*.so.*.* /usr/local/icu582/runtime/
-
-        if [ -s /etc/ld.so.conf.d/icu582.conf ]; then
-            rm -rf /etc/ld.so.conf.d/icu582.conf
-        fi
-
-        echo "/usr/local/icu582/runtime" >/etc/ld.so.conf.d/icu582.conf
-        ldconfig
 }
 
 Install_Icu603() {
-    if [ -s /usr/local/icu603/bin/icu-config ]; then
+    if [ -s /usr/local/icu603/bin/icu-config ] && [ -s /etc/ld.so.conf.d/icu603.conf ]; then
+        echo "ICU 60.3 is already installed."
+    else
         rm -rf /usr/local/icu603
-    fi
+        rm -rf /etc/ld.so.conf.d/icu603.conf
         Echo_Blue "[+] Installing icu4c-60_3..."
         cd ${cur_dir}/src
         Download_Files ${Libicu4c_60_3_DL} icu4c-60_3-src.tgz
         Tar_Cd icu4c-60_3-src.tgz icu/source
         ./configure --prefix=/usr/local/icu603
         Make_Install
-        cd ${cur_dir}/src/
+
         rm -rf ${cur_dir}/src/icu
 
-        mkdir -p /usr/local/icu603/runtime
-        ln -sf /usr/local/icu603/lib/*.so.*.* /usr/local/icu603/runtime/
-
-        if [ -s /etc/ld.so.conf.d/icu603.conf ]; then
-            rm -rf /etc/ld.so.conf.d/icu603.conf
-        fi
-
-        echo "/usr/local/icu603/runtime" >/etc/ld.so.conf.d/icu603.conf
+        echo "/usr/local/icu603/lib" >/etc/ld.so.conf.d/icu603.conf
         ldconfig
+    fi
 }
 
 Install_Icu631() {
-    if [ -s /usr/local/icu631/bin/icu-config ]; then
+    if [ -s /usr/local/icu631/bin/icu-config ] && [ -s /etc/ld.so.conf.d/icu631.conf ]; then
+        echo "ICU 63.1 is already installed."
+    else
         rm -rf /usr/local/icu631
-    fi
+        rm -rf /etc/ld.so.conf.d/icu631.conf
         Echo_Blue "[+] Installing icu4c-63_1..."
         cd ${cur_dir}/src
         Download_Files ${Libicu4c_63_1_DL} icu4c-63_1-src.tgz
         Tar_Cd icu4c-63_1-src.tgz icu/source
         ./configure --prefix=/usr/local/icu631
         Make_Install
-        cd ${cur_dir}/src/
+
         rm -rf ${cur_dir}/src/icu
 
-        mkdir -p /usr/local/icu631/runtime
-        ln -sf /usr/local/icu631/lib/*.so.*.* /usr/local/icu631/runtime/
-
-        if [ -s /etc/ld.so.conf.d/icu631.conf ]; then
-            rm -rf /etc/ld.so.conf.d/icu631.conf
-        fi
-
-        echo "/usr/local/icu631/runtime" >/etc/ld.so.conf.d/icu631.conf
+        echo "/usr/local/icu631/lib" >/etc/ld.so.conf.d/icu631.conf
         ldconfig
+    fi
 }
 
 Install_Icu671() {
-    if [ -s /usr/local/icu671/bin/icu-config ]; then
+    if [ -s /usr/local/icu671/bin/icu-config ] && [ -s /etc/ld.so.conf.d/icu671.conf ]; then
+        echo "ICU 67.1 is already installed."
+    else
         rm -rf /usr/local/icu671
-    fi
+        rm -rf /etc/ld.so.conf.d/icu671.conf
         Echo_Blue "[+] Installing icu4c-67_1..."
         cd ${cur_dir}/src
         Download_Files ${Libicu4c_67_1_DL} icu4c-67_1-src.tgz
         Tar_Cd icu4c-67_1-src.tgz icu/source
         ./configure --prefix=/usr/local/icu671
         Make_Install
-        cd ${cur_dir}/src/
+
         rm -rf ${cur_dir}/src/icu
 
-        mkdir -p /usr/local/icu671/runtime
-        ln -sf /usr/local/icu671/lib/*.so.*.* /usr/local/icu671/runtime/
-
-        if [ -s /etc/ld.so.conf.d/icu671.conf ]; then
-            rm -rf /etc/ld.so.conf.d/icu671.conf
-        fi
-
-        echo "/usr/local/icu671/runtime" >/etc/ld.so.conf.d/icu671.conf
+        echo "/usr/local/icu671/lib" >/etc/ld.so.conf.d/icu671.conf
         ldconfig
+    fi
 }
 
 Install_Icu721() {
-    if [ -s /usr/local/icu721/bin/icu-config ]; then
+    if [ -s /usr/local/icu721/bin/icu-config ] && [ -s /etc/ld.so.conf.d/icu721.conf ]; then
+        echo "ICU 72.1 is already installed."
+    else
         rm -rf /usr/local/icu721
-    fi
+        rm -rf /etc/ld.so.conf.d/icu721.conf
         Echo_Blue "[+] Installing icu4c-72_1..."
         cd ${cur_dir}/src
         Download_Files ${Libicu4c_72_1_DL} icu4c-72_1-src.tgz
         Tar_Cd icu4c-72_1-src.tgz icu/source
         ./configure --prefix=/usr/local/icu721
         Make_Install
-        cd ${cur_dir}/src/
+
         rm -rf ${cur_dir}/src/icu
 
-        mkdir -p /usr/local/icu721/runtime
-        ln -sf /usr/local/icu721/lib/*.so.*.* /usr/local/icu721/runtime/
-
-        if [ -s /etc/ld.so.conf.d/icu721.conf ]; then
-            rm -rf /etc/ld.so.conf.d/icu721.conf
-        fi
-
-        echo "/usr/local/icu721/runtime" >/etc/ld.so.conf.d/icu721.conf
+        echo "/usr/local/icu721/lib" >/etc/ld.so.conf.d/icu721.conf
         ldconfig
+    fi
 }
 
 Download_Boost() {
     Echo_Blue "[+] Download or use exist boost..."
-    if [ "${DBSelect}" = "4" ] || echo "${mysql_version}" | grep -Eqi '^5\.7\.'; then
+    if [ "${DBSelect}" = "3" ] || echo "${mysql_version}" | grep -Eqi '^5\.7\.'; then
         if [ -s "${cur_dir}/src/${Boost_Ver}.tar.bz2" ]; then
             [[ -d "${cur_dir}/src/${Boost_Ver}" ]] && rm -rf "${cur_dir}/src/${Boost_Ver}"
             tar jxf ${cur_dir}/src/${Boost_Ver}.tar.bz2 -C ${cur_dir}/src
             MySQL_WITH_BOOST="-DWITH_BOOST=${cur_dir}/src/${Boost_Ver}"
         else
             cd ${cur_dir}/src/
+            echo "Downloading ${Boost_Ver}.tar.bz2 ..."
             Download_Files ${Boost_DL} ${Boost_Ver}.tar.bz2
             tar jxf ${cur_dir}/src/${Boost_Ver}.tar.bz2
             cd -
             MySQL_WITH_BOOST="-DWITH_BOOST=${cur_dir}/src/${Boost_Ver}"
         fi
-    elif [ "${DBSelect}" = "5" ] || echo "${mysql_version}" | grep -Eqi '^8\.'; then
-        Get_Boost_Ver=$(grep 'SET(BOOST_PACKAGE_NAME' cmake/boost.cmake | grep -oP '\d+(\_\d+){2}')
-        if [ -s "${cur_dir}/src/boost_${Get_Boost_Ver}.tar.bz2" ]; then
-            [[ -d "${cur_dir}/src/boost_${Get_Boost_Ver}" ]] && rm -rf "${cur_dir}/src/boost_${Get_Boost_Ver}"
-            tar jxf ${cur_dir}/src/boost_${Get_Boost_Ver}.tar.bz2 -C ${cur_dir}/src
-            MySQL_WITH_BOOST="-DWITH_BOOST=${cur_dir}/src/boost_${Get_Boost_Ver}"
+    elif [[ "${DBSelect}" =~ ^(4|5)$ ]] || echo "${mysql_version}" | grep -Eqi '^8\.'; then
+       # Get_Boost_Ver=$(grep 'SET(BOOST_PACKAGE_NAME' cmake/boost.cmake | grep -oP '\d+(\_\d+){2}')
+       Get_Boost_Ver=$(grep 'SET(BOOST_PACKAGE_NAME' cmake/boost.cmake | cut -d'"' -f2)
+       Boost_Ver_Short=$(echo ${Get_Boost_Ver} | sed 's/boost_//' | tr '_' '.')
+        if [ -s "${cur_dir}/src/${Get_Boost_Ver}.tar.bz2" ]; then
+            [[ -d "${cur_dir}/src/${Get_Boost_Ver}" ]] && rm -rf "${cur_dir}/src/${Get_Boost_Ver}"
+            tar jxf ${cur_dir}/src/${Get_Boost_Ver}.tar.bz2 -C ${cur_dir}/src
+            MySQL_WITH_BOOST="-DWITH_BOOST=${cur_dir}/src/${Get_Boost_Ver}"
         else
-            MySQL_WITH_BOOST="-DDOWNLOAD_BOOST=1 -DWITH_BOOST=${cur_dir}/src"
+            cd ${cur_dir}/src/
+            echo "Downloading ${Get_Boost_Ver}.tar.bz2 ..."
+            Download_Files https://archives.boost.io/release/${Boost_Ver_Short}/source/${Get_Boost_Ver}.tar.bz2 ${Get_Boost_Ver}.tar.bz2
+            tar jxf ${Get_Boost_Ver}.tar.bz2
+            MySQL_WITH_BOOST="-DWITH_BOOST=${cur_dir}/src/${Get_Boost_Ver}"
         fi
     fi
 }
 
 Install_Boost() {
     Echo_Blue "[+] Download or use exist boost..."
-    if [ "${DBSelect}" = "4" ] || [ "${DBSelect}" = "5" ]; then
+    if [ "${DBSelect}" = "3" ] || [ "${DBSelect}" = "4" ] || [ "${DBSelect}" = "5" ]; then
         if [ -d "${cur_dir}/src/${Mysql_Ver}/boost" ]; then
             MySQL_WITH_BOOST="-DWITH_BOOST=${cur_dir}/src/${Mysql_Ver}/boost"
         else
@@ -905,9 +915,11 @@ Install_Boost() {
 }
 
 Install_Openssl() {
-    if [ -s /usr/local/openssl/bin/openssl ] ; then
+    if [ -s /usr/local/openssl/bin/openssl ] && [ -s /etc/ld.so.conf.d/openssl.conf ]; then
+        echo "OpenSSL 1.0.2 is already installed."
+    else
         rm -rf /usr/local/openssl
-    fi
+        rm -rf /etc/ld.so.conf.d/openssl.conf
         Echo_Blue "[+] Installing ${Openssl_Ver}"
         cd ${cur_dir}/src
         Download_Files ${Openssl_DL} ${Openssl_Ver}.tar.gz
@@ -916,26 +928,23 @@ Install_Openssl() {
         ./config -fPIC --prefix=/usr/local/openssl --openssldir=/usr/local/openssl
         make depend
         Make_Install
-        cd ${cur_dir}/src/
+
         rm -rf ${cur_dir}/src/${Openssl_Ver}
 
-        mkdir -p /usr/local/openssl/runtime
-        ln -sf /usr/local/openssl/lib/*.so.*.* /usr/local/openssl/runtime/
-
-        if [ -s /etc/ld.so.conf.d/openssl.conf ]; then
-            rm -rf /etc/ld.so.conf.d/openssl.conf
-        fi
-
-        echo "/usr/local/openssl/runtime" > /etc/ld.so.conf.d/openssl.conf
+        echo "/usr/local/openssl/lib" > /etc/ld.so.conf.d/openssl.conf
         ldconfig
+    fi
 
 }
 
 Install_Openssl_New() {
 
-    if [ -s /usr/local/openssl1.1.1/bin/openssl ] ; then
+    if [ -s /usr/local/openssl1.1.1/bin/openssl ] && [ -s /etc/ld.so.conf.d/openssl1.1.1.conf ]; then
+        echo "OpenSSL 1.1.1 is already installed."
+    else
         rm -rf /usr/local/openssl1.1.1
-    fi
+        rm -rf /etc/ld.so.conf.d/openssl1.1.1.conf
+
         Echo_Blue "[+] Installing ${Openssl_New_Ver}"
         cd ${cur_dir}/src
         Download_Files ${Openssl_New_DL} ${Openssl_New_Ver}.tar.gz
@@ -945,27 +954,22 @@ Install_Openssl_New() {
         make depend
         Make_Install
 
-        cd ${cur_dir}/src/
         rm -rf ${cur_dir}/src/${Openssl_New_Ver}
 
-        mkdir -p /usr/local/openssl1.1.1/runtime
-        ln -sf /usr/local/openssl1.1.1/lib/*.so.*.* /usr/local/openssl1.1.1/runtime/
-
-        if [ -s /etc/ld.so.conf.d/openssl1.1.1.conf ]; then
-            rm -rf /etc/ld.so.conf.d/openssl1.1.1.conf
-        fi
-
-        echo "/usr/local/openssl1.1.1/runtime" > /etc/ld.so.conf.d/openssl1.1.1.conf
+        echo "/usr/local/openssl1.1.1/lib" > /etc/ld.so.conf.d/openssl1.1.1.conf
         ldconfig
 
         apache_with_ssl='--with-ssl=/usr/local/openssl1.1.1'
+    fi
 }
 
 Install_Openssl3() {
 
-    if [ -s /usr/local/openssl3/bin/openssl ] ; then
+    if [ -s /usr/local/openssl3/bin/openssl ] && [ -s /etc/ld.so.conf.d/openssl3.conf ]; then
+        echo "OpenSSL 3 is already installed."
+    else
         rm -rf /usr/local/openssl3
-    fi
+        rm -rf /etc/ld.so.conf.d/openssl3.conf
         Echo_Blue "[+] Installing ${Openssl_3_Ver}"
         cd ${cur_dir}/src
         Download_Files ${Openssl_3_DL} ${Openssl_3_Ver}.tar.gz
@@ -974,18 +978,16 @@ Install_Openssl3() {
         ./config enable-weak-ssl-ciphers -fPIC --prefix=/usr/local/openssl3 --openssldir=/usr/local/openssl3
         make depend
         Make_Install
-        cd ${cur_dir}/src/
-        rm -rf ${cur_dir}/src/${Openssl_3_Ver}
 
-        mkdir -p /usr/local/openssl3/runtime
-        ln -sf /usr/local/openssl3/lib/*.so.*.* /usr/local/openssl3/runtime/
+        rm -rf ${cur_dir}/src/${Openssl_3_Ver}
 
         if [ -s /etc/ld.so.conf.d/openssl3.conf ]; then
             rm -rf /etc/ld.so.conf.d/openssl3.conf
         fi
 
-        echo "/usr/local/openssl3/runtime" > /etc/ld.so.conf.d/openssl3.conf
+        echo "/usr/local/openssl3/lib" > /etc/ld.so.conf.d/openssl3.conf
         ldconfig
+    fi
 
 }
 
@@ -1007,70 +1009,47 @@ Install_Nghttp2() {
 # Building against the bundled libzip was discouraged as of PHP 7.3.0, but still possible by using the --without-libzip configure option.
 # startin php 7.4 , use --with-zip. A --with-libzip=DIR configure option has been added to use a system libzip installation.
 Install_Libzip() {
-    if [ -d /usr/local/libzip ]; then
-        rm -rf /usr/local/libzip
-    fi
+    if [ -d ${Custom_Libzip_Path} ]; then
+        if [ "${UseOldOpenssl}" = 'y' ]; then
+            echo "Custom Libzip already compiled with Openssl 1.0.2, skip."
+        elif [ "${UseNewOpenssl}" = 'y' ]; then
+            echo "Custom Libzip already compiled with Openssl 1.1.1, skip."
+        fi
+    else
+        Echo_Blue "[+] Installing ${Libzip_Ver}"
+        cd ${cur_dir}/src
+        Download_Files ${Libzip_DL} ${Libzip_Ver}.tar.xz
+        Tar_Cd ${Libzip_Ver}.tar.xz ${Libzip_Ver}
+        mkdir -p build && cd build
 
-    Echo_Blue "[+] Installing ${Libzip_Ver}"
-    cd ${cur_dir}/src
-    Download_Files ${Libzip_DL} ${Libzip_Ver}.tar.xz
-    Tar_Cd ${Libzip_Ver}.tar.xz ${Libzip_Ver}
-    mkdir -p build && cd build
-
-    # Configure with CMake
-    cmake .. \
-      -DCMAKE_INSTALL_PREFIX=/usr/local/libzip \
-      -DCMAKE_PREFIX_PATH="${Curl_Openssl_Path}" \
-      -DOPENSSL_ROOT_DIR="${Curl_Openssl_Path}" \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DENABLE_GNUTLS=OFF \
-      -DENABLE_OPENSSL=ON
-
-#      -DENABLE_BZIP2=ON 
+        # Configure with CMake
+        cmake .. \
+            -DCMAKE_INSTALL_PREFIX="${Custom_Libzip_Path}" \
+            -DCMAKE_PREFIX_PATH="${Custom_Openssl_Path}" \
+            -DOPENSSL_ROOT_DIR="${Custom_Openssl_Path}" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_GNUTLS=OFF \
+            -DENABLE_OPENSSL=ON
+          # -DENABLE_BZIP2=ON 
     
-    # Build and install
-    make -j"$(nproc)"
-    make install
-
-    cd ${cur_dir}/src/
-    rm -rf ${cur_dir}/src/${Libzip_Ver}
-
-    # export path so that php can find it
-    if [ "${PHP_Use_PKG}" = 'y' ]; then
-        PKG_CONFIG_PATH_TEMP="$PKG_CONFIG_PATH_TEMP:/usr/local/libzip/pkgconfig"
-        CPPFLAGS_TEMP="$CPPFLAGS_TEMP -I/usr/local/libzip/include"
-        LDFLAGS_TEMP="$LDFLAGS_TEMP -L/usr/local/libzip/lib -Wl,-rpath=/usr/local/libzip/lib"
+        # Build and install
+        make -j"$(nproc)"
+        make install
+        rm -rf ${cur_dir}/src/${Libzip_Ver}
     fi
 
 }
 
-CentOS_Lib_Opt() {
-    if [ "${Is_64bit}" = "y" ]; then
-        ln -sf /usr/lib64/libpng.* /usr/lib/
-        ln -sf /usr/lib64/libjpeg.* /usr/lib/
+Distro_Lib_Opt() {
+    if [ "${PM}" = "yum" ] || [ "${PM}" = "dnf" ]; then
+        RHEL_Lib_Opt
+    elif [ "${PM}" = "apt" ]; then
+        Deb_Lib_Opt
     fi
+}
 
+RHEL_Lib_Opt() {
     ulimit -v unlimited
-
-    if [ $(grep -L "/lib" '/etc/ld.so.conf') ]; then
-        echo "/lib" >>/etc/ld.so.conf
-    fi
-
-    if [ $(grep -L '/usr/lib' '/etc/ld.so.conf') ]; then
-        echo "/usr/lib" >>/etc/ld.so.conf
-        #echo "/usr/lib/openssl/engines" >> /etc/ld.so.conf
-    fi
-
-    if [ -d "/usr/lib64" ] && [ $(grep -L '/usr/lib64' '/etc/ld.so.conf') ]; then
-        echo "/usr/lib64" >>/etc/ld.so.conf
-        #echo "/usr/lib64/openssl/engines" >> /etc/ld.so.conf
-    fi
-
-    if [ $(grep -L '/usr/local/lib' '/etc/ld.so.conf') ]; then
-        echo "/usr/local/lib" >>/etc/ld.so.conf
-    fi
-
-    ldconfig
 
     if command -v systemd-detect-virt >/dev/null 2>&1 && [[ "$(systemd-detect-virt)" = "lxc" ]]; then
         cat >>/etc/security/limits.conf <<eof
@@ -1087,73 +1066,10 @@ eof
     fi
 
     echo "fs.file-max=65535" >>/etc/sysctl.conf
-
-    if echo "${Fedora_Version}" | grep -Eqi "3[0-9]" && [ ! -d "/etc/init.d" ]; then
-        ln -sf /etc/rc.d/init.d /etc/init.d
-    fi
-
-    if [ -s /usr/lib64/libtinfo.so.6 ]; then
-        ln -sf /usr/lib64/libtinfo.so.6 /usr/lib64/libtinfo.so.5
-    elif [ -s /usr/lib/libtinfo.so.6 ]; then
-        ln -sf /usr/lib/libtinfo.so.6 /usr/lib/libtinfo.so.5
-    fi
-
-    if [ -s /usr/lib64/libncurses.so.6 ]; then
-        ln -sf /usr/lib64/libncurses.so.6 /usr/lib64/libncurses.so.5
-    elif [ -s /usr/lib/libncurses.so.6 ]; then
-        ln -sf /usr/lib/libncurses.so.6 /usr/lib/libncurses.so.5
-    fi
 }
 
 Deb_Lib_Opt() {
-    if [ "${Is_64bit}" = "y" ]; then
-        ln -sf /usr/lib/x86_64-linux-gnu/libpng* /usr/lib/
-        ln -sf /usr/lib/x86_64-linux-gnu/libjpeg* /usr/lib/
-    else
-        ln -sf /usr/lib/i386-linux-gnu/libpng* /usr/lib/
-        ln -sf /usr/lib/i386-linux-gnu/libjpeg* /usr/lib/
-        ln -sf /usr/include/i386-linux-gnu/asm /usr/include/asm
-    fi
-
-    if [ -d "/usr/lib/arm-linux-gnueabihf" ]; then
-        ln -sf /usr/lib/arm-linux-gnueabihf/libpng* /usr/lib/
-        ln -sf /usr/lib/arm-linux-gnueabihf/libjpeg* /usr/lib/
-        ln -sf /usr/include/arm-linux-gnueabihf/curl /usr/include/
-    fi
-
     ulimit -v unlimited
-
-    if [ $(grep -L "/lib" '/etc/ld.so.conf') ]; then
-        echo "/lib" >>/etc/ld.so.conf
-    fi
-
-    if [ $(grep -L '/usr/lib' '/etc/ld.so.conf') ]; then
-        echo "/usr/lib" >>/etc/ld.so.conf
-    fi
-
-    if [ -d "/usr/lib64" ] && [ $(grep -L '/usr/lib64' '/etc/ld.so.conf') ]; then
-        echo "/usr/lib64" >>/etc/ld.so.conf
-    fi
-
-    if [ $(grep -L '/usr/local/lib' '/etc/ld.so.conf') ]; then
-        echo "/usr/local/lib" >>/etc/ld.so.conf
-    fi
-
-    if [ -d /usr/include/x86_64-linux-gnu/curl ]; then
-        ln -sf /usr/include/x86_64-linux-gnu/curl /usr/include/
-    elif [ -d /usr/include/i386-linux-gnu/curl ]; then
-        ln -sf /usr/include/i386-linux-gnu/curl /usr/include/
-    fi
-
-    if [ -d /usr/include/arm-linux-gnueabihf/curl ]; then
-        ln -sf /usr/include/arm-linux-gnueabihf/curl /usr/include/
-    fi
-
-    if [ -d /usr/include/aarch64-linux-gnu/curl ]; then
-        ln -sf /usr/include/aarch64-linux-gnu/curl /usr/include/
-    fi
-
-    ldconfig
 
     cat >>/etc/security/limits.conf <<eof
 * soft nproc 65535

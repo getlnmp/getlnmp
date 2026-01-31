@@ -1,113 +1,149 @@
 #!/bin/sh
-# Startup script for the Apache Web Server
-# chkconfig: 345 85 15
-# Description: Startup script for Apache webserver on Debian. Place in /etc/init.d and
-# run 'update-rc.d -f httpd defaults', or use the appropriate command on your
-# distro. For CentOS/Redhat run: 'chkconfig --add httpd'
-
 ### BEGIN INIT INFO
-# Provides:          httpd
-# Required-Start:    $all
-# Required-Stop:     $all
+# Provides:          apache2
+# Required-Start:    $network $remote_fs $local_fs
+# Required-Stop:     $network $remote_fs $local_fs
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: starts Apache Web Server
-# Description:       starts Apache Web Server
+# Short-Description: Start and stop the custom compiled Apache HTTP Server
 ### END INIT INFO
 
-# Author:   licess
-# website:  https://lnmp.org
-#
-# Licensed to the Apache Software Foundation (ASF) under one or more
-# contributor license agreements.  See the NOTICE file distributed with
-# this work for additional information regarding copyright ownership.
-# The ASF licenses this file to You under the Apache License, Version 2.0
-# (the "License"); you may not use this file except in compliance with
-# the License.  You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-#
-# Apache control script designed to allow an easy command line interface
-# to controlling Apache.  Written by Marc Slemko, 1997/08/23
-# 
-# The exit codes returned are:
-#   XXX this doc is no longer correct now that the interesting
-#   XXX functions are handled by httpd
-#    0 - operation completed successfully
-#    1 - 
-#    2 - usage error
-#    3 - httpd could not be started
-#    4 - httpd could not be stopped
-#    5 - httpd could not be started during a restart
-#    6 - httpd could not be restarted during a restart
-#    7 - httpd could not be restarted during a graceful restart
-#    8 - configuration syntax error
-#
-# When multiple arguments are given, only the error from the _last_
-# one is reported.  Run "apachectl help" for usage info
-#
-ARGV="$@"
-#
-# |||||||||||||||||||| START CONFIGURATION SECTION  ||||||||||||||||||||
-# --------------------                              --------------------
-# 
-# the path to your httpd binary, including options if necessary
-HTTPD='/usr/local/apache/bin/httpd'
-PID='/usr/local/apache/logs/httpd.pid'
-#
-# pick up any necessary environment variables
-if test -f /usr/local/apache/bin/envvars; then
-  . /usr/local/apache/bin/envvars
-fi
+# Author:   getlnmp
+# website:  https://getlnmp.com
 
-ULIMIT_MAX_FILES="ulimit -S -n `ulimit -H -n`"
-# --------------------                              --------------------
-# ||||||||||||||||||||   END CONFIGURATION SECTION  ||||||||||||||||||||
+# --- PATHS FOR YOUR CUSTOM APACHE INSTALLATION ---
+NAME="httpd"
+DAEMON="/usr/local/apache/bin/httpd"
+CONTROL="/usr/local/apache/bin/apachectl" # Apache control utility is preferred
+CONFFILE="/usr/local/apache/conf/httpd.conf"
+PIDFILE="/usr/local/apache/logs/httpd.pid"
 
-# Set the maximum number of file descriptors allowed per child process.
-if [ "x$ULIMIT_MAX_FILES" != "x" ] ; then
-    $ULIMIT_MAX_FILES
-fi
+# Default variables
+DESC="Apache httpd web server"
+RETVAL=0
 
-ERROR=0
-if [ "x$ARGV" = "x" ] ; then 
-    ARGV="-h"
-fi
+# Check if the daemon and control utility exist
+[ -x $DAEMON ] || exit 0
+[ -x $CONTROL ] || exit 0
 
-case $ARGV in
-    start|stop|restart|graceful|graceful-stop)
-        echo -n "$ARGV apache... "
-        $HTTPD -k $ARGV
-        if [ "$?" != 0 ] ; then
-            echo " failed"
+# --- CORE FUNCTIONS ---
+
+# Function to test the config file
+do_configtest() {
+    # Use apachectl with the configuration file for a comprehensive test
+    $CONTROL configtest -f $CONFFILE
+    RETVAL="$?"
+    return $RETVAL
+}
+
+# Function to start the service
+do_start() {
+    # Check 1: If the PID file exists and process is running
+    if [ -f $PIDFILE ] && /bin/ps -p "$(/bin/cat $PIDFILE)" > /dev/null; then
+        echo "$DESC is already running (PID $(/bin/cat $PIDFILE))."
+        return 0 # Success: already running
+    fi
+
+    do_configtest || return 6 # Check config before starting
+    
+    echo "Starting $DESC: "
+    # Use apachectl to start, which handles daemonization and PID file creation
+    $CONTROL start -f $CONFFILE
+    RETVAL="$?"
+    if [ "$RETVAL" = 0 ]; then
+        echo "OK"
+    else
+        echo "FAILED"
+    fi
+    return $RETVAL
+}
+
+# Function to stop the service gracefully
+do_stop() {
+    echo "Stopping $DESC: "
+    
+    # Check 1: If the PID file doesn't exist OR process is NOT running
+    if ! [ -f $PIDFILE ] || ! /bin/ps -p "$(/bin/cat $PIDFILE)" > /dev/null; then
+        echo "NOT RUNNING"
+        /bin/rm -f $PIDFILE # Clean up any stale PID file
+        return 0 # Success: already stopped
+    fi
+
+    # Use apachectl with the 'stop' argument. It handles SIGTERM/graceful shutdown.
+    $CONTROL stop
+
+    # Wait for the process to exit
+    COUNT=0
+    # Use a loop to check if the main PID is still running
+    while [ $COUNT -lt 15 ] && /bin/ps -p "$(/bin/cat $PIDFILE)" > /dev/null; do
+        /bin/sleep 1
+        COUNT=$((COUNT + 1))
+    done
+
+    if /bin/ps -p "$(/bin/cat $PIDFILE)" > /dev/null; then
+        echo "FAILED (forcing kill) "
+        # If still running, send SIGKILL to the process
+        /bin/kill -s KILL "$(/bin/cat $PIDFILE)"
+        RETVAL=2
+    else
+        echo "OK"
+        RETVAL=0
+    fi
+    /bin/rm -f $PIDFILE
+    return $RETVAL
+}
+
+# Function to reload the configuration
+do_reload() {
+    do_configtest || return 6 # Check config before reloading
+    echo "Reloading $DESC configuration: "
+    
+    if [ -f $PIDFILE ] && /bin/ps -p "$(/bin/cat $PIDFILE)" > /dev/null; then
+        # Use apachectl with 'graceful' which sends SIGUSR1 for a zero-downtime restart
+        $CONTROL graceful
+        echo "OK"
+        RETVAL=0
+    else
+        echo "NOT RUNNING (cannot reload)"
+        RETVAL=1
+    fi
+    return $RETVAL
+}
+
+# --- CONTROL FLOW ---
+case "$1" in
+    start)
+        do_start
+        ;;
+    stop)
+        do_stop
+        ;;
+    status)
+        # Check if the PID file exists AND the process is running
+        if [ -f "$PIDFILE" ] && /bin/ps -p "$(/bin/cat $PIDFILE)" > /dev/null; then
+            echo "$NAME is running (PID $(/bin/cat $PIDFILE))."
+            exit 0
         else
-            echo " done"
+            echo "$NAME is NOT running."
+            exit 3
         fi
         ;;
     configtest)
-        echo -n "test apache configure... "
-        $HTTPD -t
-        if [ "$?" != 0 ] ; then
-            echo " failed"
-        else
-            echo " done"
-        fi
+        do_configtest
         ;;
-    status)
-        if [ -f "$PID" ]; then  
-            echo "Apache is running."
-        else
-            echo "Apache is stopped."
-        fi 
+    reload|graceful)
+        do_reload
+        ;;
+    restart)
+        do_configtest || exit $RETVAL
+        do_stop
+        sleep 1
+        do_start
         ;;
     *)
-        echo $"Usage: $0 {start|stop|restart|graceful|graceful-stop|configtest|status}"
+        echo "Usage: $0 {start|stop|status|restart|reload|graceful|configtest}" >&2
+        exit 3
         ;;
 esac
+
+exit $RETVAL

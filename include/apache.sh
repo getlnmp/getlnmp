@@ -92,7 +92,7 @@ Install_Apache_24()
     mv ${APR_Util_Ver} apr-util
     cd ..
     if [ "${Stack}" = "lamp" ]; then
-        ./configure --prefix=/usr/local/apache --enable-mods-shared=most --enable-headers --enable-mime-magic --enable-proxy --enable-so --enable-rewrite --enable-ssl ${apache_with_ssl} --enable-deflate --with-pcre --with-included-apr --with-apr-util --enable-mpms-shared=all --enable-remoteip --enable-http2 --with-nghttp2=/usr/local/nghttp2
+        ./configure --prefix=/usr/local/apache --enable-mods-shared=most --enable-headers --enable-mime-magic --enable-proxy --enable-so --enable-rewrite --enable-ssl --enable-deflate --with-pcre --with-included-apr --with-apr-util --enable-mpms-shared=all --enable-remoteip --enable-http2 --with-nghttp2=/usr/local/nghttp2
     else
         ./configure --prefix=/usr/local/apache --enable-mods-shared=most --enable-headers --enable-mime-magic --enable-proxy --enable-so --enable-rewrite --enable-ssl --with-ssl --enable-deflate --with-pcre --with-included-apr --with-apr-util --enable-mpms-shared=all --enable-remoteip
     fi
@@ -123,7 +123,7 @@ Install_Apache_24()
         sed -i "s#/home/wwwroot/default#${Default_Website_Dir}#g" /usr/local/apache/conf/extra/httpd-vhosts.conf
     fi
 
-    if [[ "${PHPSelect}" =~ ^([6789]|1[0-4])$ ]]; then
+    if [[ "${PHPSelect}" =~ ^([6789]|1[0-6])$ ]]; then
         sed -i '/^LoadModule php5_module/d' /usr/local/apache/conf/httpd.conf
     fi
 

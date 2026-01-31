@@ -8,14 +8,51 @@
 
 ## LNMP一键安装包是什么?
 
-LNMP一键安装包是一个用Linux Shell编写的可以为CentOS/RHEL/Fedora/Debian/Ubuntu/Raspbian/Deepin/Alibaba/Amazon/Mint/Oracle/Rocky/Alma/Kali/UOS/银河麒麟/openEuler/Anolis OS Linux VPS或独立主机安装LNMP(Nginx/MySQL/PHP)、LNMPA(Nginx/MySQL/PHP/Apache)、LAMP(Apache/MySQL/PHP)生产环境的Shell程序。
+LNMP一键安装包是一个用Linux Shell编写的可以为Debian/Ubuntu/RHEL/Rocky/AlmaLinux VPS或独立主机安装LNMP(Nginx/MySQL/PHP)、LNMPA(Nginx/MySQL/PHP/Apache)、LAMP(Apache/MySQL/PHP)生产环境的Shell程序。
+
+## 支持版本
+
+| 发行版名称 | EOL时间 | kernel | glibc | Openssl | GCC | ICU |  
+| :------: | :------: | :------: | :------: | :------: | :------: | :------: |
+| Debian 11 | 2026.8 | 5.1 | 2.31 | 1.1.1 | 10.2 | 67.1 |
+| Debian 12 | 2028.6 | 6.1 | 2.36 | 3.0.* | 12.2 | 72.1 |
+| Debian 13 | 2030.6 | 6.8 | 2.41 | 3.5.* | 14 | 74.1 |
+| Ubuntu 22 LTS | 2027.4 | 5.15 | 2.35 | 3.0.* | 11.2 | 70.1 |
+| Ubuntu 24 LTS | 2029.5 | 6.8 | 2.39 | 3.0.* | 13.2 | 74.2 |
+| RHEL 8 | 2029.5 | 4.1 | 2.28 | 1.1.1 | 8.3 | 60.3 |
+| RHEL 9 | 2032.5 | 5.1 | 2.34 | 3.0.* | 11.2 | 67.1 |
+| RHEL 10 | 2035.5 | 6.1 | * | * | * | * |
+
+## 安装建议
+由于系统自带的OPENSSL版本对可使用的PHP版本影响很大，为了保证最大的稳定性，我们建议:  
+系统自带的OPENSSL版本为1.1.1的，建议安装PHP7.1-8.*  
+系统自带的OPENSSL版本为3.*的，建议安装PHP8.1+  
+
+换句话说:
+* Debian 11 建议安装PHP 7.1+
+* Debian 12 建议安装PHP 8.1+
+* Debian 13 建议安装PHP 8.1+
+* Ubuntu 22 LTS 建议安装 PHP 8.1+
+* Ubuntu 24 LTS 建议安装 PHP 8.1+
+* RHEL 8/Rocky 8/AlmaLinux 8 建议安装 PHP 7.1+
+* RHEL 9/Rocky 9/AlmaLinux 9 建议安装 PHP 8.1+
+* RHEL 10/Rocky 10/AlmaLinux 10 建议安装 PHP 8.1+
+
+## 软件版本
+* PHP目前支持PHP5.6, PHP 7.2-7.4, PHP 8.0-8.5
+* Mysql支持5.7, 8.0和8.4， RHEL10系列只支持8.4
+* Mariadb支持10.5, 10.6, 10.11, 11.4, 11.8
+* Nginx默认安装最新的稳定版
+* Apache目前只支持2.4
+
+
 
 ## LNMP一键安装包有哪些功能？
 
 支持自定义Nginx、PHP编译参数及网站和数据库目录、支持生成Let's Ecrypt/ZeroSSL/BuyPass免费SSL证书、支持无人值守、LNMP模式支持多PHP版本、支持单独安装Nginx/MySQL/MariaDB/Pureftpd服务器，同时提供一些实用的辅助工具如：虚拟主机管理、FTP用户管理、Nginx、MySQL/MariaDB、PHP的升级、常见PHP模块exif、fileinfo、ldap、bz2、sodium、imap和swoole的一键安装、常用缓存组件Redis/Xcache等的安装、重置MySQL root密码、502自动重启、日志切割、SSH防护DenyHosts/Fail2Ban、备份等许多实用脚本。
 
-* LNMP官网：<https://lnmp.org>
-* 作者: licess <admin@lnmp.org>
+* LNMP官网：<https://getlnmp.com>
+* 作者: getlnmp <admin@getlnmp.com>
 * 问题反馈&技术支持论坛：<https://bbs.lnmp.com/forum-25-1.html>
 * 打赏捐赠：<https://lnmp.org/donation.html>
 
@@ -141,12 +178,12 @@ MySQL 8.4 | 11 | PHP 8.0 | 11 | | | |
 
 ## 状态管理
 * LNMP/LNMPA/LMAP状态管理：`lnmp {start|stop|reload|restart|kill|status}`
-* Nginx状态管理：`lnmp nginx或/etc/init.d/nginx {start|stop|reload|restart}`
-* MySQL状态管理：`lnmp mysql或/etc/init.d/mysql {start|stop|restart|reload|force-reload|status}`
-* MariaDB状态管理：`lnmp mariadb或/etc/init.d/mariadb {start|stop|restart|reload|force-reload|status}`
-* PHP-FPM状态管理：`lnmp php-fpm或/etc/init.d/php-fpm {start|stop|quit|restart|reload|logrotate}`
-* PureFTPd状态管理：`lnmp pureftpd或/etc/init.d/pureftpd {start|stop|restart|kill|status}`
-* Apache状态管理：`lnmp httpd或/etc/init.d/httpd {start|stop|restart|graceful|graceful-stop|configtest|status}`
+* Nginx状态管理：`lnmp nginx或systemctl {start|stop|reload|restart} nginx`
+* MySQL状态管理：`lnmp mysql或systemctl {start|stop|restart|reload|force-reload|status} mysql`
+* MariaDB状态管理：`lnmp mariadb或systemctl {start|stop|restart|reload|force-reload|status} mariadb`
+* PHP-FPM状态管理：`lnmp php-fpm或systemctl {start|stop|quit|restart|reload|logrotate} php-fpm`
+* PureFTPd状态管理：`lnmp pureftpd或systemctl {start|stop|restart|kill|status} pureftp`
+* Apache状态管理：`lnmp httpd或systemctl {start|stop|restart|graceful|graceful-stop|configtest|status} httpd`
 
 ## 虚拟主机管理
 * 添加：`lnmp vhost add`

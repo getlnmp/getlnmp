@@ -15,7 +15,7 @@ else
     Stack=$1
 fi
 
-LNMP_Ver='2.1'
+GetLNMP_Ver='1.0'
 . lnmp.conf
 . include/main.sh
 . include/init.sh
@@ -36,6 +36,8 @@ if [ "${DISTRO}" = "unknow" ]; then
     exit 1
 fi
 
+Block_Dist_Name
+
 if [[ "${Stack}" = "lnmp" || "${Stack}" = "lnmpa" || "${Stack}" = "lamp" ]]; then
     if [ -f /bin/lnmp ]; then
         Echo_Red "You have installed LNMP!"
@@ -48,7 +50,7 @@ Check_LNMPConf
 
 clear
 echo "+------------------------------------------------------------------------+"
-echo "|     LNMP V${LNMP_Ver} for ${DISTRO} Linux Server, Written by Licess    |"
+echo "|      GetLNMP V${GetLNMP_Ver} for ${DISTRO} Linux Server By GetLNMP     |"
 echo "+------------------------------------------------------------------------+"
 echo "|        A tool to auto-compile & install LNMP/LNMPA/LAMP on Linux       |"
 echo "+------------------------------------------------------------------------+"
@@ -69,57 +71,56 @@ Init_Install()
     fi
     Add_Swap
     Set_Timezone
+    Sync_Time
     if [ "$PM" = "yum" ]; then
-        CentOS_InstallNTP
-        CentOS_RemoveAMP
-        CentOS_Dependent
+        RHEL_RemoveAMP
+        RHEL_Dependent
     elif [ "$PM" = "apt" ]; then
-        Deb_InstallNTP
         Xen_Hwcap_Setting
         Deb_RemoveAMP
         Deb_Dependent
     fi
     Disable_Selinux
+    Check_Openssl
     Check_Download
-    Install_Libiconv
-    Install_Libmcrypt
-    Install_Mhash
-    Install_Mcrypt
-    Install_Freetype
-    Install_Pcre
-    Install_Icu4c
+    #Install_Libiconv
+    #Install_Libmcrypt
+    #Install_Mhash
+    #Install_Mcrypt
+    #Install_Freetype
+    #Install_Pcre
+    #Install_Icu4c
     if [ "${SelectMalloc}" = "2" ]; then
         Install_Jemalloc
     elif [ "${SelectMalloc}" = "3" ]; then
         Install_TCMalloc
     fi
-    if [ "$PM" = "yum" ]; then
-        CentOS_Lib_Opt
-    elif [ "$PM" = "apt" ]; then
-        Deb_Lib_Opt
-    fi
+    Distro_Lib_Opt
+    DB_BIN_Opt
     if [ "${DBSelect}" = "1" ]; then
-        Install_MySQL_51
-    elif [ "${DBSelect}" = "2" ]; then
         Install_MySQL_55
-    elif [ "${DBSelect}" = "3" ]; then
+    elif [ "${DBSelect}" = "2" ]; then
         Install_MySQL_56
-    elif [ "${DBSelect}" = "4" ]; then
+    elif [ "${DBSelect}" = "3" ]; then
         Install_MySQL_57
-    elif [ "${DBSelect}" = "5" ]; then
+    elif [ "${DBSelect}" = "4" ]; then
         Install_MySQL_80
-    elif [ "${DBSelect}" = "6" ]; then
-        Install_MariaDB_5
-    elif [ "${DBSelect}" = "7" ]; then
-        Install_MariaDB_103
-    elif [ "${DBSelect}" = "8" ]; then
-        Install_MariaDB_104
-    elif [ "${DBSelect}" = "9" ]; then
-        Install_MariaDB_105
-    elif [ "${DBSelect}" = "10" ]; then
-        Install_MariaDB_106
-    elif [ "${DBSelect}" = "11" ]; then
+    elif [ "${DBSelect}" = "5" ]; then
         Install_MySQL_84
+    elif [ "${DBSelect}" = "6" ]; then
+        Install_MariaDB_55
+    elif [ "${DBSelect}" = "7" ]; then
+        Install_MariaDB_104
+    elif [ "${DBSelect}" = "8" ]; then
+        Install_MariaDB_105
+    elif [ "${DBSelect}" = "9" ]; then
+        Install_MariaDB_106
+    elif [ "${DBSelect}" = "10" ]; then
+        Install_MariaDB_1011
+    elif [ "${DBSelect}" = "11" ]; then
+        Install_MariaDB_114
+    elif [ "${DBSelect}" = "12" ]; then
+        Install_MariaDB_118
     fi
     TempMycnf_Clean
     Clean_DB_Src_Dir
@@ -139,7 +140,7 @@ Install_PHP()
     elif [ "${PHPSelect}" = "5" ]; then
         Install_PHP_56
     elif [ "${PHPSelect}" = "6" ]; then
-        Install_PHP_7
+        Install_PHP_70
     elif [ "${PHPSelect}" = "7" ]; then
         Install_PHP_71
     elif [ "${PHPSelect}" = "8" ]; then
@@ -156,6 +157,10 @@ Install_PHP()
         Install_PHP_82
     elif [ "${PHPSelect}" = "14" ]; then
         Install_PHP_83
+    elif [ "${PHPSelect}" = "15" ]; then
+        Install_PHP_84
+    elif [ "${PHPSelect}" = "16" ]; then
+        Install_PHP_85
     fi
     Clean_PHP_Src_Dir
 }
@@ -167,7 +172,7 @@ LNMP_Stack()
     LNMP_PHP_Opt
     Install_Nginx
     Creat_PHP_Tools
-    Add_Iptables_Rules
+    Add_Firewall_Rules
     Add_LNMP_Startup
     Check_LNMP_Install
 }
@@ -184,7 +189,7 @@ LNMPA_Stack()
     Install_PHP
     Install_Nginx
     Creat_PHP_Tools
-    Add_Iptables_Rules
+    Add_Firewall_Rules
     Add_LNMPA_Startup
     Check_LNMPA_Install
 }
@@ -200,7 +205,7 @@ LAMP_Stack()
     fi
     Install_PHP
     Creat_PHP_Tools
-    Add_Iptables_Rules
+    Add_Firewall_Rules
     Add_LAMP_Startup
     Check_LAMP_Install
 }
@@ -208,15 +213,15 @@ LAMP_Stack()
 case "${Stack}" in
     lnmp)
         Dispaly_Selection
-        LNMP_Stack 2>&1 | tee /root/lnmp-install.log
+        LNMP_Stack 2>&1 | tee /root/getlnmp-install.log
         ;;
     lnmpa)
         Dispaly_Selection
-        LNMPA_Stack 2>&1 | tee /root/lnmp-install.log
+        LNMPA_Stack 2>&1 | tee /root/getlnmp-install.log
         ;;
     lamp)
         Dispaly_Selection
-        LAMP_Stack 2>&1 | tee /root/lnmp-install.log
+        LAMP_Stack 2>&1 | tee /root/getlnmp-install.log
         ;;
     nginx)
         Install_Only_Nginx 2>&1 | tee /root/nginx-install.log

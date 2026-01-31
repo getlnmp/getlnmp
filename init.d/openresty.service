@@ -1,0 +1,29 @@
+# /etc/systemd/system/openresty.service
+# OpenResty systemd unit for compiled openresty
+# Works on Debian / Ubuntu / RHEL / AlmaLinux / Rocky
+
+# Author:   getlnmp
+# website:  https://getlnmp.com
+
+[Unit]
+Description=The OpenResty Application Platform
+After=syslog.target network-online.target remote-fs.target nss-lookup.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+
+# nginx PID file
+PIDFile=/usr/local/openresty/nginx/logs/nginx.pid
+Environment="CONFFILE=/usr/local/openresty/nginx/conf/nginx.conf"
+
+# Start / reload / stop
+ExecStart=/usr/local/openresty/nginx/sbin/nginx -c ${CONFFILE}
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+
+# Safety & robustness
+PrivateTmp=false
+
+[Install]
+WantedBy=multi-user.target

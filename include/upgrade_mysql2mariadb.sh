@@ -15,10 +15,10 @@ Backup_MySQL2()
     echo "Remove autostart..."
     Remove_StartUp mysql
     mv /usr/local/mysql /usr/local/mysql2mariadb${Upgrade_Date}
-    mv /etc/init.d/mysql /usr/local/mysql2mariadb${Upgrade_Date}/init.dmysql2mariadb.bak.${Upgrade_Date}
+    mv /etc/systemd/system/mysql.service /usr/local/mysql2mariadb${Upgrade_Date}/dmysql2mariadb.service.bak.${Upgrade_Date}
     mv /etc/my.cnf /usr/local/mysql2mariadb${Upgrade_Date}/my.cnf.mysql2mariadbbak.${Upgrade_Date}
-    if [ "${MariaDB_Data_Dir}" != "/usr/local/mariadb/var" ]; then
-        mv ${MariaDB_Data_Dir} ${MariaDB_Data_Dir}${Upgrade_Date}
+    if [[ ! "${MySQL_Data_Dir}" =~ ^/usr/local/mysql/ ]]; then
+        mv ${MySQL_Data_Dir} ${MySQL_Data_Dir}${Upgrade_Date}
     fi
     if echo "${mariadb_version}" | grep -Eqi '^5\.5\.' &&  echo "${cur_mysql_version}" | grep -Eqi '^5\.6\.';then
         sed -i 's/STATS_PERSISTENT=0//g' /root/mysql_all_backup${Upgrade_Date}.sql

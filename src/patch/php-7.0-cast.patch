@@ -1,0 +1,33 @@
+--- a/main/streams/cast.c
++++ b/main/streams/cast.c
+@@ -103,24 +103,15 @@
+ 	return php_stream_write(((php_stream *)cookie), (char *)buffer, size);
+ }
+ 
+-# ifdef COOKIE_SEEKER_USES_OFF64_T
+-static int stream_cookie_seeker(void *cookie, __off64_t *position, int whence)
++static int stream_cookie_seeker(void *cookie, off64_t *position, int whence)
+ {
+-
+-	*position = php_stream_seek((php_stream *)cookie, (zend_off_t)*position, whence);
+-
+-	if (*position == -1) {
+-		return -1;
++	php_stream *stream = (php_stream *)cookie;
++	int ret = php_stream_seek(stream, (zend_off_t)*position, whence);
++	if (ret == 0) {
++		*position = (off64_t)php_stream_tell(stream);
+ 	}
+-	return 0;
++	return ret;
+ }
+-# else
+-static int stream_cookie_seeker(void *cookie, zend_off_t position, int whence)
+-{
+-
+-	return php_stream_seek((php_stream *)cookie, position, whence);
+-}
+-# endif
+ 
+ static int stream_cookie_closer(void *cookie)
+ {

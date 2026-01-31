@@ -2,57 +2,209 @@
 export PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 
 # Check if user is root
-if [ $(id -u) != "0" ]; then
+if [ "$(id -u)" != "0" ]; then
     echo "Error: You must be root to run this script!"
     exit 1
 else
-    if env |grep -q SUDO; then
+    if env | grep -q SUDO; then
         acme_sh_sudo="-f"
     fi
 fi
 
 echo "+-------------------------------------------+"
-echo "|    Manager for LNMP, Written by Licess    |"
+echo "|             Manager for LNMP              |"
 echo "+-------------------------------------------+"
-echo "|              https://lnmp.org             |"
+echo "|            https://getlnmp.com            |"
 echo "+-------------------------------------------+"
 
 arg1=$1
 arg2=$2
 
+lnmp_http_control() {
+    local http_action=$1
+    if [[ ! -s /etc/systemd/system/nginx.service ]] && [[ ! -s /etc/systemd/system/httpd.service ]]; then
+        echo "Webserver is not installed!"
+        return 0
+    fi
+    if [[ -s /etc/systemd/system/nginx.service ]]; then
+        case "${http_action}" in
+        start)
+            systemctl start nginx
+            ;;
+        stop)
+
+            systemctl stop nginx
+            ;;
+        restart)
+            systemctl restart nginx
+            ;;
+        reload)
+            systemctl reload nginx
+            ;;
+        status)
+            systemctl --no-pager status nginx
+            ;;
+        *)
+            echo "Incorrect Command for Nginx"
+            exit 1
+            ;;
+        esac
+    fi
+    if [[ -s /etc/systemd/system/httpd.service ]]; then
+        case "${http_action}" in
+        start)
+            systemctl start httpd
+            ;;
+        stop)
+
+            systemctl stop httpd
+            ;;
+        restart)
+            systemctl restart httpd
+            ;;
+        reload)
+            systemctl reload httpd
+            ;;
+        status)
+            systemctl --no-pager status httpd
+            ;;
+        *)
+            echo "Incorrect Command for Apache"
+            exit 1
+            ;;
+        esac
+    fi
+}
+
+lnmp_phpfpm_control() {
+    local php_action=$1
+    if compgen -G "/etc/systemd/system/php-fpm*.service" >/dev/null; then
+        for f in /etc/systemd/system/php-fpm*.service; do
+            [[ -e $f ]] || continue
+            local php_fpm_selector
+            php_fpm_selector="$(basename "$f")"
+            case "${php_action}" in
+            start)
+                systemctl start "${php_fpm_selector}"
+                ;;
+            stop)
+                systemctl stop "${php_fpm_selector}"
+                ;;
+            restart)
+                systemctl restart "${php_fpm_selector}"
+                ;;
+            reload)
+                systemctl reload "${php_fpm_selector}"
+                ;;
+            status)
+                systemctl --no-pager status "${php_fpm_selector}"
+                ;;
+            *)
+                echo "Incorrect Command for ${php_fpm_selector}"
+                exit 1
+                ;;
+            esac
+        done
+    else
+        echo "PHP-FPM is not installed!"
+    fi
+
+}
+
+lnmp_db_control() {
+    local db_action=$1
+    if [[ ! -s /etc/systemd/system/mysql.service && ! -s /etc/systemd/system/mariadb.service ]]; then
+        echo "Database is not installed!"
+        return 0
+    fi
+
+    if [[ -s /etc/systemd/system/mysql.service ]]; then
+        db_server='mysql'
+        case "${db_action}" in
+        start)
+            systemctl start ${db_server}
+            ;;
+        stop)
+
+            systemctl stop ${db_server}
+            ;;
+        restart)
+            systemctl restart ${db_server}
+            ;;
+        reload)
+            systemctl reload ${db_server}
+            ;;
+        status)
+            systemctl --no-pager status ${db_server}
+            ;;
+        *)
+            echo "Incorrect Command for ${db_server}"
+            exit 1
+            ;;
+        esac
+    fi
+
+    if [[ -s /etc/systemd/system/mariadb.service ]]; then
+        db_server='mariadb'
+        case "${db_action}" in
+        start)
+            systemctl start ${db_server}
+            ;;
+        stop)
+
+            systemctl stop ${db_server}
+            ;;
+        restart)
+            systemctl restart ${db_server}
+            ;;
+        reload)
+            systemctl reload ${db_server}
+            ;;
+        status)
+            systemctl --no-pager status ${db_server}
+            ;;
+        *)
+            echo "Incorrect Command for ${db_server}"
+            exit 1
+            ;;
+        esac
+    fi
+}
 lamp_start()
 {
     echo "Starting LAMP..."
-    /etc/init.d/httpd start
-    /etc/init.d/mysql start
+    systemctl start httpd
+    lnmp_db_control start
 }
 
 lamp_stop()
 {
-    echo "Stoping LAMP..."
-    /etc/init.d/httpd stop
-    /etc/init.d/mysql stop
+    echo "Stopping LAMP..."
+    systemctl stop httpd
+    lnmp_db_control stop
 }
 
 lamp_reload()
 {
     echo "Reload LAMP..."
-    /etc/init.d/httpd graceful
-    /etc/init.d/mysql reload
+    systemctl reload httpd
+    lnmp_db_control reload
 }
 
 lamp_kill()
 {
     echo "Kill apache,mysql process..."
     killall httpd
-    killall mysqld
+    killall mysql
+    killall mariadb
     echo "done."
 }
 
 lamp_status()
 {
-    /etc/init.d/httpd status
-    /etc/init.d/mysql status
+    systemctl --no-pager status httpd
+    lnmp_db_control status
+    lnmp_phpfpm_control status
 }
 
 Function_Vhost()
@@ -357,10 +509,10 @@ Check_DB()
 {
     if [[ -s /usr/local/mariadb/bin/mysql && -s /usr/local/mariadb/bin/mysqld_safe && -s /etc/my.cnf ]]; then
         MySQL_Bin="/usr/local/mariadb/bin/mysql"
-        MySQL_Ver=`/usr/local/mariadb/bin/mysql_config --version`
+        MySQL_Ver=$(/usr/local/mariadb/bin/mysql_config --version)
     elif [[ -s /usr/local/mysql/bin/mysql && -s /usr/local/mysql/bin/mysqld_safe && -s /etc/my.cnf ]]; then
         MySQL_Bin="/usr/local/mysql/bin/mysql"
-        MySQL_Ver=`/usr/local/mysql/bin/mysql_config --version`
+        MySQL_Ver=$(/usr/local/mysql/bin/mysql_config --version)
     else
         MySQL_Bin="None"
     fi
@@ -573,8 +725,8 @@ Check_Pureftpd()
 
 Add_Ftp()
 {
-    www_uid=`id -u www`
-    www_gid=`id -g www`
+    www_uid=$(id -u www)
+    www_gid=$(id -g www)
     if [ ! -d "${vhostdir}" ]; then
         mkdir -p ${vhostdir}
         chown www:www -R ${vhostdir}
@@ -614,8 +766,8 @@ EOF
     Echo_Yellow "Enter directory for ftp account ${ftp_account_name}: "
     read vhostdir
     if [ "${vhostdir}" != "" ]; then
-        www_uid=`id -u www`
-        www_gid=`id -g www`
+        www_uid=$(id -u www)
+        www_gid=$(id -g www)
         if [ ! -d "${vhostdir}" ]; then
             mkdir -p ${vhostdir}
             chown www:www -R ${vhostdir}

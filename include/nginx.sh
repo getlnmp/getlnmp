@@ -1,50 +1,60 @@
 #!/usr/bin/env bash
-
 Install_Nginx_Openssl() {
-    if [ "${Enable_Nginx_Openssl}" = 'y' ]; then
-        if [ ! -n "${Nginx_Version}" ]; then
-            Nginx_Version=$(echo ${Nginx_Ver} | sed "s/nginx-//")
-        fi
-        Nginx_Ver_Com=$(${cur_dir}/include/version_compare 1.13.0 ${Nginx_Version})
-        if [[ "${Nginx_Ver_Com}" == "0" || "${Nginx_Ver_Com}" == "1" ]]; then
-            Download_Files ${Openssl_DL} ${Openssl_Ver}.tar.gz
-            rm -rf ${Openssl_Ver}          
-            tar zxf ${Openssl_Ver}.tar.gz
-            Nginx_With_Openssl="--with-openssl=${cur_dir}/src/${Openssl_Ver}"
+    Check_Openssl
+    if [ "${isOpenSSL111}" = 'y' ]; then
+        if [[ "${Nginx_Version}" =~ ^1\.(29|[3-5][0-9])\. ]]; then
+            Custom_Openssl_Ver=${Openssl_35_Ver}
+            Custom_Openssl_DL=${Openssl_35_DL}
         else
-            if [[ "${Nginx_Version}" =~ ^1\.(2[5-9]|3[0-9])\. ]]; then
-                Check_Openssl
-                if [[ "${isOpenSSL3}" = "y" ]]; then
-                    echo "System's default openssl version is 3, compile nginx with openssl 3"
-                    Download_Files ${Openssl_3_DL} ${Openssl_3_Ver}.tar.gz
-                    rm -rf ${Openssl_3_Ver}
-                    tar zxf ${Openssl_3_Ver}.tar.gz
-                    Nginx_With_Openssl="--with-openssl=${cur_dir}/src/${Openssl_3_Ver} --with-openssl-opt=enable-weak-ssl-ciphers"
-                else
-                    echo "System's default openssl version is 1.1.1, compile nginx with openssl 1.1.1"
-                    Download_Files ${Openssl_New_DL} ${Openssl_New_Ver}.tar.gz
-                    rm -rf ${Openssl_New_Ver}                   
-                    tar zxf ${Openssl_New_Ver}.tar.gz
-                    Nginx_With_Openssl="--with-openssl=${cur_dir}/src/${Openssl_New_Ver} --with-openssl-opt=enable-weak-ssl-ciphers"
-                fi
-            else
-                echo "Compile nginx with openssl 1.1.1"
-                Download_Files ${Openssl_New_DL} ${Openssl_New_Ver}.tar.gz
-                rm -rf ${Openssl_New_Ver} 
-                tar zxf ${Openssl_New_Ver}.tar.gz
-                Nginx_With_Openssl="--with-openssl=${cur_dir}/src/${Openssl_New_Ver} --with-openssl-opt=enable-weak-ssl-ciphers"
-            fi
-        fi
+            Custom_Openssl_Ver=${Openssl_3_Ver}
+            Custom_Openssl_DL=${Openssl_3_DL}
+        fi  
+        echo "System OpenSSL version is 1.1.1, compile nginx with custom OpenSSL version: ${Custom_Openssl_Ver}"
+        cd ${cur_dir}/src
+        Download_Files ${Custom_Openssl_DL} ${Custom_Openssl_Ver}.tar.gz
+        rm -rf ${Custom_Openssl_Ver}
+        tar zxf ${Custom_Openssl_Ver}.tar.gz
+        Nginx_With_Openssl="--with-openssl=${cur_dir}/src/${Custom_Openssl_Ver}"
+    else
+        echo "Current system OpenSSL version is not 1.1.1, using system OpenSSL."
+        Nginx_With_Openssl=""
     fi
 }
 
 Install_Nginx_Pcre() {
-    if [ "${Nginx_With_Pcre}" = "" ]; then
+    if command -v pcre-config >/dev/null 2>&1; then
+        echo "OS is using old PCRE, compile nginx with PCRE2"
         cd ${cur_dir}/src
-        Download_Files ${Pcre_DL} ${Pcre_Ver}.tar.bz2
-        rm -rf ${Pcre_Ver}
-        tar jxf ${Pcre_Ver}.tar.bz2
-        Nginx_With_Pcre="--with-pcre=${cur_dir}/src/${Pcre_Ver} --with-pcre-jit"
+        Download_Files ${Pcre2_DL} ${Pcre2_Ver}.tar.bz2
+        rm -rf ${Pcre2_Ver}
+        tar jxf ${Pcre2_Ver}.tar.bz2
+        Nginx_With_Pcre="--with-pcre=${cur_dir}/src/${Pcre2_Ver} --with-pcre-jit"
+    elif command -v pcre2-config >/dev/null 2>&1; then
+        echo "OS is using PCRE2, use system PCRE2"
+        Nginx_With_Pcre="--with-pcre-jit"
+    else
+        echo "OS has no PCRE installed, compile nginx with custom PCRE2"
+        cd ${cur_dir}/src
+        Download_Files ${Pcre2_DL} ${Pcre2_Ver}.tar.bz2
+        rm -rf ${Pcre2_Ver}
+        tar jxf ${Pcre2_Ver}.tar.bz2
+        Nginx_With_Pcre="--with-pcre=${cur_dir}/src/${Pcre2_Ver} --with-pcre-jit"
+    fi
+}
+
+# since 1.21.5, nginx support PCRE2 and configure script will look for PCRE2 first. It falls back to PCRE if no PCRE2 finds.
+# for 1.21.4 and older: Only support PCRE
+Install_Nginx_Pcre2() {
+    if command -v pcre2-config >/dev/null 2>&1; then
+        echo "OS is using PCRE2, use system PCRE2"
+        Nginx_With_Pcre="--with-pcre-jit"
+    else
+        echo "OS has no PCRE2 installed, compile nginx with custom PCRE2"
+        cd ${cur_dir}/src
+        Download_Files ${Pcre2_DL} ${Pcre2_Ver}.tar.bz2
+        rm -rf ${Pcre2_Ver}
+        tar jxf ${Pcre2_Ver}.tar.bz2
+        Nginx_With_Pcre="--with-pcre=${cur_dir}/src/${Pcre2_Ver} --with-pcre-jit"
     fi
 }
 
@@ -91,19 +101,9 @@ EOF
         make install PREFIX=/usr/local/nginx
         cd -
 
-        Nginx_Ver_Com=$(${cur_dir}/include/version_compare 1.21.5 ${Nginx_Version})
-        if [[ "${Nginx_Ver_Com}" == "1" ]]; then
-            Nginx_Module_Lua="--with-ld-opt='-Wl,-rpath,/usr/local/luajit/lib' --add-module=${cur_dir}/src/${LuaNginxModule} --add-module=${cur_dir}/src/${NgxDevelKit}"
-        else
-            if [ "${Nginx_With_Pcre}" = "" ]; then
-                Nginx_Module_Lua="--with-ld-opt='-Wl,-rpath,/usr/local/luajit/lib' --add-module=${cur_dir}/src/${LuaNginxModule} --add-module=${cur_dir}/src/${NgxDevelKit} --with-pcre=${cur_dir}/src/${Pcre_Ver} --with-pcre-jit"
-                cd ${cur_dir}/src
-                Download_Files ${Pcre_DL} ${Pcre_Ver}.tar.bz2
-                Tar_Cd ${Pcre_Ver}.tar.bz2
-            else
-                Nginx_Module_Lua="--with-ld-opt='-Wl,-rpath,/usr/local/luajit/lib' --add-module=${cur_dir}/src/${LuaNginxModule} --add-module=${cur_dir}/src/${NgxDevelKit}"
-            fi
-        fi
+        Nginx_Module_Lua="--with-ld-opt='-Wl,-rpath,/usr/local/luajit/lib' --add-module=${cur_dir}/src/${LuaNginxModule} --add-module=${cur_dir}/src/${NgxDevelKit}"
+    else
+        Nginx_Module_Lua=""
     fi
 }
 
@@ -114,6 +114,8 @@ Install_Ngx_FancyIndex() {
         Download_Files ${NgxFancyIndex_DL} ${NgxFancyIndex_Ver}.tar.xz
         Tar_Cd ${NgxFancyIndex_Ver}.tar.xz
         Ngx_FancyIndex="--add-module=${cur_dir}/src/${NgxFancyIndex_Ver}"
+    else
+        Ngx_FancyIndex=""
     fi
 }
 
@@ -122,26 +124,54 @@ Install_Nginx() {
     groupadd www
     useradd -s /sbin/nologin -g www www
 
+    Nginx_Version="${Nginx_Ver#nginx-}"
+
     cd ${cur_dir}/src
     Install_Nginx_Openssl
-    Install_Nginx_Pcre
+    Install_Nginx_Pcre2
     Install_Nginx_Lua
     Install_Ngx_FancyIndex
     rm -rf ${Nginx_Ver}
     Tar_Cd ${Nginx_Ver}.tar.gz ${Nginx_Ver}
-    if [[ "${DISTRO}" = "Fedora" && ${Fedora_Version} -ge 28 ]]; then
-        patch -p1 <${cur_dir}/src/patch/nginx-libxcrypt.patch
-    fi
     Nginx_Ver_Com=$(${cur_dir}/include/version_compare 1.14.2 ${Nginx_Version})
     if gcc -dumpversion | grep -q "^[8]" && [ "${Nginx_Ver_Com}" == "1" ]; then
         patch -p1 <${cur_dir}/src/patch/nginx-gcc8.patch
     fi
-    Nginx_Ver_Com=$(${cur_dir}/include/version_compare 1.9.4 ${Nginx_Version})
-    if [[ "${Nginx_Ver_Com}" == "0" || "${Nginx_Ver_Com}" == "1" ]]; then
-        ./configure --user=www --group=www --prefix=/usr/local/nginx --with-http_stub_status_module --with-http_ssl_module --with-http_spdy_module --with-http_gzip_static_module --with-ipv6 --with-http_sub_module --with-http_realip_module ${Nginx_With_Openssl} ${Nginx_With_Pcre} ${Nginx_Module_Lua} ${NginxMAOpt} ${Ngx_FancyIndex} ${Nginx_Modules_Options}
-    else
-        ./configure --user=www --group=www --prefix=/usr/local/nginx --with-http_stub_status_module --with-http_ssl_module --with-http_v2_module --with-http_v3_module --with-http_gzip_static_module --with-http_sub_module --with-stream --with-stream_ssl_module --with-stream_ssl_preread_module --with-http_realip_module ${Nginx_With_Openssl} ${Nginx_With_Pcre} ${Nginx_Module_Lua} ${NginxMAOpt} ${Ngx_FancyIndex} ${Nginx_Modules_Options}
-    fi
+    echo "Starting configure nginx..."
+    ./configure \
+        --user=www \
+        --group=www \
+        --prefix=/usr/local/nginx \
+        --with-compat \
+        --with-file-aio \
+        --with-threads \
+        --with-http_addition_module \
+        --with-http_auth_request_module \
+        --with-http_gunzip_module \
+        --with-http_gzip_static_module \
+        --with-http_sub_module \
+        --with-http_random_index_module \
+        --with-http_realip_module \
+        --with-http_secure_link_module \
+        --with-http_slice_module \
+        --with-http_ssl_module \
+        --with-http_stub_status_module \
+        --with-http_sub_module \
+        --with-http_v2_module \
+        --with-http_v3_module \
+        --with-stream \
+        --with-stream_realip_module \
+        --with-stream_ssl_module \
+        --with-stream_ssl_preread_module \
+        ${Nginx_With_Openssl} \
+        ${Nginx_With_Pcre} \
+        ${Nginx_Module_Lua} \
+        ${NginxMAOpt} \
+        ${Ngx_FancyIndex} \
+        ${Nginx_Modules_Options} \
+        --with-ld-opt='-Wl,-z,relro -Wl,-z,now -pie' \
+        --with-cc-opt="-O2 -g -fstack-protector-strong -Wp,-D_FORTIFY_SOURCE=2 -fPIC"
+
     Make_Install
     cd ../
 
@@ -199,9 +229,8 @@ fastcgi_param PHP_ADMIN_VALUE "open_basedir=\$document_root/:/tmp/:/proc/";
 EOF
     fi
 
-    \cp init.d/init.d.nginx /etc/init.d/nginx
     \cp init.d/nginx.service /etc/systemd/system/nginx.service
-    chmod +x /etc/init.d/nginx
+    systemctl daemon-reload
 
     if [ "${SelectMalloc}" = "3" ]; then
         mkdir /tmp/tcmalloc
@@ -218,12 +247,10 @@ google_perftools_profiles /tmp/tcmalloc;' /usr/local/nginx/conf/nginx.conf
         fi
     fi
 
-    ## start cleaning
+    ## cleaning
     cd ${cur_dir}/src && rm -rf ${cur_dir}/src/${Nginx_Ver}
-    [[ -d "${Openssl_3_Ver}" ]] && rm -rf ${Openssl_3_Ver}
-    [[ -d "${Openssl_New_Ver}" ]] && rm -rf ${Openssl_New_Ver}
-    [[ -d "${Openssl_Ver}" ]] && rm -rf ${Openssl_Ver}
-    rm -rf ${Pcre_Ver}
+    [[ -d "${Custom_Openssl_Ver}" ]] && rm -rf ${Custom_Openssl_Ver}
+    [[ -d "${Pcre2_Ver}" ]] &&rm -rf ${Pcre2_Ver}
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
         rm -rf ${cur_dir}/src/luajit
         rm -rf ${LuaNginxModule}
@@ -232,5 +259,5 @@ google_perftools_profiles /tmp/tcmalloc;' /usr/local/nginx/conf/nginx.conf
         rm -rf ${LuaRestyLrucache}
     fi
     [[ -d "${NgxFancyIndex_Ver}" ]] && rm -rf ${NgxFancyIndex_Ver}
-    
+
 }

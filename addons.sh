@@ -63,9 +63,9 @@ Display_Addons_Menu()
 
 Restart_PHP()
 {
-    if [ -s /usr/local/apache/bin/httpd ] && [ -s /usr/local/apache/conf/httpd.conf ] && [ -s /etc/init.d/httpd ]; then
+    if [ -s /usr/local/apache/bin/httpd ] && [ -s /usr/local/apache/conf/httpd.conf ] && [ -s /etc/systemd/system/httpd.service ]; then
         echo "Restarting Apache......"
-        /etc/init.d/httpd restart
+        service restart httpd
     else
         echo "Restarting php-fpm......"
         ${PHPFPM_Initd} restart
@@ -93,46 +93,55 @@ Select_PHP()
         echo "Multiple PHP version found, Please select the PHP version."
         Cur_PHP_Version="$(/usr/local/php/bin/php-config --version)"
         Echo_Green "1: Default Main PHP ${Cur_PHP_Version}"
-        if [[ -s /usr/local/php5.2/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php5.2.conf && -s /etc/init.d/php-fpm5.2 ]]; then
+        if [[ -s /usr/local/php5.2/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php5.2.conf && -s /etc/systemd/system/php-fpm5.2 ]]; then
             Echo_Green "2: PHP 5.2 [found]"
         fi
-        if [[ -s /usr/local/php5.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php5.3.conf && -s /etc/init.d/php-fpm5.3 ]]; then
+        if [[ -s /usr/local/php5.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php5.3.conf && -s /etc/systemd/system/php-fpm5.3 ]]; then
             Echo_Green "3: PHP 5.3 [found]"
         fi
-        if [[ -s /usr/local/php5.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php5.4.conf && -s /etc/init.d/php-fpm5.4 ]]; then
+        if [[ -s /usr/local/php5.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php5.4.conf && -s /etc/systemd/system/php-fpm5.4 ]]; then
             Echo_Green "4: PHP 5.4 [found]"
         fi
-        if [[ -s /usr/local/php5.5/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php5.5.conf && -s /etc/init.d/php-fpm5.5 ]]; then
+        if [[ -s /usr/local/php5.5/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php5.5.conf && -s /etc/systemd/system/php-fpm5.5 ]]; then
             Echo_Green "5: PHP 5.5 [found]"
         fi
-        if [[ -s /usr/local/php5.6/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php5.6.conf && -s /etc/init.d/php-fpm5.6 ]]; then
+        if [[ -s /usr/local/php5.6/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php5.6.conf && -s /etc/systemd/system/php-fpm5.6 ]]; then
             Echo_Green "6: PHP 5.6 [found]"
         fi
-        if [[ -s /usr/local/php7.0/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.0.conf && -s /etc/init.d/php-fpm7.0 ]]; then
+        if [[ -s /usr/local/php7.0/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.0.conf && -s /etc/systemd/system/php-fpm7.0 ]]; then
             Echo_Green "7: PHP 7.0 [found]"
         fi
-        if [[ -s /usr/local/php7.1/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.1.conf && -s /etc/init.d/php-fpm7.1 ]]; then
+        if [[ -s /usr/local/php7.1/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.1.conf && -s /etc/systemd/system/php-fpm7.1 ]]; then
             Echo_Green "8: PHP 7.1 [found]"
         fi
-        if [[ -s /usr/local/php7.2/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.2.conf && -s /etc/init.d/php-fpm7.2 ]]; then
+        if [[ -s /usr/local/php7.2/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.2.conf && -s /etc/systemd/system/php-fpm7.2 ]]; then
             Echo_Green "9: PHP 7.2 [found]"
         fi
-        if [[ -s /usr/local/php7.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.3.conf && -s /etc/init.d/php-fpm7.3 ]]; then
+        if [[ -s /usr/local/php7.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.3.conf && -s /etc/systemd/system/php-fpm7.3 ]]; then
             Echo_Green "10: PHP 7.3 [found]"
         fi
-        if [[ -s /usr/local/php7.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.4.conf && -s /etc/init.d/php-fpm7.4 ]]; then
+        if [[ -s /usr/local/php7.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.4.conf && -s /etc/systemd/system/php-fpm7.4 ]]; then
             Echo_Green "11: PHP 7.4 [found]"
         fi
-        if [[ -s /usr/local/php8.0/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.0.conf && -s /etc/init.d/php-fpm8.0 ]]; then
+        if [[ -s /usr/local/php8.0/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.0.conf && -s /etc/systemd/system/php-fpm8.0 ]]; then
             Echo_Green "12: PHP 8.0 [found]"
         fi
-        if [[ -s /usr/local/php8.1/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.1.conf && -s /etc/init.d/php-fpm8.1 ]]; then
+        if [[ -s /usr/local/php8.1/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.1.conf && -s /etc/systemd/system/php-fpm8.1 ]]; then
             Echo_Green "13: PHP 8.1 [found]"
         fi
-        if [[ -s /usr/local/php8.2/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.2.conf && -s /etc/init.d/php-fpm8.2 ]]; then
+        if [[ -s /usr/local/php8.2/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.2.conf && -s /etc/systemd/system/php-fpm8.2 ]]; then
             Echo_Green "14: PHP 8.2 [found]"
         fi
-        Echo_Yellow "Enter your choice (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 or 14): "
+        if [[ -s /usr/local/php8.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.3.conf && -s /etc/systemd/system/php-fpm8.3 ]]; then
+            Echo_Green "15: PHP 8.3 [found]"
+        fi
+        if [[ -s /usr/local/php8.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.4.conf && -s /etc/systemd/system/php-fpm8.4 ]]; then
+            Echo_Green "16: PHP 8.4 [found]"
+        fi
+        if [[ -s /usr/local/php8.5/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.5.conf && -s /etc/systemd/system/php-fpm8.5 ]]; then
+            Echo_Green "17: PHP 8.5 [found]"
+        fi
+        Echo_Yellow "Enter your choice (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 or 17): "
         read php_select
         case "${php_select}" in
             1)
@@ -217,8 +226,8 @@ Select_PHP()
 
 Addons_Get_PHP_Ext_Dir()
 {
-    Cur_PHP_Version="`${PHP_Path}/bin/php-config --version`"
-    zend_ext_dir="`${PHP_Path}/bin/php-config --extension-dir`/"
+    Cur_PHP_Version="$(${PHP_Path}/bin/php-config --version)"
+    zend_ext_dir="$(${PHP_Path}/bin/php-config --extension-dir)/"
 }
 
 Download_PHP_Src()

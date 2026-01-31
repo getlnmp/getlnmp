@@ -1,16 +1,52 @@
+# /etc/systemd/system/mysqld.service
+# MySQL systemd unit for compiled MySQL
+# Works on Debian / Ubuntu / RHEL / AlmaLinux / Rocky
+
+# Author:   getlnmp
+# website:  https://getlnmp.com
+
 [Unit]
 Description=MySQL Community Server
-After=network.target syslog.target
+Documentation=http://dev.mysql.com/doc/refman/en/using-systemd.html
+After=network-online.target
+Wants=network-online.target
 
 [Service]
-Type=forking
+##############################################################################
+## Core requirements for custom install
+##
+User=mysql
+Group=mysql
 
-ExecStart=/etc/init.d/mysql start
-ExecStop=/etc/init.d/mysql stop
-ExecReload=/etc/init.d/mysql reload
+# Requires mysqld binary to be compiled with Systemd support (-DWITH_SYSTEMD=1)
+Type=notify
 
-Restart=no
-PrivateTmp=false
+# Define the location of the PID file explicitly
+PIDFile=/usr/local/mysql/var/mysqld.pid
+
+# Start main service using the custom path
+# The daemon will read the configuration from /etc/my.cnf or /usr/local/mysql/my.cnf
+ExecStart=/usr/local/mysql/bin/mysqld --datadir=/usr/local/mysql/var --pid-file=/usr/local/mysql/var/mysqld.pid
+
+# Reloads grant tables and logs (sends SIGHUP signal to the main process)
+ExecReload=/bin/kill -s HUP $MAINPID
+
+# Ensures the PID file is cleaned up after the service stops or crashes
+# ExecStopPost=/bin/rm -f /usr/local/mysql/var/mysqld.pid
+
+# From Official Repo
+TimeoutSec=0
+LimitNOFILE = 10000
+Restart=on-failure
+RestartPreventExitStatus=1
+
+# Always restart when mysqld exits with exit code of 16. This special exit code
+# is used by mysqld for RESTART SQL.
+RestartForceExitStatus=16
+
+# Set enviroment variable MYSQLD_PARENT_PID. This is required for restart.
+Environment=MYSQLD_PARENT_PID=1
+
 
 [Install]
 WantedBy=multi-user.target

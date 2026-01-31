@@ -1,0 +1,10 @@
+--- a/ext/dom/dom_iterators.c
++++ b/ext/dom/dom_iterators.c
+@@ -42,6 +42,6 @@
+ 	xmlNotation *notation;
+ };
+ 
+-static void itemHashScanner (void *payload, void *data, xmlChar *name) /* {{{ */
++static void itemHashScanner (void *payload, void *data, const xmlChar *name) /* {{{ */
+ {
+ 	nodeIterator *priv = (nodeIterator *)data;

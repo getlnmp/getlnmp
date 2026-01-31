@@ -1,14 +1,28 @@
+# /etc/systemd/system/php-fpm.service
+# Php-fpm systemd unit for compiled Php-fpm
+# Works on Debian / Ubuntu / RHEL / AlmaLinux / Rocky
+# For php 7.0+
+
+# Author:   getlnmp
+# website:  https://getlnmp.com
+
 [Unit]
 Description=The PHP FastCGI Process Manager
 After=network.target
 
 [Service]
-Type=simple
+Type=notify
+
 PIDFile=/usr/local/php/var/run/php-fpm.pid
+
 ExecStart=/usr/local/php/sbin/php-fpm --nodaemonize --fpm-config /usr/local/php/etc/php-fpm.conf
 ExecReload=/bin/kill -USR2 $MAINPID
 ExecStop=/bin/kill -s QUIT $MAINPID
+
 PrivateTmp=false
+
+# Security / stability
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target

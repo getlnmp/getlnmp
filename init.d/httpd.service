@@ -1,12 +1,28 @@
 [Unit]
 Description=The Apache HTTP Server
 After=network.target remote-fs.target nss-lookup.target
+Documentation=https://httpd.apache.org/docs/
 
 [Service]
+# Service Type
 Type=forking
+
+# PID file (must match httpd.conf if defined there)
+PIDFile=/usr/local/apache/logs/httpd.pid
+
+# Optional runtime options (safe if unset)
+Environment=LANG=C
+# Only use OPTIONS if you have extra flags to pass to the binary
+Environment=OPTIONS=
+
 ExecStart=/usr/local/apache/bin/httpd $OPTIONS -k start
 ExecReload=/usr/local/apache/bin/httpd $OPTIONS -k graceful
 ExecStop=/usr/local/apache/bin/httpd -k stop
+
+# Signal for graceful shutdown
+KillSignal=SIGWINCH
+KillMode=mixed
+
 PrivateTmp=false
 
 [Install]

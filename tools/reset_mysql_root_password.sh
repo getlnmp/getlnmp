@@ -38,7 +38,7 @@ while :;do
     fi
 done
 
-echo "Stoping ${DB_Name}..."
+echo "Stopping ${DB_Name}..."
 /etc/init.d/${DB_Name} stop
 echo "Starting ${DB_Name} with skip grant tables"
 /usr/local/${DB_Name}/bin/mysqld_safe --skip-grant-tables >/dev/null 2>&1 &

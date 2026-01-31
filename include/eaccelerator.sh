@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# Dropped support for eaccelerator
 #Install eaccelerator 0.9.5.2
 Install_Old_eA()
 {

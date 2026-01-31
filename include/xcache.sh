@@ -1,7 +1,10 @@
  #!/usr/bin/env bash
 
 Install_XCache()
-{
+{   
+    echo "We've dropped support for XCache"
+    echo "Exiting..."
+    exit 1 
     echo "You will install ${XCache_Ver}..."
 
     xadmin_pass=""
