@@ -657,6 +657,56 @@ Kill_PM() {
     fi
 }
 
+# --- Stop background noise and wait for locks ---
+Stop_Package_Manager() {
+    echo "==> Disabling automatic updates during installation..."
+    if [ "${PM}" = "apt" ];  then
+        # --- DEBIAN / UBUNTU STRATEGY ---
+        
+        # 1. Stop the triggers (timers) so no NEW updates start
+        systemctl stop apt-daily.timer 2>/dev/null
+        systemctl stop apt-daily-upgrade.timer 2>/dev/null
+        
+        # 2. Stop the service itself
+        systemctl stop unattended-upgrades 2>/dev/null
+
+    elif [ "${PM}" = "yum" ]; then
+        # --- RHEL / ROCKY / ALMA STRATEGY ---
+
+        # 1. Stop Metadata cache (High RAM usage / frequent locker)
+        systemctl stop dnf-makecache.timer 2>/dev/null
+        
+        # 2. Stop Auto-updates & PackageKit
+        systemctl stop dnf-automatic.timer 2>/dev/null
+        systemctl stop dnf5-automatic.timer 2>/dev/null # For RHEL 10 / DNF5
+        if systemctl is-active --quiet PackageKit; then
+            systemctl stop PackageKit 2>/dev/null
+        fi
+
+    else
+        echo "ERROR: No supported package manager found..."
+        exit 1
+    fi   
+    # --- 3. TRAP: Ensure cleanup happens on Exit or Ctrl+C ---
+    trap Restore_Package_Manager EXIT  
+}
+
+Restore_Package_Manager() {
+    echo "==> Restoring background update services..."
+    if command -v apt >/dev/null 2>&1; then
+        systemctl start apt-daily.timer 2>/dev/null
+        systemctl start apt-daily-upgrade.timer 2>/dev/null
+        systemctl start unattended-upgrades 2>/dev/null
+    elif command -v yum >/dev/null 2>&1; then
+        systemctl start dnf-makecache.timer 2>/dev/null
+        # Optional: We usually don't force-start dnf-automatic unless we know the user wanted it,
+        # but restarting the timer is generally safe.
+        systemctl start dnf-automatic.timer 2>/dev/null
+        systemctl start dnf5-automatic.timer 2>/dev/null
+    fi
+    echo "==> Automatic Updates Services restored."
+}
+
 Wait_For_PM_Lock() {
     local lock_files=()
     local processes=""
@@ -712,6 +762,7 @@ Press_Install() {
     fi
     . include/version.sh
     . include/downloadlink.sh
+    Stop_Package_Manager
     Wait_For_PM_Lock
     #Kill_PM
 }

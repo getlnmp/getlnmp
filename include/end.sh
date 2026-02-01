@@ -38,9 +38,9 @@ Add_Iptables_Rules()
 Add_Firewall_Rules() {
     Get_Managemanet_IP
     if [ "${PM}" = "apt" ]; then
-        Apply_Firewalld
-    elif [ "${PM}" = "yum" ]; then
         Apply_UFW
+    elif [ "${PM}" = "yum" ]; then
+        Apply_Firewalld
     else
         echo "Error: Unsupported OS. Script supports RHEL-family or Debian-family only."
         exit 1
@@ -349,7 +349,7 @@ Print_Sucess_Info()
 {
     Clean_Web_Src_Dir
     echo "+------------------------------------------------------------------------+"
-    echo "|  GetLNMP V${GetLNMP_Ver} for ${DISTRO} Linux Server, Written by Licess |"
+    echo "|           GetLNMP V${GetLNMP_Ver} for ${DISTRO} Linux Server           |"
     echo "+------------------------------------------------------------------------+"
     echo "|         For more information please visit https://www.getlnmp.com      |"
     echo "+------------------------------------------------------------------------+"
