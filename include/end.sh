@@ -374,8 +374,9 @@ Print_Sucess_Info()
         netstat -ntl
     fi
     stop_time=$(date +%s)
-    echo "Install lnmp takes $(((stop_time-start_time)/60)) minutes."
-    Echo_Green "Install GetLNMP V${GetLNMP_Ver} completed! enjoy it."
+    echo "Installation takes $(((stop_time-start_time)/60)) minutes."
+    Echo_Green "GetLNMP V${GetLNMP_Ver} installation completed!"
+    LNMP_Installation_Status="y"
 }
 
 Print_Failed_Info()

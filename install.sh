@@ -60,6 +60,7 @@ echo "+------------------------------------------------------------------------+
 Init_Install()
 {
     Press_Install
+    Stop_Package_Manager
     Print_APP_Ver
     Get_Dist_Version
     Print_Sys_Info

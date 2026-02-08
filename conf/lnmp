@@ -586,7 +586,6 @@ Add_VHost() {
 
     vhostdir="/home/wwwroot/${domain}"
     Echo_Yellow "Please enter the directory for the domain: $domain"
-    echo
     Echo_Yellow "Default directory: /home/wwwroot/${domain}: "
     read -r vhostdir
     if [ "${vhostdir}" == "" ]; then
@@ -1073,12 +1072,12 @@ Add_SSL_Info_Menu() {
     Echo_Yellow "Enter more domain name(example: getlnmp.com sub.getlnmp.com): "
     read -r moredomain
     if [ "${moredomain}" != "" ]; then
-        echo " domain list: ${moredomain}"
+        echo " domain list: ${domain} ${moredomain}"
     fi
 
     Echo_Yellow "Please enter the directory for the domain: $domain"
     echo
-    echo "Default directory: /home/wwwroot/${domain}: "
+    Echo_Yellow "Default directory: /home/wwwroot/${domain}: "
     read -r vhostdir
     if [ "${vhostdir}" == "" ]; then
         vhostdir="/home/wwwroot/${domain}"
@@ -1231,7 +1230,7 @@ Add_SSL_Menu() {
                 fi
             done
             break
-        elif [[ "${ssl_choice}" =~ [234] ]]; then
+        elif [[ "${ssl_choice}" =~ ^[234]$ ]]; then
             Check_Acme_EMail
             break
         else
@@ -1250,21 +1249,21 @@ Install_Check_Acme.sh() {
         fi
     else
         cd /tmp
-        git clone https://github.com/acmesh-official/acme.sh.git
+        git clone --depth 1 https://github.com/acmesh-official/acme.sh.git
         cd acme.sh
         ./acme.sh --install ${acme_sh_sudo} --log --home /usr/local/acme.sh -m ${email_address}
         cd ..
         rm -rf acme.sh
     fi
-        # set deaulft CA Server to letsencrypt
-        #/usr/local/acme.sh/acme.sh --set-default-ca --server letsencrypt
-        # enable auto upgrade for acme.sh
-        /usr/local/acme.sh/acme.sh --upgrade --auto-upgrade
+    # set deaulft CA Server to letsencrypt
+    #/usr/local/acme.sh/acme.sh --set-default-ca --server letsencrypt
+    # enable auto upgrade for acme.sh
+    /usr/local/acme.sh/acme.sh --upgrade --auto-upgrade --home /usr/local/acme.sh
 
-        #create cert home
-        if [ ! -d /usr/local/nginx/conf/ssl ]; then
+    #create cert home
+    if [ ! -d /usr/local/nginx/conf/ssl ]; then
             mkdir -p /usr/local/nginx/conf/ssl/
-        fi
+    fi
 }
 
 Create_SSL_Config() {
@@ -1639,7 +1638,7 @@ php-fpm)
     systemctl ${arg2} php-fpm
     ;;
 pureftpd)
-    systemctl ${arg2} pureftp
+    systemctl ${arg2} pureftpd
     ;;
 vhost)
     Function_Vhost ${arg2}
@@ -1658,7 +1657,7 @@ ssl)
     Add_SSL_Menu
     Add_SSL
     ;;
-dnsssl | dns)
+dnsssl|dns)
     Add_Dns_SSL ${arg2}
     ;;
 onlyssl)

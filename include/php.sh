@@ -360,7 +360,7 @@ PHP_with_Intl() {
     echo "System ICU version is ${local_icu_version}, detected by ${detected_icu_method}"
     
     php_with_custom_icu='n'
-    PHP_Install_ICU
+    #PHP_Install_ICU
 
     if [ "${local_icu_version}" -gt 68 ]; then
         if ! echo "${php_version}" | grep -Eqi '^8\.[2-5]\.' && ! echo "${Php_Ver}" | grep -Eqi '^php-8\.[2-5]\.'; then
@@ -385,14 +385,15 @@ PHP_With_Libxml2() {
                 echo "Custom libxml2 with ICU ${local_icu_version} already installed, skip."
             else
                 Echo_Blue "[+] Installing ${Libxml2_Ver}"
-                rm -rf /usr/local/libxml2
+                rm -rf /usr/local/libxml2_icu"${local_icu_version}"
                 cd ${cur_dir}/src
                 Download_Files ${Libxml2_DL} ${Libxml2_Ver}.tar.xz
                 Tar_Cd ${Libxml2_Ver}.tar.xz ${Libxml2_Ver}
-                #PKG_CONFIG_PATH=${php_with_custom_icu_prefix}/lib/pkgconfig \
+                #PKG_CONFIG_PATH=${php_with_custom_icu_prefix}/lib/pkgconfig
+                CPPFLAGS="-I${php_with_custom_icu_prefix}/include" \
+                LDFLAGS="-L${php_with_custom_icu_prefix}/lib -Wl,-rpath,${php_with_custom_icu_prefix}/lib" \
                 ./configure \
                     --prefix=/usr/local/libxml2_icu"${local_icu_version}" \
-	                --without-python \
                     --with-icu \
                     --without-python
                 Make_Install

@@ -659,7 +659,7 @@ Kill_PM() {
 
 # --- Stop background noise and wait for locks ---
 Stop_Package_Manager() {
-    echo "==> Disabling automatic updates during installation..."
+    echo "Disabling automatic updates during installation..."
     if [ "${PM}" = "apt" ];  then
         # --- DEBIAN / UBUNTU STRATEGY ---
         
@@ -688,11 +688,15 @@ Stop_Package_Manager() {
         exit 1
     fi   
     # --- 3. TRAP: Ensure cleanup happens on Exit or Ctrl+C ---
-    trap Restore_Package_Manager EXIT  
+    trap Restore_Package_Manager EXIT
+    # wait for other process to finish
+    Wait_For_PM_Lock  
 }
 
 Restore_Package_Manager() {
-    echo "==> Restoring background update services..."
+    if [ ! "${LNMP_Installation_Status}" = 'y' ];then
+        echo "Restoring background update services..."
+    fi    
     if command -v apt >/dev/null 2>&1; then
         systemctl start apt-daily.timer 2>/dev/null
         systemctl start apt-daily-upgrade.timer 2>/dev/null
@@ -703,8 +707,13 @@ Restore_Package_Manager() {
         # but restarting the timer is generally safe.
         systemctl start dnf-automatic.timer 2>/dev/null
         systemctl start dnf5-automatic.timer 2>/dev/null
+    fi    
+    if [ ! "${LNMP_Installation_Status}" = 'y' ];then
+        echo "Automatic updates services restored."
     fi
-    echo "==> Automatic Updates Services restored."
+    if [ "${LNMP_Installation_Status}" = 'y' ];then
+        Echo_Green "Enjoy!"
+    fi
 }
 
 Wait_For_PM_Lock() {
@@ -762,8 +771,8 @@ Press_Install() {
     fi
     . include/version.sh
     . include/downloadlink.sh
-    Stop_Package_Manager
-    Wait_For_PM_Lock
+    #Stop_Package_Manager
+    #Wait_For_PM_Lock
     #Kill_PM
 }
 

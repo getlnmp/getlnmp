@@ -1,11 +1,5 @@
 # LNMP一键安装包 - Readme
 
-## 魔改注意事项  
-
-1) 这份脚本是forked 的军哥的LNMP(lnmplvemail/lnmp),军哥最后的commit是fde3d3e, 时间是May 27, 2024.  
-2) 目前网络上比较认可的没有被收购的稳定版本的最后commit是2482de9，时间是Jun 8, 2023.  
-3) 从Jun 8, 2023到May 27, 2024的所有commit 都人工check了一下   
-
 ## LNMP一键安装包是什么?
 
 LNMP一键安装包是一个用Linux Shell编写的可以为Debian/Ubuntu/RHEL/Rocky/AlmaLinux VPS或独立主机安装LNMP(Nginx/MySQL/PHP)、LNMPA(Nginx/MySQL/PHP/Apache)、LAMP(Apache/MySQL/PHP)生产环境的Shell程序。
