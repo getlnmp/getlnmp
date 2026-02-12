@@ -1,5 +1,5 @@
  #!/usr/bin/env bash
-
+# dropped support for XCache since it's no longer maintained and compatible with latest PHP versions
 Install_XCache()
 {   
     echo "We've dropped support for XCache"
