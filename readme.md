@@ -33,7 +33,7 @@ LNMP一键安装包是一个用Linux Shell编写的可以为Debian/Ubuntu/RHEL/R
 * RHEL 10/Rocky 10/AlmaLinux 10 建议安装 PHP 8.1+
 
 ## 软件版本
-* PHP目前支持PHP5.6, PHP 7.2-7.4, PHP 8.0-8.5
+* PHP目前支持PHP 7.2-7.4, PHP 8.0-8.5
 * Mysql支持5.7, 8.0和8.4， RHEL10系列只支持8.4
 * Mariadb支持10.5, 10.6, 10.11, 11.4, 11.8
 * Nginx默认安装最新的稳定版
@@ -47,8 +47,6 @@ LNMP一键安装包是一个用Linux Shell编写的可以为Debian/Ubuntu/RHEL/R
 
 * LNMP官网：<https://getlnmp.com>
 * 作者: getlnmp <admin@getlnmp.com>
-* 问题反馈&技术支持论坛：<https://bbs.lnmp.com/forum-25-1.html>
-* 打赏捐赠：<https://lnmp.org/donation.html>
 
 ## LNMP安装
 

@@ -439,7 +439,7 @@ PHP_Selection() {
         #echo "2: Install ${PHP_Info[1]}"
         #echo "3: Install ${PHP_Info[2]}"
         #echo "4: Install ${PHP_Info[3]}"
-        echo "5: Install ${PHP_Info[4]}"
+        #echo "5: Install ${PHP_Info[4]}"
         #echo "6: Install ${PHP_Info[5]}"
         #echo "7: Install ${PHP_Info[6]}"
         echo "8: Install ${PHP_Info[7]}"
@@ -451,7 +451,7 @@ PHP_Selection() {
         echo "14: Install ${PHP_Info[13]} (Default)"
         echo "15: Install ${PHP_Info[14]}"
         echo "16: Install ${PHP_Info[15]}"
-        read -p "Enter your choice (5, 8, 9, 10, 11, 12, 13, 14, 15, 16): " PHPSelect
+        read -p "Enter your choice (8, 9, 10, 11, 12, 13, 14, 15, 16): " PHPSelect
     fi
 
     case "${PHPSelect}" in
