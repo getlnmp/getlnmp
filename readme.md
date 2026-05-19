@@ -236,5 +236,3 @@ MySQL 8.4 | 11 | PHP 8.0 | 11 | | | |
 |Enable_PHP_Imap|是否添加PHP imap模块|默认n，更改为y即安装|
 
 ## 技术支持
-
-**技术支持论坛：<https://bbs.lnmp.com/forum-25-1.html>**
