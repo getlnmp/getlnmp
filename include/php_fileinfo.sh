@@ -35,7 +35,7 @@ EOF
         Echo_Green "PHP Fileinfo installed successfully, enjoy it!"
         exit 0
     else
-        rm -f ${PHP_Path}/conf.d/009-exif.ini
+        rm -f "${PHP_Path}"/conf.d/009-fileinfo.ini
         Echo_Red "PHP Fileinfo install failed!"
         exit 1
     fi
@@ -45,7 +45,7 @@ Uninstall_PHP_Fileinfo()
 {
     echo "You will uninstall PHP Fileinfo..."
     Press_Start
-    rm -f ${PHP_Path}/conf.d/009-fileinfo.ini
+    rm -f "${PHP_Path}"/conf.d/009-fileinfo.ini
     Restart_PHP
     Echo_Green "Uninstall PHP Fileinfo completed."
 }

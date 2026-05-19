@@ -47,8 +47,14 @@ Install_ImageMagic()
             Tar_Cd ${ImageMagick_Ver}.tar.xz ${ImageMagick_Ver}
         #fi
 
-        ./configure --prefix=/usr/local/imagemagick
-        Make_Install
+        ./configure --prefix=/usr/local/imagemagick || {
+            Echo_Red "ImageMagick configure failed!"
+            exit 1
+        }
+        Make_Install || {
+            Echo_Red "ImageMagick install failed!"
+            exit 1
+        }
         cd ../
         rm -rf ${cur_dir}/src/${ImageMagick_Ver}
     fi
@@ -60,9 +66,18 @@ Install_ImageMagic()
         Download_Files ${Imagick_DL} ${Imagick_Ver}.tgz
         Tar_Cd ${Imagick_Ver}.tgz ${Imagick_Ver}
     #fi
-    ${PHP_Path}/bin/phpize
-    ./configure --with-php-config=${PHP_Path}/bin/php-config --with-imagick=/usr/local/imagemagick
-    Make_Install
+    ${PHP_Path}/bin/phpize || {
+        Echo_Red "imagick phpize failed!"
+        exit 1
+    }
+    ./configure --with-php-config=${PHP_Path}/bin/php-config --with-imagick=/usr/local/imagemagick || {
+        Echo_Red "imagick configure failed!"
+        exit 1
+    }
+    Make_Install || {
+        Echo_Red "imagick install failed!"
+        exit 1
+    }
     cd ../
 
     cat >${PHP_Path}/conf.d/008-imagick.ini<<EOF

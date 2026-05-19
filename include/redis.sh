@@ -117,9 +117,11 @@ Uninstall_Redis()
 {
     echo "You will uninstall Redis..."
     Press_Start
-    rm -f ${PHP_Path}/conf.d/007-redis.ini
-    Restart_PHP
+    systemctl stop redis
     systemctl disable redis
+    rm -f ${Default_Website_Dir}/redis.php
+    rm -f "${PHP_Path}"/conf.d/007-redis.ini
+    Restart_PHP
     echo "Delete Redis files..."
     rm -rf /usr/local/redis
     rm -rf /etc/systemd/system/redis.service

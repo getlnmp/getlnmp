@@ -1,23 +1,6 @@
 #!/usr/bin/env bash
 
 # bundled with PHP 5.5.0 and later, and is » available in PECL for PHP versions 5.2, 5.3 and 5.4
-Install_Old_Opcache()
-{
-    cd ${cur_dir}/src
-
-    if [ -d "${ZendOpcache_Ver}" ]; then
-        rm -rf "${ZendOpcache_Ver}"
-    fi
-
-    Download_Files ${ZendOpcache_DL} ${ZendOpcache_Ver}.tgz
-    Tar_Cd ${ZendOpcache_Ver}.tgz ${ZendOpcache_Ver}
-    ${PHP_Path}/bin/phpize
-    ./configure --with-php-config=${PHP_Path}/bin/php-config
-    make
-    make install
-    cd ../
-}
-
 Install_Opcache()
 {
 
@@ -36,21 +19,7 @@ Install_Opcache()
         fi
     fi
 
-    if echo "${Cur_PHP_Version}" | grep -Eqi '^5\.2\.'; then
-        echo "Zend Opcache do NOT SUPPORT PHP 5.2.* and lower version of php 5.3"
-        sleep 1
-        exit 1
-    elif echo "${Cur_PHP_Version}" | grep -Eqi '^5\.3\.'; then
-        if echo ${Cur_PHP_Version} | grep -vEqi '^5\.3\.2[0-9]';then
-            echo "If PHP under version 5.3.20, we do not recommend install opcache, it maybe cause 502 Bad Gateway error!"
-            sleep 3
-            exit 1
-        fi
-        Install_Old_Opcache
-    elif echo "${Cur_PHP_Version}" | grep -Eqi '^5\.4\.'; then
-        echo "${Cur_PHP_Version}"
-        Install_Old_Opcache
-    elif echo "${Cur_PHP_Version}" | grep -Eqi '^5\.[56]\.' || echo "${Cur_PHP_Version}" | grep -Eqi '^7\.'; then
+    if echo "${Cur_PHP_Version}" | grep -Eqi '^5\.[56]\.' || echo "${Cur_PHP_Version}" | grep -Eqi '^7\.'; then
         cat >${PHP_Path}/conf.d/004-opcache.ini<<EOF
 [Zend Opcache]
 zend_extension="opcache.so"
@@ -84,14 +53,14 @@ EOF
     fi
 
     echo "Copy Opcache Control Panel..."
-    \cp ${cur_dir}/conf/ocp.php ${Default_Website_Dir}/ocp.php
+    \cp "${cur_dir}"/conf/ocp.php "${Default_Website_Dir}"/ocp.php
     Restart_PHP
     if [ -s "${zend_ext}" ]; then
         Echo_Green "====== Opcache install completed ======"
         Echo_Green "Opcache installed successfully, enjoy it!"
         exit 0
     else
-        rm -f ${PHP_Path}/conf.d/004-opcache.ini
+        rm -f "${PHP_Path}"/conf.d/004-opcache.ini
         Echo_Red "OPcache install failed!"
         exit 1
     fi
@@ -101,7 +70,8 @@ Uninstall_Opcache()
 {
     echo "You will uninstall opcache..."
     Press_Start
-    rm -f ${PHP_Path}/conf.d/004-opcache.ini
+    rm -f ${Default_Website_Dir}/ocp.php
+    rm -f "${PHP_Path}"/conf.d/004-opcache.ini
     Restart_PHP
     Echo_Green "Uninstall Opcache completed."
 }

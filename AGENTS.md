@@ -8,10 +8,8 @@ Before reviewing or editing code, read:
 - FUNCTION_MAP.md
 - INSTALL_FLOW.md
 - GLOBAL_VARIABLES.md
-- COMPATIBILITY_MATRIX.md
 - AI_REVIEW_RULES.md
 - RISK_AREAS.md
-- TEST_PLAN.md
 
 Rules:
 

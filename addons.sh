@@ -30,7 +30,7 @@ action2=$2
 . include/php_sodium.sh
 . include/php_imap.sh
 . include/php_swoole.sh
-#. include/php_SourceGuardian.sh
+. include/php_SourceGuardian.sh
 . include/downloadlink.sh
 
 Display_Addons_Menu()
@@ -93,28 +93,28 @@ Select_PHP()
         echo "Multiple PHP version found, Please select the PHP version."
         Cur_PHP_Version="$(/usr/local/php/bin/php-config --version)"
         Echo_Green "1: Default Main PHP ${Cur_PHP_Version}"
-        if [[ -s /usr/local/php7.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.3.conf && -s /etc/systemd/system/php-fpm7.3 ]]; then
+        if [[ -s /usr/local/php7.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.3.conf && -s /etc/systemd/system/php-fpm7.3.service ]]; then
             Echo_Green "10: PHP 7.3 [found]"
         fi
-        if [[ -s /usr/local/php7.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.4.conf && -s /etc/systemd/system/php-fpm7.4 ]]; then
+        if [[ -s /usr/local/php7.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.4.conf && -s /etc/systemd/system/php-fpm7.4.service ]]; then
             Echo_Green "11: PHP 7.4 [found]"
         fi
-        if [[ -s /usr/local/php8.0/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.0.conf && -s /etc/systemd/system/php-fpm8.0 ]]; then
+        if [[ -s /usr/local/php8.0/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.0.conf && -s /etc/systemd/system/php-fpm8.0.service ]]; then
             Echo_Green "12: PHP 8.0 [found]"
         fi
-        if [[ -s /usr/local/php8.1/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.1.conf && -s /etc/systemd/system/php-fpm8.1 ]]; then
+        if [[ -s /usr/local/php8.1/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.1.conf && -s /etc/systemd/system/php-fpm8.1.service ]]; then
             Echo_Green "13: PHP 8.1 [found]"
         fi
-        if [[ -s /usr/local/php8.2/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.2.conf && -s /etc/systemd/system/php-fpm8.2 ]]; then
+        if [[ -s /usr/local/php8.2/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.2.conf && -s /etc/systemd/system/php-fpm8.2.service ]]; then
             Echo_Green "14: PHP 8.2 [found]"
         fi
-        if [[ -s /usr/local/php8.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.3.conf && -s /etc/systemd/system/php-fpm8.3 ]]; then
+        if [[ -s /usr/local/php8.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.3.conf && -s /etc/systemd/system/php-fpm8.3.service ]]; then
             Echo_Green "15: PHP 8.3 [found]"
         fi
-        if [[ -s /usr/local/php8.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.4.conf && -s /etc/systemd/system/php-fpm8.4 ]]; then
+        if [[ -s /usr/local/php8.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.4.conf && -s /etc/systemd/system/php-fpm8.4.service ]]; then
             Echo_Green "16: PHP 8.4 [found]"
         fi
-        if [[ -s /usr/local/php8.5/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.5.conf && -s /etc/systemd/system/php-fpm8.5 ]]; then
+        if [[ -s /usr/local/php8.5/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.5.conf && -s /etc/systemd/system/php-fpm8.5.service ]]; then
             Echo_Green "17: PHP 8.5 [found]"
         fi
         Echo_Yellow "Enter your choice (1, 10, 11, 12, 13, 14, 15, 16 or 17): "
@@ -175,8 +175,18 @@ Select_PHP()
     fi
 }
 
+Check_Addons_PHP()
+{
+    if [[ -z "${PHP_Path}" || ! -x "${PHP_Path}/bin/php" || ! -x "${PHP_Path}/bin/php-config" ]]; then
+        Echo_Red "Error: PHP executable or php-config not found under ${PHP_Path:-unknown}."
+        Echo_Red "Please install PHP or select a valid PHP version before installing addons."
+        exit 1
+    fi
+}
+
 Addons_Get_PHP_Ext_Dir()
 {
+    Check_Addons_PHP
     Cur_PHP_Version="$(${PHP_Path}/bin/php-config --version)"
     zend_ext_dir="$(${PHP_Path}/bin/php-config --extension-dir)/"
 }
@@ -208,6 +218,7 @@ if [[ "${action}" == "" || "${action2}" == "" ]]; then
 fi
 Get_Dist_Name
 Select_PHP
+Check_Addons_PHP
 
     case "${action}" in
     install)

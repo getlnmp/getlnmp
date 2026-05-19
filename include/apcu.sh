@@ -86,7 +86,10 @@ Uninstall_Apcu()
 {
     echo "You will uninstall apcu..."
     Press_Start
+    rm -f ${Default_Website_Dir}/apc.php
     rm -f ${PHP_Path}/conf.d/009-apcu.ini
+    Addons_Get_PHP_Ext_Dir
+    zend_ext="${zend_ext_dir}apcu.so"
     echo "Delete apcu files..."
     rm -f "${zend_ext}"
     Restart_PHP

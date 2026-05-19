@@ -156,9 +156,11 @@ Uninstall_Memcached()
 {
     echo "You will uninstall Memcached..."
     Press_Start
+    systemctl stop memcached
+    systemctl disable memcached
+    rm -f ${Default_Website_Dir}/memcached.php
     rm -f ${PHP_Path}/conf.d/005-memcached.ini
     Restart_PHP
-    systemctl disable memcached
     echo "Delete Memcached files..."
     rm -rf /usr/local/libmemcached
     rm -rf /usr/local/memcached

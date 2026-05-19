@@ -221,8 +221,8 @@ EOF
 
     echo "Copy php-fpm systemd file..."
     \cp ${cur_dir}/src/php-${php_version}/sapi/fpm/systemd.php-fpm /etc/systemd/system/php-fpm7.3.service
-    systemctl daemon-reload
     sed -i 's@# Provides:          php-fpm@# Provides:          php-fpm7.3@g' /etc/systemd/system/php-fpm7.3.service
+    systemctl daemon-reload
 
     StartUp php-fpm7.3
 
@@ -301,9 +301,7 @@ EOF
 
     echo "Copy php-fpm systemd file..."
     \cp ${cur_dir}/src/php-${php_version}/sapi/fpm/systemd.php-fpm /etc/systemd/system/php-fpm7.4.service
-    chmod +x /etc/systemd/system/php-fpm7.4.service
     sed -i 's@# Provides:          php-fpm@# Provides:          php-fpm7.4@g' /etc/systemd/system/php-fpm7.4.service
-
     systemctl daemon-reload
 
     StartUp php-fpm7.4
@@ -383,9 +381,7 @@ EOF
 
     echo "Copy php-fpm systemd file..."
     \cp ${cur_dir}/src/php-${php_version}/sapi/fpm/systemd.php-fpm /etc/systemd/system/php-fpm8.0.service
-    chmod +x /etc/systemd/system/php-fpm8.0.service
     sed -i 's@# Provides:          php-fpm@# Provides:          php-fpm8.0@g' /etc/systemd/system/php-fpm8.0.service
-
     systemctl daemon-reload
 
     StartUp php-fpm8.0
@@ -464,9 +460,7 @@ EOF
 
     echo "Copy php-fpm systemd file..."
     \cp ${cur_dir}/src/php-${php_version}/sapi/fpm/systemd.php-fpm /etc/systemd/system/php-fpm8.1.service
-    chmod +x /etc/systemd/system/php-fpm8.1.service
     sed -i 's@# Provides:          php-fpm@# Provides:          php-fpm8.1@g' /etc/systemd/system/php-fpm8.1.service
-
     systemctl daemon-reload
 
     StartUp php-fpm8.1
@@ -545,9 +539,7 @@ EOF
 
     echo "Copy php-fpm systemd file..."
     \cp ${cur_dir}/src/php-${php_version}/sapi/fpm/systemd.php-fpm /etc/systemd/system/php-fpm8.2.service
-    chmod +x /etc/systemd/system/php-fpm8.2.service
     sed -i 's@# Provides:          php-fpm@# Provides:          php-fpm8.2@g' /etc/systemd/system/php-fpm8.2.service
-
     systemctl daemon-reload
 
     StartUp php-fpm8.2
@@ -626,9 +618,7 @@ EOF
 
     echo "Copy php-fpm systemd file..."
     \cp ${cur_dir}/src/php-${php_version}/sapi/fpm/systemd.php-fpm /etc/systemd/system/php-fpm8.3.service
-    chmod +x /etc/systemd/system/php-fpm8.3.service
     sed -i 's@# Provides:          php-fpm@# Provides:          php-fpm8.3@g' /etc/systemd/system/php-fpm8.3.service
-
     systemctl daemon-reload
 
     StartUp php-fpm8.3
