@@ -34,7 +34,7 @@ Open_FTP_Ports() {
             Echo_Green "Opening FTP ports 20 and 21 using ufw..."
             ufw allow 20/tcp
             ufw allow 21/tcp
-            ufw allow 20000:30000/tcp
+            #ufw allow 20000:30000/tcp
             opened=1
         fi
     fi
@@ -44,7 +44,7 @@ Open_FTP_Ports() {
             Echo_Green "Opening FTP ports 20 and 21 using firewall-cmd..."
             firewall-cmd --add-port=20/tcp --permanent
             firewall-cmd --add-port=21/tcp --permanent
-            firewall-cmd --add-port=20000:30000/tcp --permanent
+            #firewall-cmd --add-port=20000:30000/tcp --permanent
             firewall-cmd --reload
             opened=1
         fi
@@ -52,6 +52,51 @@ Open_FTP_Ports() {
 
     if [ "$opened" -eq 0 ]; then
         Echo_Yellow "No active ufw or firewalld detected. Skip opening FTP ports."
+    fi
+}
+
+Remove_FTP_Ports() {
+    local removed=0
+
+    if command -v ufw >/dev/null 2>&1; then
+        if ufw status | grep -qi "Status: active"; then
+            Echo_Green "Removing FTP ports 20 and 21 from ufw..."
+            ufw delete allow 20/tcp
+            ufw delete allow 21/tcp
+            removed=1
+        fi
+    fi
+
+    if command -v firewall-cmd >/dev/null 2>&1; then
+        if firewall-cmd --state >/dev/null 2>&1; then
+            Echo_Green "Removing FTP ports 20 and 21 from firewall-cmd..."
+            firewall-cmd --remove-port=20/tcp --permanent
+            firewall-cmd --remove-port=21/tcp --permanent
+            firewall-cmd --reload
+            removed=1
+        fi
+    fi
+
+    if [ "$removed" -eq 0 ]; then
+        Echo_Yellow "No active ufw or firewalld detected. Skip removing FTP ports."
+    fi
+}
+
+Remove_LNMP_Command_If_Pureftpd_Only() {
+    if [ ! -s /bin/lnmp ]; then
+        return
+    fi
+
+    if [[ -s /usr/local/nginx/sbin/nginx || -s /usr/local/apache/bin/httpd || -s /usr/local/php/bin/php || -s /usr/local/mysql/bin/mysql || -s /usr/local/mariadb/bin/mariadb ]]; then
+        Echo_Yellow "Detected existing LNMP/LNMPA/LAMP components. Keep /bin/lnmp."
+        return
+    fi
+
+    if cmp -s /bin/lnmp "${cur_dir}/conf/lnmp"; then
+        echo "Remove standalone /bin/lnmp command..."
+        rm -f /bin/lnmp
+    else
+        Echo_Yellow "/bin/lnmp differs from ${cur_dir}/conf/lnmp. Keep it."
     fi
 }
 
@@ -80,17 +125,31 @@ Install_Pureftpd()
 
     Echo_Blue "Installing pure-ftpd..."
     Tar_Cd ${Pureftpd_Ver}.tar.bz2 ${Pureftpd_Ver}
-    ./configure --prefix=/usr/local/pureftpd CFLAGS=-O2 --with-puredb --with-quotas --with-cookie --with-virtualhosts --with-diraliases --with-sysquotas --with-ratios --with-altlog --with-paranoidmsg --with-shadow --with-welcomemsg --with-throttling --with-uploadscript --with-language=english --with-rfc2640 --with-ftpwho --with-tls
+    ./configure --prefix=/usr/local/pureftpd CFLAGS=-O2 --with-puredb --with-quotas --with-cookie --with-virtualhosts --with-diraliases --with-sysquotas --with-ratios --with-altlog --with-paranoidmsg --with-shadow --with-welcomemsg --with-throttling --with-uploadscript --with-language=english --with-rfc2640 --with-ftpwho --with-tls || {
+        Echo_Red "Pureftpd configure failed!"
+        exit 1
+    }
 
-    Make_Install
+    make -j"$(nproc)"
+    if [ $? -ne 0 ]; then
+        make || {
+            Echo_Red "Pureftpd build failed!"
+            exit 1
+        }
+    fi
+    make install || {
+        Echo_Red "Pureftpd install failed!"
+        exit 1
+    }
 
     Echo_Blue "Copy configure files..."
-    mkdir /usr/local/pureftpd/etc
+    mkdir -p /usr/local/pureftpd/etc
     \cp ${cur_dir}/conf/pure-ftpd.conf /usr/local/pureftpd/etc/pure-ftpd.conf
     \cp ${cur_dir}/init.d/pureftpd.service /etc/systemd/system/pureftpd.service
     touch /usr/local/pureftpd/etc/pureftpd.passwd
     touch /usr/local/pureftpd/etc/pureftpd.pdb
-
+    
+    systemctl daemon-reload
     systemctl enable --now pureftpd
 
     cd ..
@@ -135,6 +194,9 @@ Uninstall_Pureftpd()
     systemctl disable pureftpd
     rm -rf /etc/systemd/system/pureftpd.service
     systemctl daemon-reload
+    echo "Remove firewall rules..."
+    Remove_FTP_Ports
+    Remove_LNMP_Command_If_Pureftpd_Only
     echo "Delete files..."
     rm -rf /usr/local/pureftpd
     echo "Pureftpd uninstall completed."

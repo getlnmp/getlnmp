@@ -933,6 +933,17 @@ Download_Files() {
         echo "${FileName} [found]"
     else
         echo "Notice: ${FileName} not found!!!download now..."
+        wget -c --progress=dot -e dotbytes=20M --prefer-family=IPv4 --no-check-certificate ${URL}
+    fi
+}
+
+Download_Files_Exit() {
+    local URL=$1
+    local FileName=$2
+    if [ -s "${FileName}" ]; then
+        echo "${FileName} [found]"
+    else
+        echo "Notice: ${FileName} not found!!!download now..."
         wget -c --progress=dot -e dotbytes=20M --prefer-family=IPv4 --no-check-certificate ${URL} || {
             Echo_Red "${FileName}.tar.gz download failed!"
             exit 1
@@ -941,6 +952,17 @@ Download_Files() {
 }
 
 Download_O_Files() {
+    local URL=$1
+    local FileName=$2
+    if [ -s "${FileName}" ]; then
+        echo "${FileName} [found]"
+    else
+        echo "Notice: ${FileName} not found!!!download now..."
+        wget -c --progress=dot -e dotbytes=20M --prefer-family=IPv4 --no-check-certificate ${URL} -O ${FileName}
+    fi
+}
+
+Download_O_Files_Exit() {
     local URL=$1
     local FileName=$2
     if [ -s "${FileName}" ]; then

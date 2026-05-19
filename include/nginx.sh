@@ -80,10 +80,10 @@ Install_Nginx_Lua() {
             Echo_Red "Luajit download failed!"
             exit 1
         }
-        Download_O_Files ${LuaNginxModule_DL} ${LuaNginxModule}.tar.gz
-        Download_O_Files ${NgxDevelKit_DL} ${NgxDevelKit}.tar.gz
-        Download_O_Files ${LuaRestyCore_DL} ${LuaRestyCore}.tar.gz
-        Download_O_Files ${LuaRestyLrucache_DL} ${LuaRestyLrucache}.tar.gz
+        Download_O_Files_Exit ${LuaNginxModule_DL} ${LuaNginxModule}.tar.gz
+        Download_O_Files_Exit ${NgxDevelKit_DL} ${NgxDevelKit}.tar.gz
+        Download_O_Files_Exit ${LuaRestyCore_DL} ${LuaRestyCore}.tar.gz
+        Download_O_Files_Exit ${LuaRestyLrucache_DL} ${LuaRestyLrucache}.tar.gz
 
         Echo_Blue "[+] Installing Luajit... "
         tar zxf ${LuaNginxModule}.tar.gz
