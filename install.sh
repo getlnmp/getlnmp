@@ -77,7 +77,6 @@ Init_Install()
         RHEL_RemoveAMP
         RHEL_Dependent
     elif [ "$PM" = "apt" ]; then
-        Xen_Hwcap_Setting
         Deb_RemoveAMP
         Deb_Dependent
     fi
@@ -86,11 +85,9 @@ Init_Install()
     Check_Download
     #Install_Libiconv
     #Install_Libmcrypt
-    #Install_Mhash
-    #Install_Mcrypt
-    #Install_Freetype
     #Install_Pcre
     #Install_Icu4c
+    Install_Freetype
     if [ "${SelectMalloc}" = "2" ]; then
         Install_Jemalloc
     elif [ "${SelectMalloc}" = "3" ]; then
@@ -182,11 +179,7 @@ LNMPA_Stack()
 {
     Apache_Selection
     Init_Install
-    if [ "${ApacheSelect}" = "1" ]; then
-        Install_Apache_22
-    else
-        Install_Apache_24
-    fi
+    Install_Apache_24
     Install_PHP
     Install_Nginx
     Creat_PHP_Tools
@@ -199,11 +192,7 @@ LAMP_Stack()
 {
     Apache_Selection
     Init_Install
-    if [ "${ApacheSelect}" = "1" ]; then
-        Install_Apache_22
-    else
-        Install_Apache_24
-    fi
+    Install_Apache_24
     Install_PHP
     Creat_PHP_Tools
     Add_Firewall_Rules

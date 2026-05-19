@@ -1,5 +1,21 @@
 更新记录
 
+GetLNMP 3.0
+
+默认仅从软件官网下载文件
+默认只支持Redhat/Rocky/AlmaLinux/Oracle Linux以及Ubuntu/Debian发行版
+增加PHP 8.4和8.5
+增加了MariaDB 11.4和11.8
+优化Nginx的编译安装
+优化acme.sh的安装
+优化了redis的安装
+优化了memcached的安装
+移除了PHP 5.6-7.2
+移除了Apache 2.2
+移除了CentOS的支持
+更新诸多软件版本；
+其他一些功能优化及调整......
+
 LNMP 2.1
 
 增加PHP 8.3支持；

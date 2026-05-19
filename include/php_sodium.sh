@@ -30,7 +30,7 @@ Install_PHP_Sodium()
         apt-get install -y libsodium-dev
     fi
 
-    if echo "${Cur_PHP_Version}" | grep -Eqi '^7\.[234]\.|8\.[0-4]\.'; then
+    if echo "${Cur_PHP_Version}" | grep -Eqi '^7\.[234]\.|8\.[0-5]\.'; then
         Download_PHP_Src
 
         Tar_Cd php-${Cur_PHP_Version}.tar.bz2 php-${Cur_PHP_Version}/ext/sodium
@@ -38,7 +38,7 @@ Install_PHP_Sodium()
         ./configure --with-php-config=${PHP_Path}/bin/php-config
         make && make install
         cd -
-        rm -rf php-${Cur_PHP_Version}
+        rm -rf php-"${Cur_PHP_Version}"
     elif echo "${Cur_PHP_Version}" | grep -Eqi '^7\.[01].'; then
         Download_Files ${PHPSodium_DL} ${PHPSodium_Ver}.tgz
         Tar_Cd ${PHPSodium_Ver}.tgz ${PHPSodium_Ver}

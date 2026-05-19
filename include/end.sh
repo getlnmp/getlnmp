@@ -173,18 +173,18 @@ Add_LNMP_Startup()
     echo "Add Startup and Starting LNMP..."
     \cp ${cur_dir}/conf/lnmp /bin/lnmp
     chmod +x /bin/lnmp
-    StartUp nginx
-    StartOrStop start nginx
+    systemctl enable nginx
+    systemctl start nginx
     if [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
-        StartUp mariadb
-        StartOrStop start mariadb
+        systemctl enable mariadb
+        systemctl start mariadb
        # sed -i 's#/etc/init.d/mysql#/etc/init.d/mariadb#' /bin/lnmp
     elif [[ "${DBSelect}" =~ [1-5]$ ]]; then
-        StartUp mysql
-        StartOrStop start mysql
+        systemctl enable mysql
+        systemctl start mysql
     fi
-    StartUp php-fpm
-    StartOrStop start php-fpm
+    systemctl enable php-fpm
+    systemctl start php-fpm
 }
 
 Add_LNMPA_Startup()
@@ -192,17 +192,17 @@ Add_LNMPA_Startup()
     echo "Add Startup and Starting LNMPA..."
     \cp ${cur_dir}/conf/lnmpa /bin/lnmp
     chmod +x /bin/lnmp
-    StartUp nginx
-    StartOrStop start nginx
+    systemctl enable nginx
+    systemctl start nginx
     if [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
-        StartUp mariadb
-        StartOrStop start mariadb
+        systemctl enable mariadb
+        systemctl start mariadb
     elif [[ "${DBSelect}" =~ ^[1-5]$ ]]; then
-        StartUp mysql
-        StartOrStop start mysql
+        systemctl enable mysql
+        systemctl start mysql
     fi
-    StartUp httpd
-    StartOrStop start httpd
+    systemctl enable httpd
+    systemctl start httpd
 }
 
 Add_LAMP_Startup()
@@ -210,14 +210,14 @@ Add_LAMP_Startup()
     echo "Add Startup and Starting LAMP..."
     \cp ${cur_dir}/conf/lamp /bin/lnmp
     chmod +x /bin/lnmp
-    StartUp httpd
-    StartOrStop start httpd
+    systemctl enable httpd
+    systemctl start httpd
     if [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
-        StartUp mariadb
-        StartOrStop start mariadb
+        systemctl enable mariadb
+        systemctl start mariadb
     elif [[ "${DBSelect}" =~ ^[1-5]$ ]]; then
-        StartUp mysql
-        StartOrStop start mysql
+        systemctl enable mysql
+        systemctl start mysql
     fi
 }
 

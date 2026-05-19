@@ -36,7 +36,7 @@ Install_PHP_Ldap()
     ./configure --with-php-config=${PHP_Path}/bin/php-config --with-ldap --with-ldap-sasl
     make && make install
     cd -
-    rm -rf php-${Cur_PHP_Version}
+    rm -rf php-"${Cur_PHP_Version}"
 
     cat >${PHP_Path}/conf.d/009-ldap.ini<<EOF
 extension = "ldap.so"

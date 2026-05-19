@@ -1,36 +1,65 @@
 #!/usr/bin/env bash
 
+# use America/New_York timezone by default, you can change it to your local timezone if needed
 Set_Timezone() {
     Echo_Blue "[+] Setting timezone to New York Time..."
     rm -rf /etc/localtime
     ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
 }
 
+# chrony contains both chronyd and chronyc, chronyd is the daemon that runs in the background to sync time, while chronyc is the command-line tool to interact with chronyd
+# if chronyd is running, use chronyc to force time sync, otherwise use chronyd -q to perform one-shot time sync
+# chronyd -q will exit immediately after performing time sync, while chronyd running in the background will continuously sync time, so we prefer using chronyd -q when chronyd is not running to avoid potential conflicts
 Sync_Time() {
+    Echo_Blue "[+] Syncing system time..."
+    local chrony_service=""
+
     if ! command -v chronyd >/dev/null 2>&1; then
         Echo_Blue "[+] Installing chrony..."
-        if [ "$PM" = "yum" ]; then
-            yum install chrony -y
-        elif [ "$PM" = "apt" ]; then
+        case "${PM}" in
+        yum)
+            yum install -y chrony
+            systemctl enable --now chronyd
+            ;;
+        dnf)
+            dnf install -y chrony
+            systemctl enable --now chronyd
+            ;;
+        apt)
             apt-get update --allow-releaseinfo-change -y
             apt-get install -y chrony
-        fi
+            systemctl enable --now chronyd
+            ;;
+        *)
+            Echo_Red "Unsupported package manager (${PM}), existing chrony install."
+            ;;
+        esac
     fi
-    Echo_Blue "[+] Syncing system time..."
-    # Check if chronyd is already running
+
+    if ! command -v chronyd >/dev/null 2>&1; then
+        Echo_Red "chronyd is not installed, skipping time sync."
+        exit 1
+    fi
+
     if pidof chronyd >/dev/null 2>&1; then
-        # Use chronyc instead of starting another chronyd
-        if command -v chronyc >/dev/null 2>&1; then
-            echo "Forcing time sync via chronyc"
-            chronyc -a makestep
-            chronyc tracking
-        else
-            echo "chronyc not available"
+        chrony_service="chronyd"
+    elif command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet chronyd; then
+        chrony_service="chronyd"
+    fi
+
+    if [ -n "${chrony_service}" ]; then
+        if ! command -v chronyc >/dev/null 2>&1; then
+            Echo_Red "chronyd is installed but chronyc is not installed, skipping time sync."
+            exit 1
         fi
+
+        Echo_Blue "[+] Forcing time sync via chronyc..."
+        chronyc -a makestep && chronyc tracking
     else
-        echo "chronyd not running, doing one-shot sync"
+        Echo_Blue "[+] Performing one-shot time sync via chronyd..."
         chronyd -d -q "server pool.ntp.org iburst"
     fi
+
     date
     start_time=$(date +%s)
 }
@@ -91,12 +120,8 @@ Disable_Selinux() {
     fi
 }
 
-Xen_Hwcap_Setting() {
-    if [ -s /etc/ld.so.conf.d/libc6-xen.conf ]; then
-        sed -i 's/hwcap 1 nosegneg/hwcap 0 nosegneg/g' /etc/ld.so.conf.d/libc6-xen.conf
-    fi
-}
-
+# check if /etc/hosts contains localhost entry, if not add it
+# and also check if DNS is working properly when using mirror, if not add public DNS servers to /etc/resolv.conf
 Check_Hosts() {
     if grep -Eqi '^127.0.0.1[[:space:]]*localhost' /etc/hosts; then
         echo "Hosts: ok."
@@ -117,35 +142,35 @@ Check_Hosts() {
 }
 
 # not suggest using centos repository for RHEL
-RHEL_Modify_Source() {
-    Get_RHEL_Version
-    if [ "${RHELRepo}" = "local" ]; then
-        echo "DO NOT change RHEL repository, use the repository you set."
-    else
-        echo "RHEL ${RHEL_Ver} will use aliyun centos repository..."
-        if [ ! -s "/etc/yum.repos.d/Centos-${RHEL_Ver}.repo" ]; then
-            if command -v curl >/dev/null 2>&1; then
-                curl http://mirrors.aliyun.com/repo/Centos-${RHEL_Ver}.repo -o /etc/yum.repos.d/Centos-${RHEL_Ver}.repo
-            else
-                wget --prefer-family=IPv4 http://mirrors.aliyun.com/repo/Centos-${RHEL_Ver}.repo -O /etc/yum.repos.d/Centos-${RHEL_Ver}.repo
-            fi
-        fi
-        if echo "${RHEL_Version}" | grep -Eqi "^6"; then
-            sed -i "s#centos/\$releasever#centos-vault/\$releasever#g" /etc/yum.repos.d/Centos-${RHEL_Ver}.repo
-            sed -i "s/\$releasever/${RHEL_Version}/g" /etc/yum.repos.d/Centos-${RHEL_Ver}.repo
-        elif echo "${RHEL_Version}" | grep -Eqi "^7"; then
-            sed -i "s/\$releasever/7/g" /etc/yum.repos.d/Centos-${RHEL_Ver}.repo
-        elif echo "${RHEL_Version}" | grep -Eqi "^8"; then
-            sed -i "s#centos/\$releasever#centos-vault/8.5.2111#g" /etc/yum.repos.d/Centos-${RHEL_Ver}.repo
-        elif echo "${RHEL_Version}" | grep -Eqi "^9"; then
-            [[ -s /etc/yum.repos.d/Centos-9.repo ]] && rm -f /etc/yum.repos.d/Centos-9.repo
-            \cp ${cur_dir}/conf/rhel-9.repo /etc/yum.repos.d/Centos-9.repo
-        fi
-        yum clean all
-        yum makecache
-    fi
-    sed -i "s/^enabled[ ]*=[ ]*1/enabled=0/" /etc/yum/pluginconf.d/subscription-manager.conf
-}
+#RHEL_Modify_Source() {
+#    Get_RHEL_Version
+#    if [ "${RHELRepo}" = "local" ]; then
+#        echo "DO NOT change RHEL repository, use the repository you set."
+#    else
+#        echo "RHEL ${RHEL_Ver} will use aliyun centos repository..."
+#        if [ ! -s "/etc/yum.repos.d/Centos-${RHEL_Ver}.repo" ]; then
+#            if command -v curl >/dev/null 2>&1; then
+#                curl http://mirrors.aliyun.com/repo/Centos-${RHEL_Ver}.repo -o /etc/yum.repos.d/Centos-${RHEL_Ver}.repo
+#            else
+#                wget --prefer-family=IPv4 http://mirrors.aliyun.com/repo/Centos-${RHEL_Ver}.repo -O /etc/yum.repos.d/Centos-${RHEL_Ver}.repo
+#            fi
+#        fi
+#        if echo "${RHEL_Version}" | grep -Eqi "^6"; then
+#            sed -i "s#centos/\$releasever#centos-vault/\$releasever#g" /etc/yum.repos.d/Centos-${RHEL_Ver}.repo
+#            sed -i "s/\$releasever/${RHEL_Version}/g" /etc/yum.repos.d/Centos-${RHEL_Ver}.repo
+#        elif echo "${RHEL_Version}" | grep -Eqi "^7"; then
+#            sed -i "s/\$releasever/7/g" /etc/yum.repos.d/Centos-${RHEL_Ver}.repo
+#        elif echo "${RHEL_Version}" | grep -Eqi "^8"; then
+#            sed -i "s#centos/\$releasever#centos-vault/8.5.2111#g" /etc/yum.repos.d/Centos-${RHEL_Ver}.repo
+#        elif echo "${RHEL_Version}" | grep -Eqi "^9"; then
+#            [[ -s /etc/yum.repos.d/Centos-9.repo ]] && rm -f /etc/yum.repos.d/Centos-9.repo
+#            \cp ${cur_dir}/conf/rhel-9.repo /etc/yum.repos.d/Centos-9.repo
+#        fi
+#        yum clean all
+#        yum makecache
+#    fi
+#    sed -i "s/^enabled[ ]*=[ ]*1/enabled=0/" /etc/yum/pluginconf.d/subscription-manager.conf
+#}
 
 Ubuntu_Modify_Source() {
     if [ "${country}" = "CN" ]; then
@@ -209,18 +234,16 @@ Ubuntu_Modify_Source() {
     elif grep -Eqi "23.10" /etc/*-release || echo "${Ubuntu_Version}" | grep -Eqi '^23.10'; then
         Ubuntu_Deadline mantic
     fi
-    if [ "${CodeName}" != "" ]; then
+    if [ -n "${CodeName}" ]; then
         \cp /etc/apt/sources.list /etc/apt/sources.list.$(date +"%Y%m%d")
         cat >/etc/apt/sources.list <<EOF
 deb ${OldReleasesURL} ${CodeName} main restricted universe multiverse
 deb ${OldReleasesURL} ${CodeName}-security main restricted universe multiverse
 deb ${OldReleasesURL} ${CodeName}-updates main restricted universe multiverse
-deb ${OldReleasesURL} ${CodeName}-proposed main restricted universe multiverse
 deb ${OldReleasesURL} ${CodeName}-backports main restricted universe multiverse
 deb-src ${OldReleasesURL} ${CodeName} main restricted universe multiverse
 deb-src ${OldReleasesURL} ${CodeName}-security main restricted universe multiverse
 deb-src ${OldReleasesURL} ${CodeName}-updates main restricted universe multiverse
-deb-src ${OldReleasesURL} ${CodeName}-proposed main restricted universe multiverse
 deb-src ${OldReleasesURL} ${CodeName}-backports main restricted universe multiverse
 EOF
     fi
@@ -268,27 +291,28 @@ Ubuntu_Deadline() {
     esac
 }
 
-CentOS6_Modify_Source() {
-    if echo "${CentOS_Version}" | grep -Eqi "^6"; then
-        Echo_Yellow "CentOS 6 is now end of life, use vault repository."
-        mkdir /etc/yum.repos.d/backup
-        mv /etc/yum.repos.d/*.repo /etc/yum.repos.d/backup/
-        \cp ${cur_dir}/conf/CentOS6-Base-Vault.repo /etc/yum.repos.d/CentOS-Base.repo
-    fi
-}
+# drop support for centos
+#CentOS6_Modify_Source() {
+#    if echo "${CentOS_Version}" | grep -Eqi "^6"; then
+#        Echo_Yellow "CentOS 6 is now end of life, use vault repository."
+#        mkdir /etc/yum.repos.d/backup
+#        mv /etc/yum.repos.d/*.repo /etc/yum.repos.d/backup/
+#        \cp ${cur_dir}/conf/CentOS6-Base-Vault.repo /etc/yum.repos.d/CentOS-Base.repo
+#    fi
+#}
 
-CentOS8_Modify_Source() {
-    if echo "${CentOS_Version}" | grep -Eqi "^8" && [ "${isCentosStream}" != "y" ]; then
-        Echo_Yellow "CentOS 8 is now end of life, use vault repository."
-        if [ ! -s /etc/yum.repos.d/CentOS8-vault.repo ]; then
-            mkdir /etc/yum.repos.d/backup
-            mv /etc/yum.repos.d/*.repo /etc/yum.repos.d/backup/
-            \cp ${cur_dir}/conf/CentOS8-vault.repo /etc/yum.repos.d/CentOS8-vault.repo
-        fi
-    fi
-}
+#CentOS8_Modify_Source() {
+#    if echo "${CentOS_Version}" | grep -Eqi "^8" && [ "${isCentosStream}" != "y" ]; then
+#        Echo_Yellow "CentOS 8 is now end of life, use vault repository."
+#        if [ ! -s /etc/yum.repos.d/CentOS8-vault.repo ]; then
+#            mkdir /etc/yum.repos.d/backup
+#            mv /etc/yum.repos.d/*.repo /etc/yum.repos.d/backup/
+#            \cp ${cur_dir}/conf/CentOS8-vault.repo /etc/yum.repos.d/CentOS8-vault.repo
+#        fi
+#    fi
+#}
 
-Modify_Source() {
+#Modify_Source() {
 #    if [ "${DISTRO}" = "RHEL" ]; then
 #        if subscription-manager status; then
 #            Echo_Blue "RHEL subscription exists on the system, skip setting up third-party sources."
@@ -305,9 +329,46 @@ Modify_Source() {
 #        CentOS6_Modify_Source
 #        CentOS8_Modify_Source
 #    fi
-    echo ''
-    Echo_Red "Please update repository sources manually if needed."
-    echo ''
+#}
+Enable_RHEL_CRB() {
+    Get_RHEL_Version
+    case "${RHEL_Ver}" in
+        8|9|10)
+            if command -v subscription-manager >/dev/null 2>&1; then
+                subscription-manager repos --enable "codeready-builder-for-rhel-${RHEL_Ver}-${DB_ARCH}-rpms" || {
+                    Echo_Yellow "Failed to enable CodeReady Builder automatically."
+                    Echo_Yellow "Please check available repo IDs with: subscription-manager repos --list | grep -i codeready"
+                }
+            fi
+            ;;
+    esac
+}
+
+Modify_Source() {
+    case "${DISTRO}" in
+        RHEL)
+            if command -v subscription-manager >/dev/null 2>&1 && subscription-manager status >/dev/null 2>&1; then
+                Echo_Blue "RHEL subscription exists on the system, skip setting up third-party sources."
+                Enable_RHEL_CRB
+            else
+                if [ "${RHELRepo}" = "local" ]; then
+                    Echo_Blue "RHELRepo=local, keep current RHEL repository settings."
+                else
+                    Echo_Red "RHEL subscription is not active."
+                    Echo_Red "For RHEL, please register the system, configure local repos, or explicitly set RHELRepo=aliyun/centos if you accept third-party compatible repos."
+                    exit 1
+                fi
+            fi
+            ;;
+
+        Ubuntu)
+            Ubuntu_Modify_Source
+            ;;
+
+        *)
+            Echo_Blue "No source modification needed for ${DISTRO}."
+            ;;
+    esac
 }
 
 Check_PowerTools() {
@@ -481,7 +542,7 @@ PHP_Make_Install() {
 }
 
 # deprecated as only for php 5.2 which is dropped support
-# autoconf 2.69 is required for php 5.6
+# autoconf 2.69 is required for php 5.6, but we've dropped support for 5.6
 Install_Autoconf() {
     if [ -s /usr/local/autoconf-2.69/bin/autoconf ] && [ -s /usr/local/autoconf-2.69/bin/autoheader ]; then
         Echo_Yellow "autoconf 2.69 already installed, skip."       
@@ -504,16 +565,16 @@ Install_Autoconf() {
 # php 5.6 and php 7.0, 7.1 may have issue with system glibc iconv, needs test
 # use "--with-iconv=/usr/local" flag when using GNU libiconv
 # libxml2 needs recompiling if using GNU libiconv
-Install_Libiconv() {
-    Echo_Blue "[+] Installing ${Libiconv_Ver}"
-    cd ${cur_dir}/src
-    Download_Files ${Libiconv_DL} ${Libiconv_Ver}.tar.gz
-    Tar_Cd ${Libiconv_Ver}.tar.gz ${Libiconv_Ver}
-    ./configure --enable-static
-    Make_Install
-    cd ${cur_dir}/src/
-    rm -rf ${cur_dir}/src/${Libiconv_Ver}
-}
+#Install_Libiconv() {
+#    Echo_Blue "[+] Installing ${Libiconv_Ver}"
+#    cd ${cur_dir}/src
+#    Download_Files ${Libiconv_DL} ${Libiconv_Ver}.tar.gz
+#    Tar_Cd ${Libiconv_Ver}.tar.gz ${Libiconv_Ver}
+#    ./configure --enable-static
+#    Make_Install
+#    cd ${cur_dir}/src/
+#    rm -rf ${cur_dir}/src/${Libiconv_Ver}
+#}
 
 # install it for php 5.6 - php 7.0, mcrypt extension deprecated from 7.1 and removed since 7.2
 # building flag --with-mcrypt for php <= 7.0

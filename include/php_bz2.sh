@@ -22,7 +22,7 @@ Install_PHP_Bz2()
     ./configure --with-php-config=${PHP_Path}/bin/php-config
     make && make install
     cd -
-    rm -rf php-${Cur_PHP_Version}
+    rm -rf php-"${Cur_PHP_Version}"
 
     cat >${PHP_Path}/conf.d/009-bz2.ini<<EOF
 extension = "bz2.so"

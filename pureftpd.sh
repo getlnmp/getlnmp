@@ -8,7 +8,7 @@ if [ $(id -u) != "0" ]; then
 fi
 clear
 echo "+----------------------------------------------------------+"
-echo "|          Pureftpd for LNMP,  Written by Licess           |"
+echo "|                  Pureftpd for LNMP                       |"
 echo "+----------------------------------------------------------+"
 echo "|This script is a tool to install pureftpd for LNMP        |"
 echo "+----------------------------------------------------------+"
@@ -26,13 +26,42 @@ action=$1
 
 Get_Dist_Name
 
+Open_FTP_Ports() {
+    local opened=0
+
+    if command -v ufw >/dev/null 2>&1; then
+        if ufw status | grep -qi "Status: active"; then
+            Echo_Green "Opening FTP ports 20 and 21 using ufw..."
+            ufw allow 20/tcp
+            ufw allow 21/tcp
+            ufw allow 20000:30000/tcp
+            opened=1
+        fi
+    fi
+
+    if command -v firewall-cmd >/dev/null 2>&1; then
+        if firewall-cmd --state >/dev/null 2>&1; then
+            Echo_Green "Opening FTP ports 20 and 21 using firewall-cmd..."
+            firewall-cmd --add-port=20/tcp --permanent
+            firewall-cmd --add-port=21/tcp --permanent
+            firewall-cmd --add-port=20000:30000/tcp --permanent
+            firewall-cmd --reload
+            opened=1
+        fi
+    fi
+
+    if [ "$opened" -eq 0 ]; then
+        Echo_Yellow "No active ufw or firewalld detected. Skip opening FTP ports."
+    fi
+}
+
 Install_Pureftpd()
 {
     Press_Install
 
     Echo_Blue "Installing dependent packages..."
     if [ "$PM" = "yum" ]; then
-        for packages in make gcc gcc-c++ gcc-g77 openssl openssl-devel bzip2;
+        for packages in make gcc gcc-c++ openssl openssl-devel bzip2;
         do yum -y install $packages; done
     elif [ "$PM" = "apt" ]; then
         apt-get update -y
@@ -62,34 +91,13 @@ Install_Pureftpd()
     touch /usr/local/pureftpd/etc/pureftpd.passwd
     touch /usr/local/pureftpd/etc/pureftpd.pdb
 
-    StartUp pureftpd
+    systemctl enable --now pureftpd
 
     cd ..
     rm -rf ${cur_dir}/src/${Pureftpd_Ver}
 
-    if command -v iptables >/dev/null 2>&1; then
-        if [ -s /bin/lnmp ]; then
-            iptables -I INPUT 7 -p tcp --dport 20 -j ACCEPT
-            iptables -I INPUT 8 -p tcp --dport 21 -j ACCEPT
-            iptables -I INPUT 9 -p tcp --dport 20000:30000 -j ACCEPT
-        else
-            iptables -I INPUT -p tcp --dport 20 -j ACCEPT
-            iptables -I INPUT -p tcp --dport 21 -j ACCEPT
-            iptables -I INPUT -p tcp --dport 20000:30000 -j ACCEPT
-        fi
-        if [ "${PM}" = "yum" ]; then
-            service iptables save
-            service iptables reload
-        elif [ "${PM}" = "apt" ]; then
-            if [ -s /etc/init.d/netfilter-persistent ]; then
-                /etc/init.d/netfilter-persistent save
-                /etc/init.d/netfilter-persistent reload
-            else
-                /etc/init.d/iptables-persistent save
-                /etc/init.d/iptables-persistent reload
-            fi
-        fi
-    fi
+    # Open FTP ports 20, 21 and 20000-30000 for passive mode if firewalld or ufw is active
+    Open_FTP_Ports
 
     if [ ! -s /bin/lnmp ]; then
         \cp "${cur_dir}"/conf/lnmp /bin/lnmp
@@ -108,7 +116,7 @@ Install_Pureftpd()
         Echo_Green "| Install Pure-FTPd completed,enjoy it!"
         Echo_Green "| =>use command: lnmp ftp {add|list|del|show} to manage FTP users."
         Echo_Green "+----------------------------------------------------------------------+"
-        Echo_Green "| For more information please visit https://lnmp.org"
+        Echo_Green "| For more information please visit https://getlnmp.com"
         Echo_Green "+----------------------------------------------------------------------+"
     else
         Echo_Red "Pureftpd install failed!"
@@ -124,7 +132,7 @@ Uninstall_Pureftpd()
     echo "Stop pureftpd..."
     systemctl stop pureftpd
     echo "Remove service..."
-    Remove_StartUp pureftpd
+    systemctl disable pureftpd
     rm -rf /etc/systemd/system/pureftpd.service
     systemctl daemon-reload
     echo "Delete files..."

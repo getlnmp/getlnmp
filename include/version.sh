@@ -29,7 +29,7 @@ LuaNginxModule='lua-nginx-module-0.10.28'
 LuaRestyCore='lua-resty-core-0.1.31'
 LuaRestyLrucache='lua-resty-lrucache-0.15'
 NgxDevelKit='ngx_devel_kit-0.3.3'
-Nginx_Ver='nginx-1.28.1'
+Nginx_Ver='nginx-1.30.1'
 NgxFancyIndex_Ver='ngx-fancyindex-0.5.2'
 if [ "${DBSelect}" = "1" ]; then
     Mysql_Ver='mysql-5.5.62'
@@ -85,9 +85,9 @@ elif [ "${PHPSelect}" = "13" ]; then
 elif [ "${PHPSelect}" = "14" ]; then
     Php_Ver='php-8.3.30'
 elif [ "${PHPSelect}" = "15" ]; then
-    Php_Ver='php-8.4.17'
+    Php_Ver='php-8.4.20'
 elif [ "${PHPSelect}" = "16" ]; then
-    Php_Ver='php-8.5.2'
+    Php_Ver='php-8.5.5'
 fi
 if [[ "${PHPSelect}" =~ ^[123]$ ]]; then
     PhpMyAdmin_Ver='phpMyAdmin-4.0.10.20-all-languages'
@@ -98,30 +98,23 @@ else
 fi
 APR_Ver='apr-1.7.6'
 APR_Util_Ver='apr-util-1.6.3'
-if [ "${ApacheSelect}" = "1" ]; then
-    Apache_Ver='httpd-2.2.34'
-elif [ "${ApacheSelect}" = "2" ]; then
-    Apache_Ver='httpd-2.4.66'
-fi
-
+Apache_Ver='httpd-2.4.67'
 Pureftpd_Ver='pure-ftpd-1.0.52'
-
-XCache_Ver='xcache-3.2.0'
 ImageMagick_Ver='ImageMagick-7.1.1-8'
-Imagick_Ver='imagick-3.7.0'
+Imagick_Ver='imagick-3.8.1'
 ZendOpcache_Ver='zendopcache-7.0.5'
-Redis_Stable_Ver='redis-7.4.7'
-PHPRedis_Ver='redis-5.3.7'
-Memcached_Ver='memcached-1.6.15'
+Redis_Stable_Ver='redis-7.4.9'
+PHPRedis_Ver='redis-6.3.0'
+Memcached_Ver='memcached-1.6.41'
 Libmemcached_Ver='libmemcached-1.0.18'
 PHPMemcached_Ver='memcached-2.2.0'
 PHP7Memcached_Ver='memcached-3.1.5'
-PHP8Memcached_Ver='memcached-3.2.0'
+PHP8Memcached_Ver='memcached-3.4.0'
 PHPMemcache_Ver='memcache-3.0.8'
 PHP7Memcache_Ver='memcache-4.0.5.2'
 PHP8Memcache_Ver='memcache-8.2'
 PHPOldApcu_Ver='apcu-4.0.11'
-PHPNewApcu_Ver='apcu-5.1.22'
+PHPNewApcu_Ver='apcu-5.1.28'
 PHPApcu_Bc_Ver='apcu_bc-1.0.5'
 PHPSodium_Ver='libsodium-2.0.23'
 PHPSwoole_Ver='swoole-5.1.1'

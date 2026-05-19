@@ -1,0 +1,19 @@
+[Unit]
+Description=Memcached Daemon
+After=network.target
+Documentation=man:memcached(1)
+
+[Service]
+Type=simple
+User=memcached
+Group=memcached
+ExecStart=/usr/local/memcached/bin/memcached -u memcached -l 127.0.0.1 -p 11211 -m 128 -c 1024 -o modern
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

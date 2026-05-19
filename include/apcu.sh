@@ -5,7 +5,7 @@ Install_Apcu()
     echo "You will install apcu..."
     apcu_pass=""
     while :;do
-        read -p "Please enter admin password of apcu: " apcu_pass
+        read -r -p "Please enter admin password of apcu: " apcu_pass
         if [ "${apcu_pass}" != "" ]; then
             echo "================================================="
             echo "Your admin password of apcu was: ${apcu_pass}"

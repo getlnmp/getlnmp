@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 # Dropped support for eaccelerator
-#Install eaccelerator 0.9.5.2
+# full support for up to PHP 5.4
+# Install eaccelerator 0.9.5.2
 Install_Old_eA()
 {
     if [ -s eaccelerator-0.9.5.2 ]; then

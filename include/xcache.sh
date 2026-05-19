@@ -1,4 +1,5 @@
- #!/usr/bin/env bash
+#!/usr/bin/env bash
+# full support for up to PHP 5.6
 # dropped support for XCache since it's no longer maintained and compatible with latest PHP versions
 Install_XCache()
 {   

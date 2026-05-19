@@ -25,7 +25,7 @@ Install_PHP_Exif()
     ./configure --with-php-config=${PHP_Path}/bin/php-config
     make && make install
     cd -
-    rm -rf php-${Cur_PHP_Version}
+    rm -rf php-"${Cur_PHP_Version}"
 
     cat >${PHP_Path}/conf.d/009-exif.ini<<EOF
 extension = "exif.so"

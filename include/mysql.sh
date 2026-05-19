@@ -9,23 +9,23 @@
 
 
 # deprecated as we dropped support for mysql 5.5
-MySQL_ARM_Patch()
-{
-    if [ "${Is_ARM}" = "y" ]; then
-        patch -p1 < ${cur_dir}/src/patch/mysql-5.5-fix-arm-client_plugin.patch
-    fi
-}
+#MySQL_ARM_Patch()
+#{
+#    if [ "${Is_ARM}" = "y" ]; then
+#        patch -p1 < ${cur_dir}/src/patch/mysql-5.5-fix-arm-client_plugin.patch
+#    fi
+#}
 
 # deprecated as we dropped support for mysql 5.1
-MySQL_Gcc7_Patch()
-{
-    if gcc -dumpversion|grep -Eq "^([7-9]|10)"; then
-        echo "gcc version: 7+"
-        if [ "${DBSelect}" = "1" ] || echo "${mysql_version}" | grep -Eqi '^5\.1.'; then
-            patch -p1 < ${cur_dir}/src/patch/mysql-5.1-mysql-gcc7.patch
-        fi
-    fi
-}
+#MySQL_Gcc7_Patch()
+#{
+#    if gcc -dumpversion|grep -Eq "^([7-9]|10)"; then
+#        echo "gcc version: 7+"
+#        if [ "${DBSelect}" = "1" ] || echo "${mysql_version}" | grep -Eqi '^5\.1.'; then
+#            patch -p1 < ${cur_dir}/src/patch/mysql-5.1-mysql-gcc7.patch
+#        fi
+#    fi
+#}
 
 # initialize mysql data directory with no password generated for root user
 MySQL_Initialize_DB() {
@@ -588,7 +588,7 @@ EOF
 }
 
 # mysql 5.7.44 still only support openssl 1.1.1. But binary package uses openssl 3.
-# mysql 5.7 BIN is built with libncurses.so.5, but most OS use libncurses.so.6 now.
+# mysql 5.7 and before BIN is built with libncurses.so.5, but most OS use libncurses.so.6 now.
 # So we need to install ncurses5 compatibility library for mysql 5.7 BIN package
 
 Install_MySQL_57()

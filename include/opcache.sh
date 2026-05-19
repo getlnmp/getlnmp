@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# bundled with PHP 5.5.0 and later, and is » available in PECL for PHP versions 5.2, 5.3 and 5.4
 Install_Old_Opcache()
 {
     cd ${cur_dir}/src

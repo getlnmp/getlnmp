@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+# there are three memcache concepts: memcached, php-memcache and php-memcached
+# memcached is a high-performance, distributed memory object caching system, which is used to speed up dynamic web applications by alleviating database load. It is a server-side application that runs in the background and listens for requests from clients to store and retrieve data in memory.
+# php-memcache(old) is a PHP extension that provides an interface to interact with the memcached server. It allows PHP applications to connect to the memcached server, store and retrieve data from it. It is a simple and efficient way to use memcached in PHP applications.
+# php-memcached(new) is another PHP extension that provides an interface to interact with the memcached server. It is a more feature-rich extension compared to php-memcache, offering additional functionalities such as support for binary protocol, consistent hashing, and more
+# for php 5.6, 7.0, 7.1, we prefer memcache
+# for php 7.2 and above, we prefer memcached
+# both php memcache extension and php memcached extension rely on memcached server.
 Install_PHPMemcache()
 {
     echo "Install memcache php extension..."
@@ -31,11 +38,6 @@ Install_PHPMemcached()
     if [ "$PM" = "yum" ]; then
         yum install cyrus-sasl-devel -y
         Get_Dist_Version
-        if echo "${CentOS_Version}" | grep -Eqi '^5'; then
-            yum install gcc44 gcc44-c++ libstdc++44-devel -y
-            export CC="gcc44"
-            export CXX="g++44"
-        fi
     elif [ "$PM" = "apt" ]; then
         export DEBIAN_FRONTEND=noninteractive
         apt-get install libsasl2-2 sasl2-bin libsasl2-2 libsasl2-dev libsasl2-modules -y
@@ -75,7 +77,7 @@ Install_Memcached()
     echo "Which memcached php extension do you choose:"
     echo "Install php-memcache, please enter: 1"
     echo "Install php-memcached, please enter: 2"
-    read -p "Enter 1 or 2 (Default 1): " ver
+    read -r -p "Enter 1 or 2 (Default 1): " ver
 
     if [ "${ver}" = "1" ]; then
         echo "You choose php-memcache"
@@ -108,25 +110,24 @@ EOF
     if [ -s /usr/local/memcached/bin/memcached ]; then
         echo "Memcached already exists."
     else
+        # memcached should not run as root user, so we create a memcached user to run memcached
+        useradd -r -s /usr/sbin/nologin -M memcached
+
         Download_Files ${Memcached_DL} ${Memcached_Ver}.tar.gz
         Tar_Cd ${Memcached_Ver}.tar.gz ${Memcached_Ver}
         ./configure --prefix=/usr/local/memcached
-        make &&make install
+        make -j"$(nproc)"
+        make install
         cd ../
         rm -rf ${cur_dir}/src/${Memcached_Ver}
 
         ln -sf /usr/local/memcached/bin/memcached /usr/bin/memcached
 
-        \cp ${cur_dir}/init.d/init.d.memcached /etc/init.d/memcached
-        chmod +x /etc/init.d/memcached
-        useradd -s /sbin/nologin nobody
+        \cp ${cur_dir}/init.d/memcached.service /etc/systemd/system/memcached.service
+        systemctl daemon-reload
+        systemctl enable --now memcached
+        
     fi
-
-    if [ ! -d /var/lock/subsys ]; then
-      mkdir -p /var/lock/subsys
-    fi
-
-    StartUp memcached
 
     if [ "${ver}" = "1" ]; then
         Install_PHPMemcache
@@ -139,27 +140,8 @@ EOF
 
     Restart_PHP
 
-    if command -v iptables >/dev/null 2>&1; then
-        if iptables -C INPUT -i lo -j ACCEPT; then
-            iptables -A INPUT -p tcp --dport 11211 -j DROP
-            iptables -A INPUT -p udp --dport 11211 -j DROP
-            if [ "$PM" = "yum" ]; then
-                service iptables save
-                service iptables reload
-            elif [ "$PM" = "apt" ]; then
-                if [ -s /etc/init.d/netfilter-persistent ]; then
-                    /etc/init.d/netfilter-persistent save
-                    /etc/init.d/netfilter-persistent reload
-                else
-                    /etc/init.d/iptables-persistent save
-                    /etc/init.d/iptables-persistent reload
-                fi
-            fi
-        fi
-    fi
-
-    echo "Starting Memcached..."
-    /etc/init.d/memcached start
+    echo "Re-Starting Memcached..."
+    systemctl restart memcached
 
     if [ -s "${zend_ext}" ] && [ -s /usr/local/memcached/bin/memcached ]; then
         Echo_Green "====== Memcached install completed ======"
@@ -176,27 +158,12 @@ Uninstall_Memcached()
     Press_Start
     rm -f ${PHP_Path}/conf.d/005-memcached.ini
     Restart_PHP
-    Remove_StartUp memcached
+    systemctl disable memcached
     echo "Delete Memcached files..."
     rm -rf /usr/local/libmemcached
     rm -rf /usr/local/memcached
-    rm -rf /etc/init.d/memcached
+    rm -rf /etc/systemd/system/memcached.service
     rm -rf /usr/bin/memcached
-    if command -v iptables >/dev/null 2>&1; then
-        iptables -D INPUT -p tcp --dport 11211 -j DROP
-        iptables -D INPUT -p udp --dport 11211 -j DROP
-        if [ "$PM" = "yum" ]; then
-            service iptables save
-            service iptables reload
-        elif [ "$PM" = "apt" ]; then
-            if [ -s /etc/init.d/netfilter-persistent ]; then
-                /etc/init.d/netfilter-persistent save
-                /etc/init.d/netfilter-persistent reload
-            else
-                /etc/init.d/iptables-persistent save
-                /etc/init.d/iptables-persistent reload
-            fi
-        fi
-    fi
+    systemctl daemon-reload
     Echo_Green "Uninstall Memcached completed."
 }

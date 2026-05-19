@@ -62,7 +62,6 @@ Install_Nginx_Lua() {
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
         echo "Installing Lua for Nginx..."
         cd ${cur_dir}/src
-        #      Download_Files ${Luajit_DL} ${Luajit_Ver}.tar.gz
         git clone https://luajit.org/git/luajit.git
         Download_O_Files ${LuaNginxModule_DL} ${LuaNginxModule}.tar.gz
         Download_O_Files ${NgxDevelKit_DL} ${NgxDevelKit}.tar.gz

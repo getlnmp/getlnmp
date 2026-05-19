@@ -10,7 +10,7 @@ fi
 cur_dir=$(pwd)
 Stack=$1
 
-LNMP_Ver='1.0'
+GetLNMP_Ver='1.0'
 
 . lnmp.conf
 . include/main.sh
@@ -22,7 +22,7 @@ Get_Dist_Name
 
 clear
 echo "+------------------------------------------------------------------------+"
-echo "|   GetLNMP V${LNMP_Ver} for ${DISTRO} Linux Server, Written by Licess   |"
+echo "|             GetLNMP V${GetLNMP_Ver} for ${DISTRO} Linux Server            |"
 echo "+------------------------------------------------------------------------+"
 echo "|        A tool to auto-compile & install Nginx+MySQL+PHP on Linux       |"
 echo "+------------------------------------------------------------------------+"
@@ -47,10 +47,10 @@ Uninstall_LNMP()
     lnmp kill
     lnmp stop
 
-    Remove_StartUp nginx
-    Remove_StartUp php-fpm
+    systemctl disable nginx
+    systemctl disable php-fpm
     if [ ${DB_Name} != "None" ]; then
-        Remove_StartUp ${DB_Name}
+        systemctl disable ${DB_Name}
         echo "Backup ${DB_Name} databases directory to /root/databases_backup_$(date +"%Y%m%d%H%M%S")"
         if [ ${DB_Name} == "mysql" ]; then
             mv ${MySQL_Data_Dir} /root/databases_backup_$(date +"%Y%m%d%H%M%S")
@@ -67,15 +67,16 @@ Uninstall_LNMP()
     if [ ${DB_Name} != "None" ]; then
         rm -rf /usr/local/${DB_Name}
         rm -f /etc/my.cnf
-        rm -f /etc/init.d/${DB_Name}
+        rm -f /etc/systemd/system/${DB_Name}.service
     fi
 
     for mphp in /usr/local/php[5,7].[0-9]; do
-        mphp_ver=`echo $mphp|sed 's#/usr/local/php##'`
-        if [ -s /etc/init.d/php-fpm${mphp_ver} ]; then
-            /etc/init.d/php-fpm${mphp_ver} stop
-            Remove_StartUp php-fpm${mphp_ver}
-            rm -f /etc/init.d/php-fpm${mphp_ver}
+        mphp_ver=$(echo $mphp|sed 's#/usr/local/php##')
+        if [ -s /etc/systemd/system/php-fpm${mphp_ver}.service ]; then
+            systemctl stop php-fpm${mphp_ver}
+            systemctl disable php-fpm${mphp_ver}
+            rm -f /etc/systemd/system/php-fpm${mphp_ver}.service
+            systemctl daemon-reload
         fi
         if [ -d ${mphp} ]; then
             rm -rf ${mphp}
@@ -90,8 +91,8 @@ Uninstall_LNMP()
         fi
     fi
 
-    rm -f /etc/init.d/nginx
-    rm -f /etc/init.d/php-fpm
+    rm -f /etc/systemd/system/nginx.service
+    rm -f /etc/systemd/system/php-fpm.service
     rm -f /bin/lnmp
     echo "LNMP Uninstall completed."
 }
@@ -122,7 +123,7 @@ Uninstall_LNMPA()
     if [ ${DB_Name} != "None" ]; then
         rm -rf /usr/local/${DB_Name}
         rm -f /etc/my.cnf
-        rm -f /etc/init.d/${DB_Name}
+        rm -f /etc/systemd/system/${DB_Name}.service
     fi
 
     if [ -s /usr/local/acme.sh/acme.sh ]; then
@@ -133,8 +134,8 @@ Uninstall_LNMPA()
         fi
     fi
 
-    rm -f /etc/init.d/nginx
-    rm -f /etc/init.d/httpd
+    rm -f /etc/systemd/system/nginx.service
+    rm -f /etc/systemd/system/httpd.service
     rm -f /bin/lnmp
     echo "LNMPA Uninstall completed."
 }
@@ -163,7 +164,7 @@ Uninstall_LAMP()
     if [ ${DB_Name} != "None" ]; then
         rm -rf /usr/local/${DB_Name}
         rm -f /etc/my.cnf
-        rm -f /etc/init.d/${DB_Name}
+        rm -f /etc/systemd/system/${DB_Name}.service
     fi
 
     if [ -s /usr/local/acme.sh/acme.sh ]; then
@@ -175,7 +176,7 @@ Uninstall_LAMP()
     fi
 
     rm -f /etc/my.cnf
-    rm -f /etc/init.d/httpd
+    rm -f /etc/systemd/system/httpd.service
     rm -f /bin/lnmp
     echo "LAMP Uninstall completed."
 }
@@ -198,9 +199,9 @@ Uninstall_LAMP()
 /usr/local/nginx
 ${MySQL_Dir}
 /usr/local/php
-/etc/init.d/nginx
-/etc/init.d/${DB_Name}
-/etc/init.d/php-fpm
+/etc/systemd/system/nginx.service
+/etc/systemd/system/${DB_Name}.service
+/etc/systemd/system/php-fpm.service
 /usr/local/zend
 /etc/my.cnf
 /bin/lnmp
@@ -218,9 +219,9 @@ EOF
 ${MySQL_Dir}
 /usr/local/php
 /usr/local/apache
-/etc/init.d/nginx
-/etc/init.d/${DB_Name}
-/etc/init.d/httpd
+/etc/systemd/system/nginx.service
+/etc/systemd/system/${DB_Name}.service
+/etc/systemd/system/httpd.service
 /usr/local/zend
 /etc/my.cnf
 /bin/lnmp
@@ -236,8 +237,8 @@ EOF
         cat << EOF
 /usr/local/apache
 ${MySQL_Dir}
-/etc/init.d/httpd
-/etc/init.d/${DB_Name}
+/etc/systemd/system/httpd.service
+/etc/systemd/system/${DB_Name}.service
 /usr/local/php
 /usr/local/zend
 /etc/my.cnf

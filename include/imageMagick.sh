@@ -20,13 +20,13 @@ Install_ImageMagic()
         fi
         Get_Dist_Version
   #      Get_Country
-        if [ "${country}" = "CN" ]; then
-            sed -e 's!^metalink=!#metalink=!g' \
-                -e 's!^#baseurl=!baseurl=!g' \
-                -e 's!//download\.fedoraproject\.org/pub!//mirrors.ustc.edu.cn!g' \
-                -e 's!//download\.example/pub!//mirrors.ustc.edu.cn!g' \
-                -i /etc/yum.repos.d/epel*.repo
-        fi
+  #     if [ "${country}" = "CN" ]; then
+  #          sed -e 's!^metalink=!#metalink=!g' \
+  #              -e 's!^#baseurl=!baseurl=!g' \
+  #              -e 's!//download\.fedoraproject\.org/pub!//mirrors.ustc.edu.cn!g' \
+  #              -e 's!//download\.example/pub!//mirrors.ustc.edu.cn!g' \
+  #              -i /etc/yum.repos.d/epel*.repo
+  #      fi
         yum install -y libwebp-devel
     elif [ "$PM" = "apt" ]; then
         export DEBIAN_FRONTEND=noninteractive
@@ -39,13 +39,13 @@ Install_ImageMagic()
     if [ -s /usr/local/imagemagick/bin/convert ]; then
         echo "ImageMagick already exists."
     else
-        if echo "${Cur_PHP_Version}" | grep -Eqi '^5\.2.';then
-            Download_Files ${ImageMagickold_DL} ImageMagick-6.9.9-51.tar.gz
-            Tar_Cd ImageMagick-6.9.9-51.tar.gz ImageMagick-6.9.9-51
-        else
+        #if echo "${Cur_PHP_Version}" | grep -Eqi '^5\.2.';then
+        #    Download_Files ${ImageMagickold_DL} ImageMagick-6.9.9-51.tar.gz
+        #    Tar_Cd ImageMagick-6.9.9-51.tar.gz ImageMagick-6.9.9-51
+        #else
             Download_Files ${ImageMagick_DL} ${ImageMagick_Ver}.tar.xz
             Tar_Cd ${ImageMagick_Ver}.tar.xz ${ImageMagick_Ver}
-        fi
+        #fi
 
         ./configure --prefix=/usr/local/imagemagick
         Make_Install
@@ -53,13 +53,13 @@ Install_ImageMagic()
         rm -rf ${cur_dir}/src/${ImageMagick_Ver}
     fi
 
-    if echo "${Cur_PHP_Version}" | grep -Eqi '^5\.2.';then
-        Download_Files ${Imagickold_DL} imagick-3.1.2.tgz
-        Tar_Cd imagick-3.1.2.tgz imagick-3.1.2
-    else
+    #if echo "${Cur_PHP_Version}" | grep -Eqi '^5\.2.';then
+    #    Download_Files ${Imagickold_DL} imagick-3.1.2.tgz
+    #    Tar_Cd imagick-3.1.2.tgz imagick-3.1.2
+    #else
         Download_Files ${Imagick_DL} ${Imagick_Ver}.tgz
         Tar_Cd ${Imagick_Ver}.tgz ${Imagick_Ver}
-    fi
+    #fi
     ${PHP_Path}/bin/phpize
     ./configure --with-php-config=${PHP_Path}/bin/php-config --with-imagick=/usr/local/imagemagick
     Make_Install

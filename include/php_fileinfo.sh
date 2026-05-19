@@ -23,7 +23,7 @@ Install_PHP_Fileinfo()
     ./configure --with-php-config=${PHP_Path}/bin/php-config
     make && make install
     cd -
-    rm -rf php-${Cur_PHP_Version}
+    rm -rf php-"${Cur_PHP_Version}"
 
     cat >${PHP_Path}/conf.d/009-fileinfo.ini<<EOF
 extension = "fileinfo.so"

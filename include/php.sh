@@ -526,7 +526,7 @@ Pear_Pecl_Set() {
 Install_Composer() {
     if [ "${CheckMirror}" != "n" ]; then
         echo "Downloading Composer..."
-        if echo "${PHPSelect}" | grep -Eqi '^[1-14]' || echo "${php_version}" | grep -Eqi '^(5\.[2-6]\.*|7\.[0-4]\.*|8\.[0-5]\.*)' || echo "${Php_Ver}" | grep -Eqi "(php-5\.[2-6]\.*|php-7\.[0-4]\.*|php-8\.[0-5]\.*)"; then
+        if echo "${PHPSelect}" | grep -Eqi '^[1-16]' || echo "${php_version}" | grep -Eqi '^(5\.[2-6]\.*|7\.[0-4]\.*|8\.[0-5]\.*)' || echo "${Php_Ver}" | grep -Eqi "(php-5\.[2-6]\.*|php-7\.[0-4]\.*|php-8\.[0-5]\.*)"; then
             curl -sS --connect-timeout 30 -m 60 https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
             if [ $? -eq 0 ]; then
                 echo "Composer install successfully."
@@ -709,6 +709,7 @@ PHP_Autoconf_Patch() {
 # -Wno-implicit-int -Wno-implicit-function-declaration
 # /src/php-5.6.40/ext/fileinfo/libmagic/funcs.c:440:1: error: return type defaults to ‘int’ [-Wimplicit-int]
 # 440 | file_replace(struct magic_set *ms, const char *pat, const char *rep)
+# only for php 5.6
 PHP_GCC14_PATCH() {
     if [[ "${Php_Ver_Short}" = "5.6" ]]; then
         echo "checking if GCC 14 patch is needed..."

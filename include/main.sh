@@ -2,7 +2,7 @@
 
 #DB_Info=('MySQL 5.1.73' 'MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.37' 'MariaDB 5.5.68' 'MariaDB 10.4.33' 'MariaDB 10.5.24' 'MariaDB 10.6.17' 'MariaDB 10.11.7' 'MySQL 8.4.0')
 DB_Info=('MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.37' 'MySQL 8.4.7' 'MariaDB 5.5.68' 'MariaDB 10.4.33' 'MariaDB 10.5.29' 'MariaDB 10.6.24' 'MariaDB 10.11.15' 'MariaDB 11.4.9' 'MariaDB 11.8.5')
-PHP_Info=('PHP 5.2.17' 'PHP 5.3.29' 'PHP 5.4.45' 'PHP 5.5.38' 'PHP 5.6.40' 'PHP 7.0.33' 'PHP 7.1.33' 'PHP 7.2.34' 'PHP 7.3.33' 'PHP 7.4.33' 'PHP 8.0.30' 'PHP 8.1.34' 'PHP 8.2.30' 'PHP 8.3.30' 'PHP 8.4.17' 'PHP 8.5.2')
+PHP_Info=('PHP 5.2.17' 'PHP 5.3.29' 'PHP 5.4.45' 'PHP 5.5.38' 'PHP 5.6.40' 'PHP 7.0.33' 'PHP 7.1.33' 'PHP 7.2.34' 'PHP 7.3.33' 'PHP 7.4.33' 'PHP 8.0.30' 'PHP 8.1.34' 'PHP 8.2.30' 'PHP 8.3.30' 'PHP 8.4.20' 'PHP 8.5.5')
 Apache_Info=('Apache 2.2.34' 'Apache 2.4.66')
 
 Database_Selection() {
@@ -442,7 +442,7 @@ PHP_Selection() {
         #echo "5: Install ${PHP_Info[4]}"
         #echo "6: Install ${PHP_Info[5]}"
         #echo "7: Install ${PHP_Info[6]}"
-        echo "8: Install ${PHP_Info[7]}"
+        #echo "8: Install ${PHP_Info[7]}"
         echo "9: Install ${PHP_Info[8]}"
         echo "10: Install ${PHP_Info[9]}"
         echo "11: Install ${PHP_Info[10]}"
@@ -569,9 +569,9 @@ Dispaly_Selection() {
 Apache_Selection() {
     echo "==========================="
     #set Server Administrator Email Address
-    if [ -z ${ServerAdmin} ]; then
+    if [ -z "${ServerAdmin}" ]; then
         ServerAdmin=""
-        read -p "Please enter Administrator Email Address: " ServerAdmin
+        read -r -p "Please enter Administrator Email Address: " ServerAdmin
     fi
     if [ "${ServerAdmin}" == "" ]; then
         echo "Administrator Email Address will set to webmaster@example.com!"
@@ -582,29 +582,7 @@ Apache_Selection() {
         echo "==========================="
     fi
     echo "==========================="
-
-    #which Apache Version do you want to install?
-    if [ -z ${ApacheSelect} ]; then
-        ApacheSelect="2"
-        Echo_Yellow "You have 2 options for your Apache install."
-        echo "1: Install ${Apache_Info[0]}"
-        echo "2: Install ${Apache_Info[1]} (Default)"
-        read -p "Enter your choice (1 or 2): " ApacheSelect
-    fi
-
-    if [ "${ApacheSelect}" = "1" ]; then
-        echo "You will install ${Apache_Info[0]}"
-    elif [ "${ApacheSelect}" = "2" ]; then
-        echo "You will install ${Apache_Info[1]}"
-    else
-        echo "No input,You will install ${Apache_Info[1]}"
-        ApacheSelect="2"
-    fi
-    if [[ "${PHPSelect}" = "1" && "${ApacheSelect}" = "2" ]]; then
-        Echo_Red "PHP 5.2.17 is not compatible with Apache 2.4.*."
-        Echo_Red "Force use Apache 2.2.31"
-        ApacheSelect="1"
-    fi
+    echo "You will install Apache 2.4 from source"
 }
 
 Check_PM_Lock() {
@@ -785,6 +763,7 @@ Press_Start() {
     stty ${OLDCONFIG}
 }
 
+# install lsb-release to get distribution version
 Install_LSB() {
     echo "[+] Installing lsb..."
     if [ "$PM" = "yum" ]; then
@@ -899,7 +878,6 @@ Get_Dist_Name() {
 }
 
 Get_RHEL_Version() {
-    Get_Dist_Name
     if [ "${DISTRO}" = "RHEL" ]; then
         if grep -Eqi "release 5." /etc/redhat-release; then
             echo "Current Version: RHEL Ver 5"
@@ -990,6 +968,7 @@ Tar_Cd() {
     fi
 }
 
+# check lnmp.conf file and get values from it
 Check_LNMPConf() {
     if [ ! -s "${cur_dir}/lnmp.conf" ]; then
         Echo_Red "lnmp.conf was not exsit!"
@@ -1115,6 +1094,7 @@ Get_Country() {
     fi
 }
 
+# mainly downloading files from corresponding official website, no need to check mirror, but if you want to use mirror, please modify lnmp.conf and set CheckMirror to y.
 Check_Mirror() {
     if ! command -v curl >/dev/null 2>&1; then
         if [ "$PM" = "yum" ]; then
@@ -1125,7 +1105,7 @@ Check_Mirror() {
             apt-get install -y curl
         fi
     fi
-    # u
+
     if [[ "${Download_Mirror}" = "https://files.getlnmp.com" ]]; then
         Download_Mirror='https://files.getlnmp.com'
         echo "Try ${Download_Mirror} ..."
@@ -1484,7 +1464,9 @@ Install_Ncurses5_Compat()
     fi
 }
 
-
+# mysql 5.7 and before BIN is built with libncurses.so.5, but most OS use libncurses.so.6 now.
+# mariadb 5.5 -10.3 bin package is built with libncurses.so.5, mariadb 10.4+ bin package is built with libncurses.so.6
+# So we need to install ncurses5 compatibility library for mysql 5.7 BIN package
 Ncurses5_Compat_Check()
 {   
     if [[ $Bin = "y" ]]; then

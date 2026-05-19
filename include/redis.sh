@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# https://redis.io/docs/latest/operate/oss_and_stack/install/build-stack/debian-bookworm/
+# https://redis.io/docs/latest/operate/oss_and_stack/install/build-stack/ubuntu-noble/
 Compile_Redis() {
     Get_OS_Bit
     if [ "${Is_ARM}" = "y" ]; then
@@ -63,23 +65,6 @@ Install_Redis()
         cd ../
         rm -rf ${cur_dir}/src/${Redis_Stable_Ver}
 
-        if command -v iptables >/dev/null 2>&1; then
-            if iptables -C INPUT -i lo -j ACCEPT; then
-                iptables -A INPUT -p tcp --dport 6379 -j DROP
-                if [ "$PM" = "yum" ]; then
-                    service iptables save
-                    service iptables reload
-                elif [ "$PM" = "apt" ]; then
-                    if [ -s /etc/init.d/netfilter-persistent ]; then
-                        /etc/init.d/netfilter-persistent save
-                        /etc/init.d/netfilter-persistent reload
-                    else
-                        /etc/init.d/iptables-persistent save
-                        /etc/init.d/iptables-persistent reload
-                    fi
-                fi
-            fi
-        fi
     fi
 
     if [ -s ${PHPRedis_Ver} ]; then
@@ -92,6 +77,9 @@ Install_Redis()
     elif echo "${Cur_PHP_Version}" | grep -Eqi '^5\.[3456].';then
         Download_Files https://pecl.php.net/get/redis-4.3.0.tgz redis-4.3.0.tgz
         Tar_Cd redis-4.3.0.tgz redis-4.3.0
+    elif echo "${Cur_PHP_Version}" | grep -Eqi '^7\.[0123].';then
+        Download_Files https://pecl.php.net/get/redis-5.3.7.tgz redis-5.3.7.tgz
+        Tar_Cd redis-5.3.7.tgz redis-5.3.7
     else
         Download_Files https://pecl.php.net/get/${PHPRedis_Ver}.tgz ${PHPRedis_Ver}.tgz
         Tar_Cd ${PHPRedis_Ver}.tgz ${PHPRedis_Ver}
@@ -109,9 +97,9 @@ EOF
     \cp ${cur_dir}/init.d/redis.service /etc/systemd/system/redis.service
     #chmod +x /etc/init.d/redis
     echo "Add to auto startup..."
-    StartUp redis
+    systemctl enable redis
     Restart_PHP
-    StartOrStop start redis
+    systemctl start redis
 
     echo "Copy Redis PHP Test file..."
     \cp ${cur_dir}/conf/redis.php ${Default_Website_Dir}/redis.php
@@ -131,24 +119,10 @@ Uninstall_Redis()
     Press_Start
     rm -f ${PHP_Path}/conf.d/007-redis.ini
     Restart_PHP
-    Remove_StartUp redis
+    systemctl disable redis
     echo "Delete Redis files..."
     rm -rf /usr/local/redis
-    rm -rf /etc/init.d/redis
-    if command -v iptables >/dev/null 2>&1; then
-        iptables -D INPUT -p tcp --dport 6379 -j DROP
-        if [ "$PM" = "yum" ]; then
-            service iptables save
-            service iptables reload
-        elif [ "$PM" = "apt" ]; then
-            if [ -s /etc/init.d/netfilter-persistent ]; then
-                /etc/init.d/netfilter-persistent save
-                /etc/init.d/netfilter-persistent reload
-            else
-                /etc/init.d/iptables-persistent save
-                /etc/init.d/iptables-persistent reload
-            fi
-        fi
-    fi
+    rm -rf /etc/systemd/system/redis.service
+    systemctl daemon-reload
     Echo_Green "Uninstall Redis completed."
 }
