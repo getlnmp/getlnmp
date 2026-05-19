@@ -64,6 +64,7 @@ Upgrade_Nginx()
     if gcc -dumpversion|grep -q "^[8]" && [ "${Nginx_Ver_Com}" == "1" ]; then
         patch -p1 < ${cur_dir}/src/patch/nginx-gcc8.patch
     fi
+    Validate_Nginx_Modules_Options
     echo "Starting configure nginx..."
     ./configure \
         --user=www \
@@ -101,15 +102,57 @@ Upgrade_Nginx()
         
     make -j"$(nproc)"
     if [ $? -ne 0 ]; then
-        make
+        make || {
+            Echo_Red "Error: Nginx build failed."
+            exit 1
+        }
     fi
 
-    mv /usr/local/nginx/sbin/nginx /usr/local/nginx/sbin/nginx.${Upgrade_Date}
-    \cp objs/nginx /usr/local/nginx/sbin/nginx
-    echo "Test nginx configure file..."
-    /usr/local/nginx/sbin/nginx -t
+    if [ ! -x objs/nginx ]; then
+        Echo_Red "Error: new nginx binary was not built."
+        exit 1
+    fi
+
+    old_nginx="/usr/local/nginx/sbin/nginx"
+    backup_nginx="/usr/local/nginx/sbin/nginx.${Upgrade_Date}"
+    temp_nginx="/usr/local/nginx/sbin/nginx.${Upgrade_Date}.new"
+    \cp objs/nginx "${temp_nginx}" || {
+        Echo_Red "Error: failed to stage new nginx binary."
+        exit 1
+    }
+
+    echo "Test new nginx binary with current configure file..."
+    "${temp_nginx}" -t -c /usr/local/nginx/conf/nginx.conf || {
+        Echo_Red "Error: new nginx binary failed config test."
+        rm -f "${temp_nginx}"
+        exit 1
+    }
+
+    \cp "${old_nginx}" "${backup_nginx}" || {
+        Echo_Red "Error: failed to backup current nginx binary."
+        rm -f "${temp_nginx}"
+        exit 1
+    }
+    \cp "${temp_nginx}" "${old_nginx}" || {
+        Echo_Red "Error: failed to replace nginx binary, restoring backup."
+        \cp "${backup_nginx}" "${old_nginx}" 2>/dev/null
+        rm -f "${temp_nginx}"
+        exit 1
+    }
+    rm -f "${temp_nginx}"
+
+    echo "Test installed nginx configure file..."
+    "${old_nginx}" -t || {
+        Echo_Red "Error: installed nginx binary failed config test, restoring backup."
+        \cp "${backup_nginx}" "${old_nginx}" 2>/dev/null
+        exit 1
+    }
     echo "upgrade..."
-    make upgrade
+    make upgrade || {
+        Echo_Red "Error: nginx live upgrade failed, restoring backup."
+        \cp "${backup_nginx}" "${old_nginx}" 2>/dev/null
+        exit 1
+    }
 
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
         if ! grep -q 'lua_package_path "/usr/local/nginx/lib/lua/?.lua";' /usr/local/nginx/conf/nginx.conf; then
@@ -130,15 +173,15 @@ Upgrade_Nginx()
     fi
 
    ## cleaning
-    cd ${cur_dir}/src && rm -rf ${cur_dir}/src/${Nginx_Ver}
+    cd ${cur_dir}/src && rm -rf nginx-${Nginx_Version} && rm -rf nginx-${Nginx_Version}.tar.gz
     [[ -d "${Custom_Openssl_Ver}" ]] && rm -rf ${Custom_Openssl_Ver}
     [[ -d "${Pcre2_Ver}" ]] &&rm -rf ${Pcre2_Ver}
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
         rm -rf ${cur_dir}/src/luajit
-        rm -rf ${LuaNginxModule}
-        rm -rf ${NgxDevelKit}
-        rm -rf ${LuaRestyCore}
-        rm -rf ${LuaRestyLrucache}
+        rm -rf ${cur_dir}/src/${LuaNginxModule}
+        rm -rf ${cur_dir}/src/${NgxDevelKit}
+        rm -rf ${cur_dir}/src/${LuaRestyCore}
+        rm -rf ${cur_dir}/src/${LuaRestyLrucache}
     fi
     [[ -d "${NgxFancyIndex_Ver}" ]] && rm -rf ${NgxFancyIndex_Ver}
 

@@ -15,8 +15,21 @@ Install_Nginx_Openssl() {
         rm -rf ${Custom_Openssl_Ver}
         tar zxf ${Custom_Openssl_Ver}.tar.gz
         Nginx_With_Openssl="--with-openssl=${cur_dir}/src/${Custom_Openssl_Ver}"
+    elif [ "${isOpenSSL3}" = 'y' ] && [ "${isOpenSSL35}" = 'n' ]; then
+        if [[ "${Nginx_Version}" =~ ^1\.(29|[3-5][0-9])\. ]]; then
+            Custom_Openssl_Ver=${Openssl_35_Ver}
+            Custom_Openssl_DL=${Openssl_35_DL}
+            echo "System OpenSSL version is 3.0.x, compile nginx with custom OpenSSL version: ${Custom_Openssl_Ver}"
+            cd ${cur_dir}/src
+            Download_Files ${Custom_Openssl_DL} ${Custom_Openssl_Ver}.tar.gz
+            rm -rf ${Custom_Openssl_Ver}
+            tar zxf ${Custom_Openssl_Ver}.tar.gz
+            Nginx_With_Openssl="--with-openssl=${cur_dir}/src/${Custom_Openssl_Ver}"
+        fi
+        echo "System OpenSSL version is 3.0.x with nginx version belows 1.29, compile nginx with system OpenSSL."
+        Nginx_With_Openssl=""
     else
-        echo "Current system OpenSSL version is not 1.1.1, using system OpenSSL."
+        echo "Current system OpenSSL version is not 1.1.1 nor 3.0.x, using system OpenSSL."
         Nginx_With_Openssl=""
     fi
 }
@@ -62,7 +75,11 @@ Install_Nginx_Lua() {
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
         echo "Installing Lua for Nginx..."
         cd ${cur_dir}/src
-        git clone https://luajit.org/git/luajit.git
+        rm -rf ${cur_dir}/src/luajit
+        git clone https://luajit.org/git/luajit.git || {
+            Echo_Red "Luajit download failed!"
+            exit 1
+        }
         Download_O_Files ${LuaNginxModule_DL} ${LuaNginxModule}.tar.gz
         Download_O_Files ${NgxDevelKit_DL} ${NgxDevelKit}.tar.gz
         Download_O_Files ${LuaRestyCore_DL} ${LuaRestyCore}.tar.gz
@@ -72,8 +89,14 @@ Install_Nginx_Lua() {
         tar zxf ${LuaNginxModule}.tar.gz
         tar zxf ${NgxDevelKit}.tar.gz
         cd luajit
-        make
-        make install PREFIX=/usr/local/luajit
+        make || {
+            Echo_Red "Luajit build failed!"
+            exit 1
+        }
+        make install PREFIX=/usr/local/luajit || {
+            Echo_Red "Luajit install failed!"
+            exit 1
+        }
         cd ${cur_dir}/src
 
         cat >/etc/ld.so.conf.d/luajit.conf <<EOF
@@ -94,10 +117,16 @@ EOF
         source /etc/profile.d/luajit.sh
 
         Tar_Cd ${LuaRestyCore}.tar.gz ${LuaRestyCore}
-        make install PREFIX=/usr/local/nginx
+        make install PREFIX=/usr/local/nginx || {
+            Echo_Red "${LuaRestyCore} install failed!"
+            exit 1
+        }
         cd -
         Tar_Cd ${LuaRestyLrucache}.tar.gz ${LuaRestyLrucache}
-        make install PREFIX=/usr/local/nginx
+        make install PREFIX=/usr/local/nginx || {
+            Echo_Red "${LuaRestyLrucache} install failed!"
+            exit 1
+        }
         cd -
 
         Nginx_Module_Lua="--with-ld-opt='-Wl,-rpath,/usr/local/luajit/lib' --add-module=${cur_dir}/src/${LuaNginxModule} --add-module=${cur_dir}/src/${NgxDevelKit}"
@@ -118,10 +147,21 @@ Install_Ngx_FancyIndex() {
     fi
 }
 
+Validate_Nginx_Modules_Options() {
+    if [[ "${Nginx_Modules_Options}" =~ [[:cntrl:]] ]]; then
+        Echo_Red "Nginx_Modules_Options contains control characters. Please check lnmp.conf."
+        exit 1
+    fi
+}
+
 Install_Nginx() {
     Echo_Blue "[+] Installing ${Nginx_Ver}... "
-    groupadd www
-    useradd -s /sbin/nologin -g www www
+    if ! getent group www >/dev/null 2>&1; then
+        groupadd www
+    fi
+    if ! id www >/dev/null 2>&1; then
+        useradd -s /sbin/nologin -g www www
+    fi
 
     Nginx_Version="${Nginx_Ver#nginx-}"
 
@@ -136,6 +176,7 @@ Install_Nginx() {
     if gcc -dumpversion | grep -q "^[8]" && [ "${Nginx_Ver_Com}" == "1" ]; then
         patch -p1 <${cur_dir}/src/patch/nginx-gcc8.patch
     fi
+    Validate_Nginx_Modules_Options
     echo "Starting configure nginx..."
     ./configure \
         --user=www \
@@ -171,7 +212,17 @@ Install_Nginx() {
         --with-ld-opt='-Wl,-z,relro -Wl,-z,now -pie' \
         --with-cc-opt="-O2 -g -fstack-protector-strong -Wp,-D_FORTIFY_SOURCE=2 -fPIC"
 
-    Make_Install
+    make -j"$(nproc)"
+    if [ $? -ne 0 ]; then
+        make || {
+            Echo_Red "Error: Nginx build failed."
+            exit 1
+        }
+    fi
+    make install || {
+        Echo_Red "Error: Nginx install failed."
+        exit 1
+    }
     cd ../
 
     ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx
@@ -211,7 +262,7 @@ Install_Nginx() {
 
     chown -R www:www ${Default_Website_Dir}
 
-    mkdir /usr/local/nginx/conf/vhost
+    mkdir -p /usr/local/nginx/conf/vhost
 
     if [ "${Default_Website_Dir}" != "/home/wwwroot/default" ]; then
         sed -i "s#/home/wwwroot/default#${Default_Website_Dir}#g" /usr/local/nginx/conf/nginx.conf
@@ -223,9 +274,11 @@ open_basedir=${Default_Website_Dir}:/tmp/:/proc/
 EOF
         chmod 644 ${Default_Website_Dir}/.user.ini
         chattr +i ${Default_Website_Dir}/.user.ini
-        cat >>/usr/local/nginx/conf/fastcgi.conf <<EOF
+        if [ ! -s /usr/local/nginx/conf/fastcgi.conf ] || ! grep -qF 'fastcgi_param PHP_ADMIN_VALUE "open_basedir=$document_root/:/tmp/:/proc/";' /usr/local/nginx/conf/fastcgi.conf; then
+            cat >>/usr/local/nginx/conf/fastcgi.conf <<EOF
 fastcgi_param PHP_ADMIN_VALUE "open_basedir=\$document_root/:/tmp/:/proc/";
 EOF
+        fi
     fi
 
     \cp init.d/nginx.service /etc/systemd/system/nginx.service
@@ -252,10 +305,10 @@ google_perftools_profiles /tmp/tcmalloc;' /usr/local/nginx/conf/nginx.conf
     [[ -d "${Pcre2_Ver}" ]] &&rm -rf ${Pcre2_Ver}
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
         rm -rf ${cur_dir}/src/luajit
-        rm -rf ${LuaNginxModule}
-        rm -rf ${NgxDevelKit}
-        rm -rf ${LuaRestyCore}
-        rm -rf ${LuaRestyLrucache}
+        rm -rf ${cur_dir}/src/${LuaNginxModule}
+        rm -rf ${cur_dir}/src/${NgxDevelKit}
+        rm -rf ${cur_dir}/src/${LuaRestyCore}
+        rm -rf ${cur_dir}/src/${LuaRestyLrucache}
     fi
     [[ -d "${NgxFancyIndex_Ver}" ]] && rm -rf ${NgxFancyIndex_Ver}
 
