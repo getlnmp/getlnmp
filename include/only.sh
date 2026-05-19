@@ -5,7 +5,7 @@ Nginx_Dependent()
     if [ "$PM" = "yum" ]; then
         rpm -e httpd httpd-tools --nodeps
         yum -y remove httpd*
-        for packages in make gcc gcc-c++ gcc-g77 wget crontabs zlib zlib-devel openssl openssl-devel perl patch bzip2 initscripts xz gzip;
+        for packages in make gcc gcc-c++ wget crontabs zlib zlib-devel openssl openssl-devel perl patch bzip2 initscripts xz gzip;
         do yum -y install $packages; done
         if  echo "${RHEL_Version}" | grep -Eqi "^9" || echo "${Alma_Version}" | grep -Eqi "^9" || echo "${Rocky_Version}" | grep -Eqi "^9" || echo "${Oracle_Version}" | grep -Eqi "^9"; then
             dnf install chkconfig -y
@@ -59,34 +59,30 @@ DB_Dependent()
         fi
         for packages in make cmake gcc gcc-c++ flex bison wget zlib zlib-devel openssl openssl-devel ncurses ncurses-devel libaio-devel rpcgen libtirpc-devel patch cyrus-sasl-devel pkg-config pcre-devel libxml2-devel hostname ncurses-libs numactl-devel libxcrypt gnutls-devel initscripts libxcrypt-compat perl xz gzip systemd-devel;
         do yum -y install $packages; done
-        if echo "${RHEL_Version}" | grep -Eqi "^8" || echo "${Rocky_Version}" | grep -Eqi "^8" || echo "${Alma_Version}" | grep -Eqi "^8"; then
-            Check_PowerTools
-            dnf --enablerepo=${repo_id} install rpcgen -y
+        Get_RHEL_Family_Major
+
+        if [ "${EL_Ver}" = "8" ]; then
+            Set_RHEL_Family_CRB_Repo
+            if [ "${repo_id}" != "" ]; then
+                dnf --enablerepo=${repo_id} install rpcgen re2c -y
+            fi
             dnf install libarchive -y
 
             dnf install gcc-toolset-10 -y
         fi
 
-        if [ "${DISTRO}" = "Oracle" ] && echo "${Oracle_Version}" | grep -Eqi "^8"; then
-            Check_Codeready
-            dnf --enablerepo=${repo_id} install rpcgen re2c -y
-            dnf install libarchive -y
-        fi
-
-        if [ "${DISTRO}" = "Oracle" ] && echo "${Oracle_Version}" | grep -Eqi "^9"; then
-            Check_Codeready
-            dnf --enablerepo=${repo_id} install libtirpc-devel -y
-            if [[ "${Bin}" != "y" && "${DBSelect}" =~ ^[45]$ ]]; then
+        if [[ "${EL_Ver}" =~ ^(9|10)$ ]]; then
+            Set_RHEL_Family_CRB_Repo
+            if [ "${repo_id}" != "" ]; then
+                dnf --enablerepo=${repo_id} install libtirpc-devel libxcrypt-compat -y
+            fi
+            if [[ "${EL_Ver}" = "9" && "${Bin}" != "y" && "${DBSelect}" =~ ^[45]$ ]]; then
                 dnf install gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-binutils gcc-toolset-12-annobin-annocheck gcc-toolset-12-annobin-plugin-gcc -y
             fi
         fi
 
-        if echo "${RHEL_Version}" | grep -Eqi "^9" || echo "${Alma_Version}" | grep -Eqi "^9" || echo "${Rocky_Version}" | grep -Eqi "^9" || echo "${Oracle_Version}" | grep -Eqi "^9"; then
+        if [ "${EL_Ver}" = "9" ]; then
             dnf install chkconfig -y
-            dnf --enablerepo=crb install libtirpc-devel libxcrypt-compat -y
-            if [[ "${Bin}" != "y" && "${DBSelect}" = "5" ]]; then
-                dnf install gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-binutils gcc-toolset-12-annobin-annocheck gcc-toolset-12-annobin-plugin-gcc -y
-            fi
         fi
 
         if [ -s /usr/lib64/libtinfo.so.6 ]; then
@@ -109,8 +105,11 @@ DB_Dependent()
         dpkg -l |grep mysql
         dpkg -P mysql-server mysql-common libmysqlclient15off libmysqlclient15-dev
         dpkg -P mariadb-client mariadb-server mariadb-common
-        for packages in debian-keyring debian-archive-keyring build-essential gcc g++ make cmake autoconf automake wget openssl libssl-dev zlib1g zlib1g-dev libncurses-dev bison libaio-dev libtirpc-dev libsasl2-dev pkg-config libpcre2-dev libxml2-dev libtinfo-dev libnuma-dev libgnutls28-dev gnutls-dev xz-utils gzip libsystemd-dev systemd-dev;
+        for packages in debian-keyring debian-archive-keyring build-essential gcc g++ make cmake autoconf automake wget openssl libssl-dev zlib1g zlib1g-dev libncurses-dev bison libaio-dev libtirpc-dev libsasl2-dev pkg-config libpcre2-dev libxml2-dev libtinfo-dev libnuma-dev libgnutls28-dev gnutls-dev xz-utils gzip libsystemd-dev;
         do apt-get --no-install-recommends install -y $packages; done
+        if echo "${Debian_Version}" | grep -Eqi "^1[3-9]" || echo "${Ubuntu_Version}" | grep -Eqi "^2[4-9]\."; then
+            apt-get --no-install-recommends install -y systemd-dev
+        fi
     fi
 }
 

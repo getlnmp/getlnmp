@@ -371,16 +371,67 @@ Modify_Source() {
     esac
 }
 
-Check_PowerTools() {
-    if ! yum -v repolist all | grep "PowerTools"; then
-        Echo_Red "PowerTools repository not found!"
+Get_RHEL_Family_Major() {
+    local version=""
+
+    case "${DISTRO}" in
+        RHEL)
+            Get_RHEL_Version
+            version="${RHEL_Ver}"
+            ;;
+        Rocky)
+            version="${Rocky_Version:-${DISTRO_Version}}"
+            ;;
+        Alma)
+            version="${Alma_Version:-${DISTRO_Version}}"
+            ;;
+        Oracle)
+            version="${Oracle_Version:-${DISTRO_Version}}"
+            ;;
+    esac
+
+    EL_Ver="${version%%.*}"
+}
+
+Set_RHEL_Family_CRB_Repo() {
+    Get_RHEL_Family_Major
+    repo_id=""
+
+    case "${DISTRO}" in
+        RHEL)
+            if [ -n "${EL_Ver}" ]; then
+                repo_id="codeready-builder-for-rhel-${EL_Ver}-${DB_ARCH}-rpms"
+            fi
+            ;;
+        Rocky|Alma)
+            if [ "${EL_Ver}" = "8" ]; then
+                repo_id="powertools"
+            elif [[ "${EL_Ver}" =~ ^(9|10)$ ]]; then
+                repo_id="crb"
+            fi
+            ;;
+        Oracle)
+            if [[ "${EL_Ver}" =~ ^(8|9|10)$ ]]; then
+                repo_id="ol${EL_Ver}_codeready_builder"
+            fi
+            ;;
+    esac
+
+    if [ -z "${repo_id}" ]; then
+        repo_id=$(yum repolist all | grep -Ei "PowerTools|CRB|codeready" | head -n 1 | awk '{print $1}')
     fi
-    repo_id=$(yum repolist all | grep -Ei "PowerTools" | head -n 1 | awk '{print $1}')
+
+    if [ -n "${repo_id}" ] && ! yum repolist all | awk '{print $1}' | grep -Eiq "^${repo_id}(/|$)"; then
+        Echo_Yellow "${repo_id} repository not found in yum/dnf repo list."
+    fi
+}
+
+Check_PowerTools() {
+    Set_RHEL_Family_CRB_Repo
 }
 
 Check_Codeready() {
-    repo_id=$(yum repolist all | grep -E "CRB" | head -n 1 | awk '{print $1}')
-#    [ -z "${repo_id}" ] && repo_id="ol8_codeready_builder"
+    Set_RHEL_Family_CRB_Repo
 }
 
 RHEL_Dependent() {
@@ -390,14 +441,20 @@ RHEL_Dependent() {
     fi
 
     Echo_Blue "[+] Yum installing dependent packages..."
-    for packages in make cmake gcc gcc-c++ gcc-g77 kernel-headers glibc-headers glibc-devel flex bison file libtool libtool-libs autoconf patch wget crontabs libjpeg libjpeg-devel libjpeg-turbo-devel libpng libpng-devel libpng10 libpng10-devel gd gd-devel libxml2 libxml2-devel zlib zlib-devel glib2 glib2-devel unzip tar bzip2 bzip2-devel libzip-devel libevent libevent-devel ncurses ncurses-devel curl curl-devel libcurl libcurl-devel e2fsprogs e2fsprogs-devel krb5 krb5-devel libidn libidn-devel openssl openssl-devel pcre2-devel gettext gettext-devel ncurses-devel gmp-devel pspell-devel unzip libcap diffutils ca-certificates net-tools libc-client-devel psmisc libXpm-devel git-core c-ares-devel libicu-devel libxslt libxslt-devel xz expat-devel libaio-devel rpcgen libtirpc-devel perl cyrus-sasl-devel sqlite-devel oniguruma-devel lsof re2c pkg-config libarchive hostname ncurses-libs numactl-devel libxcrypt libwebp-devel gnutls-devel initscripts iproute libxcrypt-compat git systemd-devel freetype-devel pkgconf libsodium-devel; do yum -y install $packages; done
+    for packages in make cmake gcc gcc-c++ kernel-headers glibc-headers glibc-devel flex bison file libtool autoconf patch wget crontabs libjpeg libjpeg-devel libjpeg-turbo-devel libpng libpng-devel gd gd-devel libxml2 libxml2-devel zlib zlib-devel glib2 glib2-devel unzip tar bzip2 bzip2-devel libzip-devel libevent libevent-devel ncurses ncurses-devel curl curl-devel libcurl libcurl-devel e2fsprogs e2fsprogs-devel krb5 krb5-devel libidn libidn-devel openssl openssl-devel pcre2-devel gettext gettext-devel ncurses-devel gmp-devel pspell-devel unzip libcap diffutils ca-certificates net-tools libc-client-devel psmisc libXpm-devel c-ares-devel libicu-devel libxslt libxslt-devel xz expat-devel libaio-devel rpcgen libtirpc-devel perl cyrus-sasl-devel sqlite-devel oniguruma-devel lsof re2c pkg-config libarchive hostname ncurses-libs numactl-devel libxcrypt libwebp-devel gnutls-devel initscripts iproute libxcrypt-compat git systemd-devel freetype-devel pkgconf libsodium-devel; do yum -y install $packages; done
 
     yum -y update nss
 
-    if echo "${RHEL_Version}" | grep -Eqi "^8" || echo "${Rocky_Version}" | grep -Eqi "^8" || echo "${Alma_Version}" | grep -Eqi "^8"; then
-        Check_PowerTools
+    Get_RHEL_Family_Major
+
+    if [ "${DISTRO}" = "RHEL" ] && [[ "${EL_Ver}" =~ ^[5-7]$ ]]; then
+        for legacy_packages in gcc-g77 libtool-libs libpng10 libpng10-devel git-core; do yum -y install $legacy_packages; done
+    fi
+
+    if [ "${EL_Ver}" = "8" ]; then
+        Set_RHEL_Family_CRB_Repo
         if [ "${repo_id}" != "" ]; then
-            echo "Installing packages in PowerTools repository..."
+            echo "Installing packages in ${repo_id} repository..."
             for c8packages in rpcgen re2c oniguruma-devel; do dnf --enablerepo=${repo_id} install ${c8packages} -y; done
         fi
         dnf install libarchive -y
@@ -405,28 +462,17 @@ RHEL_Dependent() {
         dnf install gcc-toolset-10 -y
     fi
 
-    if echo "${RHEL_Version}" | grep -Eqi "^9" || echo "${Alma_Version}" | grep -Eqi "^9" || echo "${Rocky_Version}" | grep -Eqi "^9"; then
-        for cs9packages in oniguruma-devel libzip-devel libtirpc-devel libxcrypt-compat; do dnf --enablerepo=crb install ${cs9packages} -y; done
-        if [[ "${Bin}" != "y" && "${DBSelect}" = "[45]" ]]; then
+    if [[ "${EL_Ver}" =~ ^(9|10)$ ]]; then
+        Set_RHEL_Family_CRB_Repo
+        if [ "${repo_id}" != "" ]; then
+            for cs9packages in oniguruma-devel libzip-devel libtirpc-devel libxcrypt-compat; do dnf --enablerepo=${repo_id} install ${cs9packages} -y; done
+        fi
+        if [[ "${EL_Ver}" = "9" && "${Bin}" != "y" && "${DBSelect}" =~ ^[45]$ ]]; then
             dnf install gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-binutils gcc-toolset-12-annobin-annocheck gcc-toolset-12-annobin-plugin-gcc -y
         fi
     fi
 
-    if [ "${DISTRO}" = "Oracle" ] && echo "${Oracle_Version}" | grep -Eqi "^8"; then
-        Check_Codeready
-        for o8packages in rpcgen re2c oniguruma-devel; do dnf --enablerepo=${repo_id} install ${o8packages} -y; done
-        dnf install libarchive -y
-    fi
-
-    if [ "${DISTRO}" = "Oracle" ] && echo "${Oracle_Version}" | grep -Eqi "^9"; then
-        Check_Codeready
-        dnf --enablerepo=${repo_id} install libtirpc-devel -y
-        if [[ "${Bin}" != "y" && "${DBSelect}" =~ "[45]" ]]; then
-            dnf install gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-binutils gcc-toolset-12-annobin-annocheck gcc-toolset-12-annobin-plugin-gcc -y
-        fi
-    fi
-
-    if  echo "${RHEL_Version}" | grep -Eqi "^9" || echo "${Alma_Version}" | grep -Eqi "^9" || echo "${Rocky_Version}" | grep -Eqi "^9" || echo "${Oracle_Version}" | grep -Eqi "^9"; then
+    if [ "${EL_Ver}" = "9" ]; then
         dnf install chkconfig -y
     fi
 
@@ -445,7 +491,10 @@ Deb_Dependent() {
     apt-get -fy install
     export DEBIAN_FRONTEND=noninteractive
     apt-get --no-install-recommends install -y build-essential gcc g++ make
-    for packages in debian-keyring debian-archive-keyring build-essential gcc g++ make cmake autoconf automake re2c wget cron bzip2 libzip-dev libc6-dev bison file flex bison m4 gawk less cpp binutils diffutils unzip tar bzip2 libbz2-dev libncurses-dev libtool libevent-dev openssl libssl-dev libsasl2-dev libltdl-dev zlib1g zlib1g-dev libbz2-1.0 libbz2-dev libglib2.0-dev libjpeg62-turbo-dev libpng-dev libkrb5-dev curl libcurl4-openssl-dev libpcre2-dev libpq-dev libpq5 gettext libxml2-dev libcap-dev ca-certificates psmisc patch git libc-ares-dev libicu-dev e2fsprogs libxslt1.1 libxslt1-dev xz-utils libexpat1-dev libaio-dev libtirpc-dev libsqlite3-dev libonig-dev lsof pkg-config libtinfo-dev libnuma-dev libwebp-dev gnutls-dev iproute2 xz-utils gzip libsystemd-dev libgd-dev lsb-release libgnutls28-dev systemd-dev libfreetype6-dev libsodium-dev; do apt-get --no-install-recommends install -y $packages; done
+    for packages in debian-keyring debian-archive-keyring build-essential gcc g++ make cmake autoconf automake re2c wget cron bzip2 libzip-dev libc6-dev bison file flex bison m4 gawk less cpp binutils diffutils unzip tar bzip2 libbz2-dev libncurses-dev libtool libevent-dev openssl libssl-dev libsasl2-dev libltdl-dev zlib1g zlib1g-dev libbz2-1.0 libbz2-dev libglib2.0-dev libjpeg62-turbo-dev libpng-dev libkrb5-dev curl libcurl4-openssl-dev libpcre2-dev libpq-dev libpq5 gettext libxml2-dev libcap-dev ca-certificates psmisc patch git libc-ares-dev libicu-dev e2fsprogs libxslt1.1 libxslt1-dev xz-utils libexpat1-dev libaio-dev libtirpc-dev libsqlite3-dev libonig-dev lsof pkg-config libtinfo-dev libnuma-dev libwebp-dev gnutls-dev iproute2 xz-utils gzip libsystemd-dev libgd-dev lsb-release libgnutls28-dev libfreetype6-dev libsodium-dev; do apt-get --no-install-recommends install -y $packages; done
+    if echo "${Debian_Version}" | grep -Eqi "^1[3-9]" || echo "${Ubuntu_Version}" | grep -Eqi "^2[4-9]\."; then
+        apt-get --no-install-recommends install -y systemd-dev
+    fi
 }
 
 Check_Download() {
