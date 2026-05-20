@@ -1267,10 +1267,28 @@ Check_DB() {
 }
 
 Do_Query() {
-    echo "$1" >/tmp/.mysql.tmp
+    local sql_file
+    local status
+
+    sql_file=$(mktemp /tmp/lnmp.mysql.XXXXXX) || {
+        Echo_Red "Error: failed to create temporary MySQL query file."
+        return 1
+    }
+    chmod 600 "${sql_file}" || {
+        Echo_Red "Error: failed to secure temporary MySQL query file."
+        rm -f "${sql_file}"
+        return 1
+    }
+    printf "%s\n" "$1" >"${sql_file}" || {
+        Echo_Red "Error: failed to write temporary MySQL query file."
+        rm -f "${sql_file}"
+        return 1
+    }
     Check_DB
-    ${MySQL_Bin} --defaults-file=~/.my.cnf </tmp/.mysql.tmp
-    return $?
+    ${MySQL_Bin} --defaults-file=~/.my.cnf <"${sql_file}"
+    status=$?
+    rm -f "${sql_file}"
+    return ${status}
 }
 
 Make_TempMycnf() {

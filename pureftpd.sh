@@ -137,10 +137,7 @@ Install_Pureftpd()
             exit 1
         }
     fi
-    make install || {
-        Echo_Red "Pureftpd install failed!"
-        exit 1
-    }
+    make install
 
     Echo_Blue "Copy configure files..."
     mkdir -p /usr/local/pureftpd/etc

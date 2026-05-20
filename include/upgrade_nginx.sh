@@ -115,38 +115,10 @@ Upgrade_Nginx()
 
     old_nginx="/usr/local/nginx/sbin/nginx"
     backup_nginx="/usr/local/nginx/sbin/nginx.${Upgrade_Date}"
-    temp_nginx="/usr/local/nginx/sbin/nginx.${Upgrade_Date}.new"
-    \cp objs/nginx "${temp_nginx}" || {
-        Echo_Red "Error: failed to stage new nginx binary."
-        exit 1
-    }
-
-    echo "Test new nginx binary with current configure file..."
-    "${temp_nginx}" -t -c /usr/local/nginx/conf/nginx.conf || {
-        Echo_Red "Error: new nginx binary failed config test."
-        rm -f "${temp_nginx}"
-        exit 1
-    }
-
-    \cp "${old_nginx}" "${backup_nginx}" || {
-        Echo_Red "Error: failed to backup current nginx binary."
-        rm -f "${temp_nginx}"
-        exit 1
-    }
-    \cp "${temp_nginx}" "${old_nginx}" || {
-        Echo_Red "Error: failed to replace nginx binary, restoring backup."
-        \cp "${backup_nginx}" "${old_nginx}" 2>/dev/null
-        rm -f "${temp_nginx}"
-        exit 1
-    }
-    rm -f "${temp_nginx}"
-
-    echo "Test installed nginx configure file..."
-    "${old_nginx}" -t || {
-        Echo_Red "Error: installed nginx binary failed config test, restoring backup."
-        \cp "${backup_nginx}" "${old_nginx}" 2>/dev/null
-        exit 1
-    }
+    mv "${old_nginx}" "${backup_nginx}"
+    \cp objs/nginx /usr/local/nginx/sbin/nginx
+    echo "Test nginx configure file..."
+    /usr/local/nginx/sbin/nginx -t
     echo "upgrade..."
     make upgrade || {
         Echo_Red "Error: nginx live upgrade failed, restoring backup."

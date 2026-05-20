@@ -96,8 +96,18 @@ MariaDB_Check_Config() {
 }
 
 MariaDB_Add_UG() {
-    groupadd mariadb
-    useradd -s /sbin/nologin -M -g mariadb mariadb
+    if ! getent group mariadb >/dev/null 2>&1; then
+        groupadd mariadb || {
+            Echo_Red "Error: failed to create mariadb group."
+            exit 1
+        }
+    fi
+    if ! id mariadb >/dev/null 2>&1; then
+        useradd -s /sbin/nologin -M -g mariadb mariadb || {
+            Echo_Red "Error: failed to create mariadb user."
+            exit 1
+        }
+    fi
 }
 
 MariaDB_Set_MyCNF_104() {

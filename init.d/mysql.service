@@ -21,18 +21,12 @@ Group=mysql
 # Requires mysqld binary to be compiled with Systemd support (-DWITH_SYSTEMD=1)
 Type=notify
 
-# Define the location of the PID file explicitly
-PIDFile=/usr/local/mysql/var/mysqld.pid
-
 # Start main service using the custom path
-# The daemon will read the configuration from /etc/my.cnf or /usr/local/mysql/my.cnf
-ExecStart=/usr/local/mysql/bin/mysqld --datadir=/usr/local/mysql/var --pid-file=/usr/local/mysql/var/mysqld.pid
+# The daemon will read datadir, pid-file, and other options from /etc/my.cnf
+ExecStart=/usr/local/mysql/bin/mysqld $MYSQLD_OPTS
 
 # Reloads grant tables and logs (sends SIGHUP signal to the main process)
 ExecReload=/bin/kill -s HUP $MAINPID
-
-# Ensures the PID file is cleaned up after the service stops or crashes
-# ExecStopPost=/bin/rm -f /usr/local/mysql/var/mysqld.pid
 
 # From Official Repo
 TimeoutSec=0

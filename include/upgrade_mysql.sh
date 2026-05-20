@@ -2,17 +2,24 @@
 
 Backup_MySQL()
 {
+    dump_file="/root/mysql_all_backup${Upgrade_Date}.sql"
+
     echo "Starting backup all databases..."
     echo "If the database is large, the backup time will be longer."
-    if [ -s /usr/local/mysql/bin/mysqldump ]; then
-        /usr/local/mysql/bin/mysqldump --defaults-file=~/.my.cnf --all-databases > /root/mysql_all_backup${Upgrade_Date}.sql
-    else
-        echo "mysqldump not found, please check if MySQL is installed correctly."
+    if [ ! -x /usr/local/mysql/bin/mysqldump ]; then
+        Echo_Red "mysqldump not found, please check if MySQL is installed correctly."
+        exit 1
     fi
-    if [ $? -eq 0 ]; then
-        echo "MySQL databases backup successfully.";
+    if /usr/local/mysql/bin/mysqldump --defaults-file=~/.my.cnf --all-databases --routines --triggers --events --single-transaction > "${dump_file}"; then
+        if [ -s "${dump_file}" ]; then
+            echo "MySQL databases backup successfully."
+        else
+            Echo_Red "MySQL databases backup failed, dump file is empty."
+            exit 1
+        fi
     else
-        echo "MySQL databases backup failed,Please backup databases manually!"
+        Echo_Red "MySQL databases backup failed, please backup databases manually!"
+        exit 1
     fi
     lnmp stop
     if [[ ! "${MySQL_Data_Dir}" =~ ^/usr/local/mysql/ ]]; then
@@ -21,7 +28,7 @@ Backup_MySQL()
     mv /usr/local/mysql /usr/local/oldmysql${Upgrade_Date}
     mv /etc/my.cnf /usr/local/oldmysql${Upgrade_Date}/my.cnf.bak.${Upgrade_Date}
     if echo "${mysql_version}" | grep -Eqi '^5\.5\.' &&  echo "${cur_mysql_version}" | grep -Eqi '^5\.6\.';then
-        sed -i 's/STATS_PERSISTENT=0//g' /root/mysql_all_backup${Upgrade_Date}.sql
+        sed -i 's/STATS_PERSISTENT=0//g' "${dump_file}"
     fi
 }
 
@@ -479,26 +486,56 @@ EOF
 
 Restore_Start_MySQL()
 {
-    chgrp -R mysql /usr/local/mysql/.
+    backup_sql="/root/mysql_all_backup${Upgrade_Date}.sql"
+
+    chgrp -R mysql /usr/local/mysql/. || {
+        Echo_Red "Error: failed to set MySQL group ownership."
+        exit 1
+    }
     ldconfig
     MySQL_Sec_Setting
 
     echo "Restore backup databases..."
+    if [ ! -s "${backup_sql}" ]; then
+        Echo_Red "Error: MySQL backup file ${backup_sql} was not found or is empty."
+        exit 1
+    fi
     echo "Starting MySQL..."
     systemctl start mysql
     echo "Starting importing..."
-    /usr/local/mysql/bin/mysql --defaults-file=~/.my.cnf < /root/mysql_all_backup${Upgrade_Date}.sql
+    /usr/local/mysql/bin/mysql --defaults-file=~/.my.cnf < "${backup_sql}" || {
+        Echo_Red "Error: failed to import MySQL backup."
+        systemctl stop mysql
+        exit 1
+    }
     echo "Repair databases..."
     MySQL_Ver_Com=$(${cur_dir}/include/version_compare 8.0.16 ${mysql_version})
     if [ "${MySQL_Ver_Com}" != "1" ]; then
         systemctl stop mysql
         echo "Upgrading MySQL..."
         /usr/local/mysql/bin/mysqld --user=mysql --upgrade=FORCE &
+        mysql_upgrade_pid=$!
         echo "Waiting for upgrade to start..."
         sleep 180
-        /usr/local/mysql/bin/mysqladmin --defaults-file=~/.my.cnf shutdown
+        if ! kill -0 "${mysql_upgrade_pid}" >/dev/null 2>&1; then
+            Echo_Red "Error: MySQL upgrade process exited unexpectedly."
+            wait "${mysql_upgrade_pid}"
+            exit 1
+        fi
+        /usr/local/mysql/bin/mysqladmin --defaults-file=~/.my.cnf shutdown || {
+            Echo_Red "Error: failed to shut down MySQL after upgrade repair."
+            exit 1
+        }
+        wait "${mysql_upgrade_pid}" || {
+            Echo_Red "Error: MySQL upgrade repair failed."
+            exit 1
+        }
     else
-        /usr/local/mysql/bin/mysql_upgrade -u root -p${DB_Root_Password}
+        /usr/local/mysql/bin/mysql_upgrade --defaults-file=~/.my.cnf || {
+            Echo_Red "Error: mysql_upgrade failed."
+            systemctl stop mysql
+            exit 1
+        }
     fi
 
     systemctl stop mysql
@@ -512,6 +549,7 @@ Restore_Start_MySQL()
         Echo_Red "======== upgrade MySQL failed ======"
         Echo_Red "upgrade MySQL log: /root/upgrade_mysq${Upgrade_Date}.log"
         echo "You upload upgrade_mysq${Upgrade_Date}.log to LNMP Forum for help."
+        exit 1
     fi
 }
 

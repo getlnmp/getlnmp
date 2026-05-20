@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# ngx_http_v3_module require the OpenSSL library version 1.1.1 or higher, and the OpenSSL library version 3.0.0 or higher is recommended for better performance and security. 
+# http_v3_module's 0-RTT support requires the OpenSSL library version 3.5.1 or higher
+# The OpenSSL library version 3.5.1 or higher is recommended to build nginx with QUIC support
+# for best compability, if system openssl version is 1.1.1, compile nginx with openssl 3.5 if nginx version is 1.29 or higher, otherwise compile nginx with openssl 3.0
 Install_Nginx_Openssl() {
     Check_Openssl
     if [ "${isOpenSSL111}" = 'y' ]; then
@@ -11,25 +15,12 @@ Install_Nginx_Openssl() {
         fi  
         echo "System OpenSSL version is 1.1.1, compile nginx with custom OpenSSL version: ${Custom_Openssl_Ver}"
         cd ${cur_dir}/src
-        Download_Files ${Custom_Openssl_DL} ${Custom_Openssl_Ver}.tar.gz
+        Download_Files_Exit ${Custom_Openssl_DL} ${Custom_Openssl_Ver}.tar.gz
         rm -rf ${Custom_Openssl_Ver}
         tar zxf ${Custom_Openssl_Ver}.tar.gz
         Nginx_With_Openssl="--with-openssl=${cur_dir}/src/${Custom_Openssl_Ver}"
-    elif [ "${isOpenSSL3}" = 'y' ] && [ "${isOpenSSL35}" = 'n' ]; then
-        if [[ "${Nginx_Version}" =~ ^1\.(29|[3-5][0-9])\. ]]; then
-            Custom_Openssl_Ver=${Openssl_35_Ver}
-            Custom_Openssl_DL=${Openssl_35_DL}
-            echo "System OpenSSL version is 3.0.x, compile nginx with custom OpenSSL version: ${Custom_Openssl_Ver}"
-            cd ${cur_dir}/src
-            Download_Files ${Custom_Openssl_DL} ${Custom_Openssl_Ver}.tar.gz
-            rm -rf ${Custom_Openssl_Ver}
-            tar zxf ${Custom_Openssl_Ver}.tar.gz
-            Nginx_With_Openssl="--with-openssl=${cur_dir}/src/${Custom_Openssl_Ver}"
-        fi
-        echo "System OpenSSL version is 3.0.x with nginx version belows 1.29, compile nginx with system OpenSSL."
-        Nginx_With_Openssl=""
     else
-        echo "Current system OpenSSL version is not 1.1.1 nor 3.0.x, using system OpenSSL."
+        echo "Current system OpenSSL version is not 1.1.1, using system OpenSSL."
         Nginx_With_Openssl=""
     fi
 }
@@ -38,7 +29,7 @@ Install_Nginx_Pcre() {
     if command -v pcre-config >/dev/null 2>&1; then
         echo "OS is using old PCRE, compile nginx with PCRE2"
         cd ${cur_dir}/src
-        Download_Files ${Pcre2_DL} ${Pcre2_Ver}.tar.bz2
+        Download_Files_Exit ${Pcre2_DL} ${Pcre2_Ver}.tar.bz2
         rm -rf ${Pcre2_Ver}
         tar jxf ${Pcre2_Ver}.tar.bz2
         Nginx_With_Pcre="--with-pcre=${cur_dir}/src/${Pcre2_Ver} --with-pcre-jit"
@@ -48,7 +39,7 @@ Install_Nginx_Pcre() {
     else
         echo "OS has no PCRE installed, compile nginx with custom PCRE2"
         cd ${cur_dir}/src
-        Download_Files ${Pcre2_DL} ${Pcre2_Ver}.tar.bz2
+        Download_Files_Exit ${Pcre2_DL} ${Pcre2_Ver}.tar.bz2
         rm -rf ${Pcre2_Ver}
         tar jxf ${Pcre2_Ver}.tar.bz2
         Nginx_With_Pcre="--with-pcre=${cur_dir}/src/${Pcre2_Ver} --with-pcre-jit"
@@ -64,7 +55,7 @@ Install_Nginx_Pcre2() {
     else
         echo "OS has no PCRE2 installed, compile nginx with custom PCRE2"
         cd ${cur_dir}/src
-        Download_Files ${Pcre2_DL} ${Pcre2_Ver}.tar.bz2
+        Download_Files_Exit ${Pcre2_DL} ${Pcre2_Ver}.tar.bz2
         rm -rf ${Pcre2_Ver}
         tar jxf ${Pcre2_Ver}.tar.bz2
         Nginx_With_Pcre="--with-pcre=${cur_dir}/src/${Pcre2_Ver} --with-pcre-jit"
@@ -93,10 +84,7 @@ Install_Nginx_Lua() {
             Echo_Red "Luajit build failed!"
             exit 1
         }
-        make install PREFIX=/usr/local/luajit || {
-            Echo_Red "Luajit install failed!"
-            exit 1
-        }
+        make install PREFIX=/usr/local/luajit
         cd ${cur_dir}/src
 
         cat >/etc/ld.so.conf.d/luajit.conf <<EOF
@@ -117,16 +105,10 @@ EOF
         source /etc/profile.d/luajit.sh
 
         Tar_Cd ${LuaRestyCore}.tar.gz ${LuaRestyCore}
-        make install PREFIX=/usr/local/nginx || {
-            Echo_Red "${LuaRestyCore} install failed!"
-            exit 1
-        }
+        make install PREFIX=/usr/local/nginx
         cd -
         Tar_Cd ${LuaRestyLrucache}.tar.gz ${LuaRestyLrucache}
-        make install PREFIX=/usr/local/nginx || {
-            Echo_Red "${LuaRestyLrucache} install failed!"
-            exit 1
-        }
+        make install PREFIX=/usr/local/nginx
         cd -
 
         Nginx_Module_Lua="--with-ld-opt='-Wl,-rpath,/usr/local/luajit/lib' --add-module=${cur_dir}/src/${LuaNginxModule} --add-module=${cur_dir}/src/${NgxDevelKit}"
@@ -139,7 +121,7 @@ Install_Ngx_FancyIndex() {
     if [ "${Enable_Ngx_FancyIndex}" = 'y' ]; then
         echo "Installing Ngx FancyIndex for Nginx..."
         cd ${cur_dir}/src
-        Download_Files ${NgxFancyIndex_DL} ${NgxFancyIndex_Ver}.tar.xz
+        Download_Files_Exit ${NgxFancyIndex_DL} ${NgxFancyIndex_Ver}.tar.xz
         Tar_Cd ${NgxFancyIndex_Ver}.tar.xz
         Ngx_FancyIndex="--add-module=${cur_dir}/src/${NgxFancyIndex_Ver}"
     else
@@ -219,10 +201,8 @@ Install_Nginx() {
             exit 1
         }
     fi
-    make install || {
-        Echo_Red "Error: Nginx install failed."
-        exit 1
-    }
+    make install
+    
     cd ../
 
     ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx

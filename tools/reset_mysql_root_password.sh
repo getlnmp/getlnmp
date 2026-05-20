@@ -7,8 +7,18 @@ if [ $(id -u) != "0" ]; then
     exit 1
 fi
 
+DB_SQL_Escape()
+{
+    local value=$1
+    local sq="'"
+
+    value=${value//\\/\\\\}
+    value=${value//${sq}/${sq}${sq}}
+    printf "%s" "${value}"
+}
+
 echo "+-------------------------------------------------------------------+"
-echo "|   Reset MySQL/MariaDB root Password for LNMP, Written by Licess   |"
+echo "|           Reset MySQL/MariaDB root Password for LNMP              |"
 echo "+-------------------------------------------------------------------+"
 echo "|       A tool to reset MySQL/MariaDB root password for LNMP        |"
 echo "+-------------------------------------------------------------------+"
@@ -19,10 +29,10 @@ echo "+-------------------------------------------------------------------+"
 
 if [ -s /usr/local/mariadb/bin/mysql ]; then
     DB_Name="mariadb"
-    DB_Ver=`/usr/local/mariadb/bin/mysql_config --version`
+    DB_Ver=$(/usr/local/mariadb/bin/mysql_config --version)
 elif [ -s /usr/local/mysql/bin/mysql ]; then
     DB_Name="mysql"
-    DB_Ver=`/usr/local/mysql/bin/mysql_config --version`
+    DB_Ver=$(/usr/local/mysql/bin/mysql_config --version)
 else
     echo "MySQL/MariaDB not found!"
     exit 1
@@ -30,7 +40,7 @@ fi
 
 while :;do
     DB_Root_Password=""
-    read -p "Enter New ${DB_Name} root password: " DB_Root_Password
+    read -r -p "Enter New ${DB_Name} root password: " DB_Root_Password
     if [ "${DB_Root_Password}" = "" ]; then
         echo "Error: Password can't be NULL!!"
     else
@@ -39,19 +49,20 @@ while :;do
 done
 
 echo "Stopping ${DB_Name}..."
-/etc/init.d/${DB_Name} stop
+systemctl stop ${DB_Name}
 echo "Starting ${DB_Name} with skip grant tables"
-/usr/local/${DB_Name}/bin/mysqld_safe --skip-grant-tables >/dev/null 2>&1 &
+/usr/local/${DB_Name}/bin/mysqld_safe --skip-grant-tables --skip-networking >/dev/null 2>&1 &
 sleep 5
 echo "update ${DB_Name} root password..."
-if echo "${DB_Ver}" | grep -Eqi '^8.0.|^5.7.|^10.[2345678].'; then
+DB_Root_Password_SQL=$(DB_SQL_Escape "${DB_Root_Password}")
+if echo "${DB_Ver}" | grep -Eqi '^5.7.|^8.0.|^8.4.|^10.([2-9]|1[0-9]).'; then
     /usr/local/${DB_Name}/bin/mysql -u root << EOF
 FLUSH PRIVILEGES;
-ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_Root_Password}';
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_Root_Password_SQL}';
 EOF
 else
     /usr/local/${DB_Name}/bin/mysql -u root << EOF
-update mysql.user set password = Password('${DB_Root_Password}') where User = 'root';
+update mysql.user set password = Password('${DB_Root_Password_SQL}') where User = 'root';
 EOF
 fi
 
@@ -60,11 +71,11 @@ if [ $? -eq 0 ]; then
     if command -v killall >/dev/null 2>&1; then
         killall mysqld
     else
-        kill `pidof mysqld`
+        kill $(pidof mysqld)
     fi
     sleep 5
     echo "Restarting the actual ${DB_Name} service"
-    /etc/init.d/${DB_Name} start
+    systemctl start ${DB_Name}
     echo "Password successfully reset to '${DB_Root_Password}'"
 else
     echo "Reset ${DB_Name} root password failed!"
