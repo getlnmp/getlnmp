@@ -130,14 +130,7 @@ Install_Pureftpd()
         exit 1
     }
 
-    make -j"$(nproc)"
-    if [ $? -ne 0 ]; then
-        make || {
-            Echo_Red "Pureftpd build failed!"
-            exit 1
-        }
-    fi
-    make install
+    Make_Install_Exit "Pureftpd"
 
     Echo_Blue "Copy configure files..."
     mkdir -p /usr/local/pureftpd/etc

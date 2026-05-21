@@ -575,6 +575,39 @@ Make_Install() {
     make install
 }
 
+# Need to accept an optional argument for app name to provide more specific error messages
+Make_Install_Exit() {
+    local AppName="$1"
+
+    if ! make -j"$(nproc)"; then
+        if [ -n "$AppName" ]; then
+            Echo_Red "Parallel build failed for ${AppName}, retrying with single-threaded make..."
+        else
+            Echo_Red "Parallel build failed, retrying with single-threaded make..."
+        fi
+
+        if ! make; then
+            if [ -n "$AppName" ]; then
+                Echo_Red "Build failed for ${AppName} even with single-threaded make."
+            else
+                Echo_Red "Build failed even with single-threaded make."
+            fi
+            exit 1
+        fi
+    fi
+
+    if ! make install; then
+        if [ -n "$AppName" ]; then
+            Echo_Red "${AppName} install failed"
+        else
+            Echo_Red "Installation failed"
+        fi
+        exit 1
+    fi
+
+    echo "${AppName} build and install completed successfully"
+}
+
 PHP_Make_Install() {
 #    make ZEND_EXTRA_LIBS='-liconv' -j "$(nproc)"
 #    if [ $? -ne 0 ]; then
@@ -602,7 +635,7 @@ Install_Autoconf() {
         Download_Files https://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz autoconf-2.69.tar.gz
         Tar_Cd autoconf-2.69.tar.gz autoconf-2.69
         ./configure --prefix=/usr/local/autoconf-2.69
-        Make_Install
+        Make_Install_Exit "Autoconf 2.69"
         cd ${cur_dir}/src/
         rm -rf ${cur_dir}/src/${Autoconf_Ver}
     fi
@@ -1037,7 +1070,7 @@ Install_Openssl() {
         Tar_Cd ${Openssl_Ver}.tar.gz ${Openssl_Ver}
         ./config -fPIC --prefix=/usr/local/openssl --openssldir=/usr/local/openssl
         make depend
-        Make_Install
+        Make_Install_Exit "OpenSSL 1.0.2"
 
         rm -rf ${cur_dir}/src/${Openssl_Ver}
 
@@ -1062,7 +1095,7 @@ Install_Openssl_New() {
         Tar_Cd ${Openssl_New_Ver}.tar.gz ${Openssl_New_Ver}
         ./config enable-weak-ssl-ciphers -fPIC --prefix=/usr/local/openssl1.1.1 --openssldir=/usr/local/openssl1.1.1
         make depend
-        Make_Install
+        Make_Install_Exit "OpenSSL 1.1.1"
 
         rm -rf ${cur_dir}/src/${Openssl_New_Ver}
 
@@ -1087,7 +1120,7 @@ Install_Openssl3() {
         Tar_Cd ${Openssl_3_Ver}.tar.gz ${Openssl_3_Ver}
         ./config enable-weak-ssl-ciphers -fPIC --prefix=/usr/local/openssl3 --openssldir=/usr/local/openssl3
         make depend
-        Make_Install
+        Make_Install_Exit "OpenSSL 3"
 
         rm -rf ${cur_dir}/src/${Openssl_3_Ver}
 
@@ -1109,7 +1142,7 @@ Install_Nghttp2() {
         [[ -d "${Nghttp2_Ver}" ]] && rm -rf ${Nghttp2_Ver}
         Tar_Cd ${Nghttp2_Ver}.tar.xz ${Nghttp2_Ver}
         ./configure --prefix=/usr/local/nghttp2
-        Make_Install
+        Make_Install_Exit "Nghttp2"
         cd ${cur_dir}/src/
         rm -rf ${cur_dir}/src/${Nghttp2_Ver}
     fi

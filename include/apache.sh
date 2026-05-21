@@ -38,7 +38,7 @@ Install_Apache_24()
     else
         ./configure --prefix=/usr/local/apache --enable-mods-shared=most --enable-headers --enable-mime-magic --enable-proxy --enable-so --enable-rewrite --enable-ssl --with-ssl --enable-deflate --with-pcre --with-included-apr --with-apr-util --enable-mpms-shared=all --enable-remoteip
     fi
-    Make_Install
+    Make_Install_Exit "Apache 2.4"
     cd ${cur_dir}/src
     rm -rf ${cur_dir}/src/${Apache_Ver}
 

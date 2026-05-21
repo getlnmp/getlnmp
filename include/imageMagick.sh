@@ -51,10 +51,7 @@ Install_ImageMagic()
             Echo_Red "ImageMagick configure failed!"
             exit 1
         }
-        Make_Install || {
-            Echo_Red "ImageMagick install failed!"
-            exit 1
-        }
+        Make_Install_Exit "ImageMagick"
         cd ../
         rm -rf ${cur_dir}/src/${ImageMagick_Ver}
     fi
@@ -74,10 +71,7 @@ Install_ImageMagic()
         Echo_Red "imagick configure failed!"
         exit 1
     }
-    Make_Install || {
-        Echo_Red "imagick install failed!"
-        exit 1
-    }
+    Make_Install_Exit "imagick"
     cd ../
 
     cat >${PHP_Path}/conf.d/008-imagick.ini<<EOF

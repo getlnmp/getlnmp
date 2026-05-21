@@ -77,7 +77,7 @@ Upgrade_MySQL57()
             -DDOWNLOAD_BOOST=ON \
 			-DWITH_BOOST=/usr/local/mysql57_boost \
             ${MySQL_WITH_SSL}
-        Make_Install
+        MYSQL_Make_Install
     fi
 
 
@@ -214,7 +214,7 @@ Upgrade_MySQL80()
             -DWITH_SYSTEMD=1 \
             -DDOWNLOAD_BOOST=ON \
 			-DWITH_BOOST=/usr/local/mysql80_boost
-        Make_Install
+        MYSQL_Make_Install
     fi
 
 cat > /etc/my.cnf<<EOF
@@ -362,7 +362,7 @@ Upgrade_MySQL84()
         -DENABLED_LOCAL_INFILE=1 \
         -DWITH_SYSTEMD=1 
         
-        Make_Install
+        MYSQL_Make_Install
     fi
 
 cat > /etc/my.cnf<<EOF
