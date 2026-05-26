@@ -39,6 +39,11 @@ Validate_VHost_Path() {
     [[ "${path_name}" = /* && "${path_name}" != *".."* && "${path_name}" != *[[:space:]]* ]]
 }
 
+Validate_Readable_File() {
+    local file_path=$1
+    [[ "${file_path}" = /* && -f "${file_path}" && -r "${file_path}" ]]
+}
+
 Validate_Simple_Name() {
     local name_value=$1
     [[ "${name_value}" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]*$ ]]
@@ -314,7 +319,10 @@ EOF
     fi
 
     echo "Test Nginx configure file......"
-    /usr/local/nginx/sbin/nginx -t
+    if ! /usr/local/nginx/sbin/nginx -t; then
+        Echo_Red "Nginx configure file test failed!"
+        return 1
+    fi
     echo "Reload Nginx......"
     /usr/local/nginx/sbin/nginx -s reload
 }
@@ -731,7 +739,7 @@ Add_VHost() {
     chmod -R 755 "${vhostdir}"
     chown -R www:www "${vhostdir}"
 
-    Add_VHost_Config
+    Add_VHost_Config || exit 1
 
     systemctl reload php-fpm
 
@@ -841,7 +849,9 @@ Check_DB() {
         MySQL_Ver=$(/usr/local/mysql/bin/mysql_config --version)
     else
         MySQL_Bin="None"
+        return 1
     fi
+    return 0
 }
 
 Make_TempMycnf() {
@@ -856,7 +866,10 @@ EOF
 }
 
 Verify_DB_Password() {
-    Check_DB
+    if ! Check_DB; then
+        Echo_Red "Database is not installed or /etc/my.cnf is missing."
+        exit 1
+    fi
     status=1
     while [ $status -eq 1 ]; do
         Echo_Yellow "Enter current root password of Database (Password will not shown): "
@@ -872,7 +885,7 @@ Verify_DB_Password() {
 Do_Query() {
     echo "$1" >/tmp/.mysql.tmp
     chmod 600 /tmp/.mysql.tmp
-    Check_DB
+    Check_DB || return 1
     ${MySQL_Bin} --defaults-file=~/.my.cnf </tmp/.mysql.tmp
     return $?
 }
@@ -1293,6 +1306,8 @@ Add_SSL_Menu() {
                 read -r ssl_certificate
                 if [ "${ssl_certificate}" == "" ]; then
                     Echo_Red "SSL Certificate file cannot be empty!"
+                elif ! Validate_Readable_File "${ssl_certificate}"; then
+                    Echo_Red "SSL Certificate file does not exist or is not readable!"
                 else
                     break
                 fi
@@ -1302,6 +1317,8 @@ Add_SSL_Menu() {
                 read -r ssl_certificate_key
                 if [ "${ssl_certificate_key}" == "" ]; then
                     Echo_Red "SSL Certificate Key file cannot be empty!"
+                elif ! Validate_Readable_File "${ssl_certificate_key}"; then
+                    Echo_Red "SSL Certificate Key file does not exist or is not readable!"
                 else
                     break
                 fi
@@ -1412,7 +1429,10 @@ EOF
     fi
 
     echo "Test Nginx configure file......"
-    /usr/local/nginx/sbin/nginx -t
+    if ! /usr/local/nginx/sbin/nginx -t; then
+        Echo_Red "Nginx configure file test failed!"
+        return 1
+    fi
     echo "Reload Nginx......"
     /usr/local/nginx/sbin/nginx -s reload
 }
@@ -1427,7 +1447,7 @@ Install_SSL_Cert() {
 
 Add_SSL() {
     if [ "${ssl_choice}" == "1" ]; then
-        Create_SSL_Config
+        Create_SSL_Config || exit 1
     elif echo "${ssl_choice}" | grep -Eqi "^[2-4]$"; then
         letsdomain=""
         if [ "${moredomain}" != "" ]; then
@@ -1439,7 +1459,7 @@ Add_SSL() {
             letsdomain="-d ${domain}"
         fi
         if [ ! -s "/usr/local/nginx/conf/vhost/${domain}.conf" ]; then
-            Add_VHost_Config
+            Add_VHost_Config || exit 1
         fi
         if [ ! -d "${vhostdir}" ]; then
             mkdir -p "${vhostdir}"
@@ -1484,8 +1504,11 @@ Add_SSL() {
         if [ "${lets_status}" = 0 ]; then
             Install_SSL_Cert
             if [ $? -eq 0 ]; then
-                Create_SSL_Config
-                Echo_Green " Generate SSL Certificate successfully."
+                if Create_SSL_Config; then
+                    Echo_Green " Generate SSL Certificate successfully."
+                else
+                    Echo_Red " Create SSL configure failed!"
+                fi
             else
                 Echo_Red " Install SSL Certificate failed!"
             fi
@@ -1566,11 +1589,11 @@ Add_Dns_SSL() {
         fi
 
         if [ ! -s "/usr/local/nginx/conf/vhost/${domain}.conf" ]; then
-            Add_VHost_Config
+            Add_VHost_Config || exit 1
         fi
         ssl_certificate="/usr/local/nginx/conf/ssl/${domain}/fullchain.cer"
         ssl_certificate_key="/usr/local/nginx/conf/ssl/${domain}/${domain}.key"
-        Create_SSL_Config
+        Create_SSL_Config || exit 1
         Echo_Blue "------------------ SSL Certificate information as follows ------------------"
         Echo_Blue "| Domain: ${domain} ${moredomain}"
         Echo_Blue "| SSL Certificate: /usr/local/nginx/conf/ssl/${domain}/fullchain.cer"

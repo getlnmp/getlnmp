@@ -190,8 +190,8 @@ Add_LNMP_Startup()
 Add_LNMPA_Startup()
 {
     echo "Add Startup and Starting LNMPA..."
-    \cp ${cur_dir}/conf/lnmpa /bin/lnmp
-    chmod +x /bin/lnmp
+    \cp ${cur_dir}/conf/lnmpa /bin/lnmpa
+    chmod +x /bin/lnmpa
     systemctl enable nginx
     systemctl start nginx
     if [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
@@ -208,8 +208,8 @@ Add_LNMPA_Startup()
 Add_LAMP_Startup()
 {
     echo "Add Startup and Starting LAMP..."
-    \cp ${cur_dir}/conf/lamp /bin/lnmp
-    chmod +x /bin/lnmp
+    \cp ${cur_dir}/conf/lamp /bin/lamp
+    chmod +x /bin/lamp
     systemctl enable httpd
     systemctl start httpd
     if [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
