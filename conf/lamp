@@ -20,6 +20,37 @@ echo "+-------------------------------------------+"
 arg1=$1
 arg2=$2
 
+Validate_Domain() {
+    local domain_name=$1
+    [[ "${domain_name}" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$ ]]
+}
+
+Validate_Domain_List() {
+    local domain_name
+    for domain_name in $1; do
+        [[ "${domain_name}" =~ ^(\*\.)?[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$ ]] || return 1
+    done
+}
+
+Validate_VHost_Path() {
+    local path_name=$1
+    [[ "${path_name}" = /* && "${path_name}" != *".."* && "${path_name}" != *[[:space:]]* ]]
+}
+
+Validate_Simple_Name() {
+    local name_value=$1
+    [[ "${name_value}" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]*$ ]]
+}
+
+Validate_DB_Name() {
+    local name_value=$1
+    [[ "${name_value}" =~ ^[A-Za-z0-9_]+$ ]]
+}
+
+Validate_DB_Password() {
+    local password_value=$1
+    [[ "${password_value}" != *"'"* && "${password_value}" != *"\\"* && "${password_value}" != *$'\n'* ]]
+}
 
 lamp_db_control() {
     local db_action=$1
@@ -84,24 +115,24 @@ lamp_db_control() {
 lamp_start() {
     echo "Starting LAMP..."
     systemctl start httpd
-    lnmp_db_control start
+    lamp_db_control start
 }
 
 lamp_stop() {
     echo "Stopping LAMP..."
     systemctl stop httpd
-    lnmp_db_control stop
+    lamp_db_control stop
 }
 
 lamp_reload() {
     echo "Reload LAMP..."
     systemctl reload httpd
-    lnmp_db_control reload
+    lamp_db_control reload
 }
 
 lamp_status() {
     systemctl --no-pager status httpd
-    lnmp_db_control status
+    lamp_db_control status
 
 }
 lamp_kill() {
@@ -227,7 +258,7 @@ Add_VHost() {
     while :; do
         Echo_Yellow "Please enter domain(example: www.getlnmp.com): "
         read -r domain
-        if [ "${domain}" != "" ] && [[ "$domain" = "${domain%[[:space:]]*}" ]]; then
+        if [ "${domain}" != "" ] && [[ "$domain" = "${domain%[[:space:]]*}" ]] && Validate_Domain "${domain}"; then
             if [ -f "/usr/local/apache/conf/vhost/${domain}.conf" ]; then
                 Echo_Red " ${domain} exists,please check!"
                 exit 1
@@ -243,6 +274,10 @@ Add_VHost() {
     Echo_Yellow "Enter more domain name(example: getlnmp.com sub.getlnmp.com): "
     read -r moredomain
     if [ "${moredomain}" != "" ]; then
+        if ! Validate_Domain_List "${moredomain}"; then
+            Echo_Red "More domain list contains invalid domain names!"
+            exit 1
+        fi
         echo " domain list: ${domain} ${moredomain}"
     fi
 
@@ -252,6 +287,10 @@ Add_VHost() {
     read -r vhostdir
     if [ "${vhostdir}" == "" ]; then
         vhostdir="/home/wwwroot/${domain}"
+    fi
+    if ! Validate_VHost_Path "${vhostdir}"; then
+        Echo_Red "Virtual Host Directory must be an absolute path without spaces or '..'."
+        exit 1
     fi
     echo "Virtual Host Directory: ${vhostdir}"
 
@@ -265,6 +304,10 @@ Add_VHost() {
         read -r al_name
         if [ "${al_name}" == "" ]; then
             al_name="${domain}"
+        fi
+        if ! Validate_Simple_Name "${al_name}"; then
+            Echo_Red "Access log filename contains invalid characters."
+            exit 1
         fi
         echo "You access log filename: ${al_name}-access_log"
     fi
@@ -312,15 +355,16 @@ Add_VHost() {
     stty ${OLDCONFIG}
 
     echo "Create Virtul Host directory......"
-    mkdir -p ${vhostdir}
+    mkdir -p "${vhostdir}"
     echo "set permissions of Virtual Host directory......"
-    chmod -R 755 ${vhostdir}
-    chown -R www:www ${vhostdir}
+    chmod -R 755 "${vhostdir}"
+    chown -R www:www "${vhostdir}"
 
     Add_VHost_Config
 
     if [ "${create_database}" == "y" ]; then
         Add_Database
+        TempMycnf_Clean
     fi
 
     if [ "${create_ftp}" == "y" ]; then
@@ -384,6 +428,8 @@ Del_VHost() {
         read -r domain
         if [ "${domain}" == "" ]; then
             Echo_Red "Domain name can't be empty."
+        elif ! Validate_Domain "${domain}"; then
+            Echo_Red "Domain name is invalid."
         else
             break
         fi
@@ -422,6 +468,8 @@ user=root
 password='$1'
 EOF
     chmod 600 ~/.my.cnf
+    trap 'TempMycnf_Clean' EXIT
+    trap 'TempMycnf_Clean; exit 1' INT TERM HUP
 }
 
 Verify_DB_Password() {
@@ -461,6 +509,8 @@ Enter_Database_Name() {
         read -r database_name
         if [ "${database_name}" == "" ]; then
             Echo_Red "Database Name can't be empty!"
+        elif ! Validate_DB_Name "${database_name}"; then
+            Echo_Red "Database Name can only contain letters, numbers, and underscores."
         else
             break
         fi
@@ -472,6 +522,10 @@ Add_Database_Menu() {
     echo "Your will create a database and MySQL user with same name: ${database_name}"
     Echo_Yellow "Please enter password for mysql user ${database_name}: "
     read -r mysql_password
+    if ! Validate_DB_Password "${mysql_password}"; then
+        Echo_Red "Database password cannot contain single quotes, backslashes, or newlines."
+        exit 1
+    fi
     echo "Your password: ${mysql_password} "
 }
 
@@ -513,6 +567,8 @@ Edit_Database() {
         read -r database_username
         if [ "${database_username}" == "" ]; then
             Echo_Red "Database Username can't be empty!"
+        elif ! Validate_DB_Name "${database_username}"; then
+            Echo_Red "Database Username can only contain letters, numbers, and underscores."
         else
             break
         fi
@@ -522,6 +578,8 @@ Edit_Database() {
         read -r database_username_passwd
         if [ "${database_username_passwd}" == "" ]; then
             Echo_Red "Database Password can't be empty!"
+        elif ! Validate_DB_Password "${database_username_passwd}"; then
+            Echo_Red "Database password cannot contain single quotes, backslashes, or newlines."
         else
             break
         fi
@@ -560,6 +618,8 @@ Enter_Ftp_Name() {
         read -r ftp_account_name
         if [ "${ftp_account_name}" == "" ]; then
             Echo_Red "FTP account name can't be empty!"
+        elif ! Validate_Simple_Name "${ftp_account_name}"; then
+            Echo_Red "FTP account name contains invalid characters."
         else
             break
         fi
@@ -583,6 +643,8 @@ Add_Ftp_Menu() {
             read -r vhostdir
             if [ "${vhostdir}" == "" ]; then
                 Echo_Red "Directory can't be empty!"
+            elif ! Validate_VHost_Path "${vhostdir}"; then
+                Echo_Red "FTP directory must be an absolute path without spaces or '..'."
             else
                 break
             fi
@@ -601,16 +663,16 @@ Add_Ftp() {
     www_uid=$(id -u www)
     www_gid=$(id -g www)
     if [ ! -d "${vhostdir}" ]; then
-        mkdir -p ${vhostdir}
-        chown www:www -R ${vhostdir}
+        mkdir -p "${vhostdir}"
+        chown www:www -R "${vhostdir}"
     fi
-    cat >/tmp/pass${ftp_account_name} <<EOF
+    cat >"/tmp/pass${ftp_account_name}" <<EOF
 ${ftp_account_password}
 ${ftp_account_password}
 EOF
-    /usr/local/pureftpd/bin/pure-pw useradd ${ftp_account_name} -f /usr/local/pureftpd/etc/pureftpd.passwd -u ${www_uid} -g ${www_gid} -d ${vhostdir} -m </tmp/pass${ftp_account_name}
+    /usr/local/pureftpd/bin/pure-pw useradd "${ftp_account_name}" -f /usr/local/pureftpd/etc/pureftpd.passwd -u "${www_uid}" -g "${www_gid}" -d "${vhostdir}" -m <"/tmp/pass${ftp_account_name}"
     [ $? -eq 0 ] && echo "Created FTP User: ${ftp_account_name} Sucessfully." || echo "FTP User: ${ftp_account_name} already exists!"
-    rm -f /tmp/pass${ftp_account_name}
+    rm -f "/tmp/pass${ftp_account_name}"
 }
 
 List_Ftp() {
@@ -624,26 +686,30 @@ Edit_Ftp() {
     Echo_Yellow "Enter password for ftp account ${ftp_account_name}: "
     read -r ftp_account_password
     if [ "${ftp_account_password}" != "" ]; then
-        cat >/tmp/pass${ftp_account_name} <<EOF
+        cat >"/tmp/pass${ftp_account_name}" <<EOF
 ${ftp_account_password}
 ${ftp_account_password}
 EOF
-        /usr/local/pureftpd/bin/pure-pw passwd ${ftp_account_name} -f /usr/local/pureftpd/etc/pureftpd.passwd -m </tmp/pass${ftp_account_name}
+        /usr/local/pureftpd/bin/pure-pw passwd "${ftp_account_name}" -f /usr/local/pureftpd/etc/pureftpd.passwd -m <"/tmp/pass${ftp_account_name}"
         [ $? -eq 0 ] && echo "FTP User: ${ftp_account_name} change password Sucessfully." || echo "FTP User: ${ftp_account_name} change password failed!"
-        rm -f /tmp/pass${ftp_account_name}
+        rm -f "/tmp/pass${ftp_account_name}"
     else
         echo "FTP password will not change."
     fi
     Echo_Yellow "Enter directory for ftp account ${ftp_account_name}: "
     read -r vhostdir
     if [ "${vhostdir}" != "" ]; then
+        if ! Validate_VHost_Path "${vhostdir}"; then
+            Echo_Red "FTP directory must be an absolute path without spaces or '..'."
+            exit 1
+        fi
         www_uid=$(id -u www)
         www_gid=$(id -g www)
         if [ ! -d "${vhostdir}" ]; then
-            mkdir -p ${vhostdir}
-            chown www:www -R ${vhostdir}
+            mkdir -p "${vhostdir}"
+            chown www:www -R "${vhostdir}"
         fi
-        /usr/local/pureftpd/bin/pure-pw usermod ${ftp_account_name} -f /usr/local/pureftpd/etc/pureftpd.passwd -u ${www_uid} -g ${www_gid} -d ${vhostdir} -m
+        /usr/local/pureftpd/bin/pure-pw usermod "${ftp_account_name}" -f /usr/local/pureftpd/etc/pureftpd.passwd -u "${www_uid}" -g "${www_gid}" -d "${vhostdir}" -m
         [ $? -eq 0 ] && echo "FTP User: ${ftp_account_name} change diretcory Sucessfully." || echo "FTP User: ${ftp_account_name} change directory failed!"
     else
         echo "Directory will not change."
@@ -656,7 +722,7 @@ Del_Ftp() {
     echo "Your will delete ftp user ${ftp_account_name}"
     echo "Sleep 3s,Press ctrl+c to cancel..."
     Sleep_Sec 3
-    /usr/local/pureftpd/bin/pure-pw userdel ${ftp_account_name} -f /usr/local/pureftpd/etc/pureftpd.passwd -m
+    /usr/local/pureftpd/bin/pure-pw userdel "${ftp_account_name}" -f /usr/local/pureftpd/etc/pureftpd.passwd -m
     [ $? -eq 0 ] && echo "FTP User: ${ftp_account_name} deleted Sucessfully." || echo "FTP User: ${ftp_account_name} not exists!"
 }
 
@@ -664,7 +730,7 @@ Show_Ftp() {
     List_Ftp
     Enter_Ftp_Name
     echo "Your ftp account ${ftp_account_name} details:"
-    /usr/local/pureftpd/bin/pure-pw show ${ftp_account_name}
+    /usr/local/pureftpd/bin/pure-pw show "${ftp_account_name}"
     [ $? -eq 0 ] && echo "Ok." || echo "failed."
 }
 
@@ -673,7 +739,7 @@ Add_SSL_Info_Menu() {
     while :; do
         Echo_Yellow "Please enter domain(example: www.getlnmp.com): "
         read -r domain
-        if [ "${domain}" != "" ] && [[ "$domain" = "${domain%[[:space:]]*}" ]]; then
+        if [ "${domain}" != "" ] && [[ "$domain" = "${domain%[[:space:]]*}" ]] && Validate_Domain "${domain}"; then
             echo " Your domain: ${domain}"
             break
         else
@@ -684,6 +750,10 @@ Add_SSL_Info_Menu() {
     Echo_Yellow "Enter more domain name(example: getlnmp.com sub.getlnmp.com): "
     read -r moredomain
     if [ "${moredomain}" != "" ]; then
+        if ! Validate_Domain_List "${moredomain}"; then
+            Echo_Red "More domain list contains invalid domain names!"
+            exit 1
+        fi
     echo " domain list: ${domain} ${moredomain}"
     fi
 
@@ -693,6 +763,10 @@ Add_SSL_Info_Menu() {
     read -r vhostdir
     if [ "${vhostdir}" == "" ]; then
         vhostdir="/home/wwwroot/${domain}"
+    fi
+    if ! Validate_VHost_Path "${vhostdir}"; then
+        Echo_Red "Virtual Host Directory must be an absolute path without spaces or '..'."
+        exit 1
     fi
     echo "Virtual Host Directory: ${vhostdir}"
 
@@ -707,6 +781,10 @@ Add_SSL_Info_Menu() {
         read -r al_name
         if [ "${al_name}" == "" ]; then
             al_name="${domain}"
+        fi
+        if ! Validate_Simple_Name "${al_name}"; then
+            Echo_Red "Access log filename contains invalid characters."
+            exit 1
         fi
         al="access_log  /home/wwwlogs/${al_name}.log;"
         echo "You access log filename: ${al_name}.log"
@@ -770,7 +848,7 @@ Add_DNS_SSL_Only_Info_Menu() {
     while :; do
         Echo_Yellow "Please enter domain(example: getlnmp.com): "
         read -r domain
-        if [ "${domain}" != "" ] && [[ "$domain" = "${domain%[[:space:]]*}" ]]; then
+        if [ "${domain}" != "" ] && [[ "$domain" = "${domain%[[:space:]]*}" ]] && Validate_Domain "${domain}"; then
             echo " Your domain: ${domain}"
             break
         else
@@ -781,6 +859,10 @@ Add_DNS_SSL_Only_Info_Menu() {
     Echo_Yellow "Enter more domain name(example: *.getlnmp.com): "
     read -r moredomain
     if [ "${moredomain}" != "" ]; then
+        if ! Validate_Domain_List "${moredomain}"; then
+            Echo_Red "More domain list contains invalid domain names!"
+            exit 1
+        fi
         echo " domain list: ${moredomain}"
     fi
 }
@@ -970,20 +1052,24 @@ Add_SSL() {
         if [ "${ssl_choice}" == "2" ]; then
             echo "Generate ssl certificate using Let's Encrypt..."
             /usr/local/acme.sh/acme.sh ${acme_sh_sudo} --server letsencrypt --issue ${letsdomain} -w ${vhostdir}
-            Install_SSL_Cert
+            lets_status=$?
         elif [ "${ssl_choice}" == "3" ]; then
             echo "Generate ssl certificate using BuyPass..."
             /usr/local/acme.sh/acme.sh ${acme_sh_sudo} --server buypass --issue ${letsdomain} -w ${vhostdir}
-            Install_SSL_Cert
+            lets_status=$?
         elif [ "${ssl_choice}" == "4" ]; then
             echo "Generate ssl certificate using ZeroSSL..."
             /usr/local/acme.sh/acme.sh ${acme_sh_sudo} --server zerossl --issue ${letsdomain} -w ${vhostdir}
-            Install_SSL_Cert
+            lets_status=$?
         fi
-        lets_status=$?
         if [ "${lets_status}" = 0 ]; then
-            Create_SSL_Config
-            Echo_Green " Generate SSL Certificate successfully."
+            Install_SSL_Cert
+            if [ $? -eq 0 ]; then
+                Create_SSL_Config
+                Echo_Green " Generate SSL Certificate successfully."
+            else
+                Echo_Red " Install SSL Certificate failed!"
+            fi
         else
             Echo_Red " Generate SSL Certificate failed!"
         fi
@@ -1054,10 +1140,10 @@ Add_Dns_SSL() {
     if [ "${lets_status}" = 0 ] || [[ "${provider}" = "" && "${lets_status}" = 1 && -s "/usr/local/apache/conf/ssl/${domain}/${domain}.cer" ]]; then
         if [ ! -d "${vhostdir}" ]; then
             echo "Create Virtul Host directory......"
-            mkdir -p ${vhostdir}
+            mkdir -p "${vhostdir}"
             echo "set permissions of Virtual Host directory......"
-            chmod -R 755 ${vhostdir}
-            chown -R www:www ${vhostdir}
+            chmod -R 755 "${vhostdir}"
+            chown -R www:www "${vhostdir}"
         fi
 
         if [ ! -s "/usr/local/apache/conf/vhost/${domain}.conf" ]; then

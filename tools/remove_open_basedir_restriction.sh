@@ -8,11 +8,11 @@ if [ $(id -u) != "0" ]; then
 fi
 
 echo "+-------------------------------------------------------------------+"
-echo "|   Remove open_basedir restrication for LNMP, Written by Licess    |"
+echo "|            Remove open_basedir restrication for LNMP              |"
 echo "+-------------------------------------------------------------------+"
 echo "|       A tool to remove open_basedir restrication for LNMP         |"
 echo "+-------------------------------------------------------------------+"
-echo "|       For more information please visit https://lnmp.org          |"
+echo "|       For more information please visit https://getlnmp.com       |"
 echo "+-------------------------------------------------------------------+"
 echo "|          Usage: ./remove_open_basedir_restrication.sh             |"
 echo "+-------------------------------------------------------------------+"
@@ -20,14 +20,14 @@ echo "+-------------------------------------------------------------------+"
 website_root=''
 
 while :;do
-    read -p "Enter website root directory: " website_root
+    read -r -p "Enter website root directory: " website_root
     if [ -d "${website_root}" ]; then
         if [ -f ${website_root}/.user.ini ];then
             chattr -i ${website_root}/.user.ini
             rm -f ${website_root}/.user.ini
             sed -i 's/^fastcgi_param PHP_ADMIN_VALUE/#fastcgi_param PHP_ADMIN_VALUE/g' /usr/local/nginx/conf/fastcgi.conf
-            /etc/init.d/php-fpm restart
-            /etc/init.d/nginx reload
+            systemctl restart php-fpm
+            systemctl reload nginx
             echo "done."
         else
             echo "${website_root}/.user.ini is not exist!"
