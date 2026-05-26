@@ -4,7 +4,7 @@ Backup_MySQL2()
 {
     echo "Starting backup all databases..."
     echo "If the database is large, the backup time will be longer."
-    /usr/local/mysql/bin/mysqldump --defaults-file=~/.my.cnf --all-databases > /root/mysql_all_backup${Upgrade_Date}.sql
+    /usr/local/mysql/bin/mysqldump --defaults-file=~/.my.cnf --all-databases --routines --triggers --events --single-transaction > /root/mysql_all_backup${Upgrade_Date}.sql
     if [ $? -eq 0 ]; then
         echo "MySQL databases backup successfully.";
     else
@@ -18,8 +18,9 @@ Backup_MySQL2()
     mv /etc/systemd/system/mysql.service /usr/local/mysql2mariadb${Upgrade_Date}/dmysql2mariadb.service.bak.${Upgrade_Date}
     mv /etc/my.cnf /usr/local/mysql2mariadb${Upgrade_Date}/my.cnf.mysql2mariadbbak.${Upgrade_Date}
     if [[ ! "${MySQL_Data_Dir}" =~ ^/usr/local/mysql/ ]]; then
-        mv ${MySQL_Data_Dir} ${MySQL_Data_Dir}${Upgrade_Date}
+        mv "${MySQL_Data_Dir}" "${MySQL_Data_Dir}""${Upgrade_Date}"
     fi
+    # remove upgrading support from mysql 5.6 to mariadb 5.5 as we've dropped support for mariadb 5.5 and mysql 5.6
     if echo "${mariadb_version}" | grep -Eqi '^5\.5\.' &&  echo "${cur_mysql_version}" | grep -Eqi '^5\.6\.';then
         sed -i 's/STATS_PERSISTENT=0//g' /root/mysql_all_backup${Upgrade_Date}.sql
     fi
@@ -38,8 +39,17 @@ Upgrade_MySQL2MariaDB()
     mariadb_version=""
     echo "Current MySQL Version:${cur_mysql_version}"
     echo "You can get version number from https://downloads.mariadb.org/"
+    echo "We only support upgrading MySQL to LTS version like 10.6.x, 10.11.x, 11.4.x and 11.8.x"
     Echo_Yellow "Please enter MariaDB Version you want."
-    read -p "(example: 10.1.33 ): " mariadb_version
+    read -r -p "(example: 11.8.5 ): " mariadb_version
+    if echo "${mariadb_version}" | grep -Eqi '^(10\.6\.|10\.11\.|11\.4\.|11\.8\.)';then
+        echo "You will upgrade MySQL to version:${mariadb_version}"
+    else
+        Echo_Red "Error: You input MariaDB Version was:${mariadb_version}"
+        Echo_Red "We only support to upgrade MySQL to MariaDBLTS version like 10.6.x, 10.11.x, 11.4.x and 11.8.x"
+        exit 1
+    fi
+
     if [ "${mariadb_version}" = "" ]; then
         echo "Error: You must input MariaDB Version!!"
         exit 1
@@ -165,7 +175,7 @@ Upgrade_MySQL2MariaDB()
         Echo_Blue "[+] Starting upgrade mariadb-${mariadb_version} Using Source code..."
         Tar_Cd mariadb-${mariadb_version}.tar.gz mariadb-${mariadb_version}
         MariaDB_WITHSSL
-        if echo "${mariadb_version}" | grep -Eqi '^(10\.[5-9]|1[01]\.)';then
+        if echo "${mariadb_version}" | grep -Eqi '^(10\.[5-9]|1[09]\.)';then
             cmake -DCMAKE_INSTALL_PREFIX=/usr/local/mariadb -DMYSQL_UNIX_ADDR=/tmp/mysql.sock -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_READLINE=1 -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 -DWITHOUT_TOKUDB=1
         elif echo "${mariadb_version}" | grep -Eqi '^10\.4.';then
             patch -p1 < ${cur_dir}/src/patch/mariadb_10.4_install_db.patch
@@ -175,112 +185,41 @@ Upgrade_MySQL2MariaDB()
         else
             cmake -DCMAKE_INSTALL_PREFIX=/usr/local/mariadb -DWITH_ARIA_STORAGE_ENGINE=1 -DWITH_XTRADB_STORAGE_ENGINE=1 -DWITH_INNOBASE_STORAGE_ENGINE=1 -DWITH_PARTITION_STORAGE_ENGINE=1 -DWITH_MYISAM_STORAGE_ENGINE=1 -DWITH_FEDERATED_STORAGE_ENGINE=1 -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_READLINE=1 -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 ${MariaDBWITHSSL}
         fi
-        Make_Install
+        MariaDB_Make_Install
     fi
 
-    groupadd mariadb
-    useradd -s /sbin/nologin -M -g mariadb mariadb
-
-    cat > /etc/my.cnf<<EOF
-[client]
-#password	= your_password
-port		= 3306
-socket		= /tmp/mysql.sock
-
-[mysqld]
-port		= 3306
-socket		= /tmp/mysql.sock
-user    = mariadb
-basedir = /usr/local/mariadb
-datadir = ${MariaDB_Data_Dir}
-log_error = ${MariaDB_Data_Dir}/mariadb.err
-pid-file = ${MariaDB_Data_Dir}/mariadb.pid
-skip-external-locking
-key_buffer_size = 16M
-max_allowed_packet = 1M
-table_open_cache = 64
-sort_buffer_size = 512K
-net_buffer_length = 8K
-read_buffer_size = 256K
-read_rnd_buffer_size = 512K
-myisam_sort_buffer_size = 8M
-thread_cache_size = 8
-query_cache_size = 8M
-tmp_table_size = 16M
-
-#skip-networking
-max_connections = 500
-max_connect_errors = 100
-open_files_limit = 65535
-
-log-bin=mysql-bin
-binlog_format=mixed
-server-id	= 1
-expire_logs_days = 10
-
-default_storage_engine = InnoDB
-#innodb_file_per_table = 1
-#innodb_data_home_dir = ${MariaDB_Data_Dir}
-#innodb_data_file_path = ibdata1:10M:autoextend
-#innodb_log_group_home_dir = ${MariaDB_Data_Dir}
-#innodb_buffer_pool_size = 16M
-#innodb_log_file_size = 5M
-#innodb_log_buffer_size = 8M
-#innodb_flush_log_at_trx_commit = 1
-#innodb_lock_wait_timeout = 50
-
-[mysqldump]
-quick
-max_allowed_packet = 16M
-
-[mysql]
-no-auto-rehash
-
-[myisamchk]
-key_buffer_size = 20M
-sort_buffer_size = 20M
-read_buffer = 2M
-write_buffer = 2M
-
-[mysqlhotcopy]
-interactive-timeout
-
-${MySQLMAOpt}
-EOF
-
-    if [ "${InstallInnodb}" = "y" ]; then
-        sed -i 's/^#innodb/innodb/g' /etc/my.cnf
-    else
-        sed -i '/^default_storage_engine/d' /etc/my.cnf
-        sed -i '/skip-external-locking/i\default_storage_engine = MyISAM\nloose-skip-innodb' /etc/my.cnf
-    fi
+    MariaDB_Add_UG
+    MariaDB_My_Cnf
+    MariaDB_Enable_Innodb
     MySQL_Opt
-    if [ -d "${MariaDB_Data_Dir}" ]; then
-        rm -rf ${MariaDB_Data_Dir}/*
-    else
-        mkdir -p ${MariaDB_Data_Dir}
-    fi
-    chown -R mariadb:mariadb /usr/local/mariadb
-    /usr/local/mariadb/scripts/mysql_install_db --defaults-file=/etc/my.cnf --basedir=/usr/local/mariadb --datadir=${MariaDB_Data_Dir} --user=mariadb
-    chown -R mariadb:mariadb ${MariaDB_Data_Dir}
-    \cp /usr/local/mariadb/support-files/mysql.server /etc/init.d/mariadb
+    Check_MariaDB_Data_Dir
+    MariaDB_Initialize_DB
+
     \cp ${cur_dir}/init.d/mariadb.service /etc/systemd/system/mariadb.service
-    chmod 755 /etc/init.d/mariadb
 
     Mariadb_Sec_Setting
-    /etc/init.d/mariadb start
+    systemctl start mariadb
 
     echo "Restore backup databases..."
-    /usr/local/mariadb/bin/mysql --defaults-file=~/.my.cnf < /root/mysql_all_backup${Upgrade_Date}.sql
-    [ $? -eq 0 ] && echo "MariaDB databases import successfully." || echo "MariaDB databases import failed,Please import databases manually!"
+    /usr/local/mariadb/bin/mysql --defaults-file=~/.my.cnf < /root/mysql_all_backup${Upgrade_Date}.sql || {
+        Echo_Red "Error: MariaDB databases import failed, old data remains in the backup location."
+        systemctl stop mariadb
+        TempMycnf_Clean
+        exit 1
+    }
 
     echo "Repair databases..."
-    /usr/local/mariadb/bin/mysql_upgrade -u root -p${DB_Root_Password}
+    /usr/local/mariadb/bin/mysql_upgrade -u root -p${DB_Root_Password} || {
+        Echo_Red "Error: mariadb-upgrade failed."
+        systemctl stop mariadb
+        TempMycnf_Clean
+        exit 1
+    }
 
     echo "Add to autostart..."
-    StartUp mariadb
+    systemctl enable mariadb
     echo "Stopping MariaDB..."
-    /etc/init.d/mariadb stop
+    systemctl stop mariadb
     TempMycnf_Clean
     cd ${cur_dir} && rm -rf ${cur_dir}/src/mariadb-${mariadb_version}
 

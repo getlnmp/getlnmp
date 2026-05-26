@@ -77,16 +77,28 @@ MariaDB_Set_Startup() {
     systemctl daemon-reload
 }
 
+# mariadb-install-db is used for mariadb 10.4 and later versions, mysql_install_db is used for mariadb 5.5 - 10.3
+# mariadb-install-db initializes the MariaDB data directory and creates the necessary system tables. 
+# --defaults-file option specifies the path to the my.cnf configuration file, which is used to set various options 
+#for the initialization process and must be given as the first option
 MariaDB_Initialize_DB() {
+    local init_status
+
     if [ -s "/usr/local/mariadb/scripts/mariadb-install-db" ]; then
         echo "Initialize MariaDB database using mariadb-install-db ..."
         /usr/local/mariadb/scripts/mariadb-install-db --defaults-file=/etc/my.cnf
+        init_status=$?
     else
         echo "Initialize MariaDB database using mysql_install_db ..."
         /usr/local/mariadb/scripts/mysql_install_db --defaults-file=/etc/my.cnf
+        init_status=$?
     fi
 #    /usr/local/mariadb/scripts/mariadb-install-db --defaults-file=/etc/my.cnf
-    chown -R mariadb:mariadb ${MariaDB_Data_Dir}
+    if [ ${init_status} -ne 0 ]; then
+        Echo_Red "Error: failed to initialize MariaDB database."
+        exit 1
+    fi
+    chown -R mariadb:mariadb "${MariaDB_Data_Dir}"
 }
 
 MariaDB_Check_Config() {
@@ -111,8 +123,8 @@ MariaDB_Add_UG() {
 }
 
 MariaDB_Set_MyCNF_104() {
-    sed -i 's/^#query_cache_type/query_cache_type/g' /etc/my.cnf
-    sed -i 's/^#query_cache_size/query_cache_size/g' /etc/my.cnf
+    #sed -i 's/^#query_cache_type/query_cache_type/g' /etc/my.cnf
+    #sed -i 's/^#query_cache_size/query_cache_size/g' /etc/my.cnf
     sed -i 's/^#expire_logs_days/expire_logs_days/g' /etc/my.cnf
     sed -i 's/^binlog_expire_logs_seconds/#binlog_expire_logs_seconds/g' /etc/my.cnf
 }
@@ -133,6 +145,7 @@ basedir = /usr/local/mariadb
 datadir = ${MariaDB_Data_Dir}
 log_error = ${MariaDB_Data_Dir}/mariadb.err
 pid-file = ${MariaDB_Data_Dir}/mariadb.pid
+local_infile=0
 
 skip-external-locking
 # required for 10.4+ compatibility
@@ -198,11 +211,10 @@ EOF
 }
 
 Mariadb_Sec_Setting() {
-    cat >/etc/ld.so.conf.d/mariadb.conf <<EOF
-    /usr/local/mariadb/lib
-EOF
-    ldconfig
 
+    # 1. system set up
+    echo "/usr/local/mariadb/lib" > /etc/ld.so.conf.d/mariadb.conf
+    ldconfig
     if [ -d "/proc/vz" ]; then
         ulimit -s unlimited
     fi
@@ -211,86 +223,133 @@ EOF
         mv /etc/mysql /etc/mysql.backup.$(date +%Y%m%d)
     fi
 
+    # 2. service management and symlinks
     systemctl enable mariadb
     systemctl start mariadb
 
-    ln -sf /usr/local/mariadb/bin/mariadb /usr/bin/mariadb
-    ln -sf /usr/local/mariadb/bin/mariadb-dump /usr/bin/mariadb-dump
-    ln -sf /usr/local/mariadb/bin/mariadbd-safe /usr/bin/mariadbd-safe
-    ln -sf /usr/local/mariadb/bin/mariadb-check /usr/bin/mariadb-check
-
-    ln -sf /usr/local/mariadb/bin/mysql /usr/bin/mysql
-    ln -sf /usr/local/mariadb/bin/mysqldump /usr/bin/mysqldump
-    ln -sf /usr/local/mariadb/bin/mysqld_safe /usr/bin/mysqld_safe
-    ln -sf /usr/local/mariadb/bin/mysqlcheck /usr/bin/mysqlcheck
-
-    ln -sf /usr/local/mariadb/bin/myisamchk /usr/bin/myisamchk
-
+    local bin_dir="/usr/local/mariadb/bin"
+    local bins=("mariadb" "mariadb-dump" "mariadbd-safe" "mariadb-check" "mysql" "mysqldump" "mysqld_safe" "mysqlcheck" "myisamchk")
+    
+    for bin in "${bins[@]}"; do
+        if [ -f "$bin_dir/$bin" ]; then
+            ln -sf "$bin_dir/$bin" "/usr/bin/$bin"
+        fi
+    done
+    
+    echo "Waiting for MariaDB to re-start..."
     systemctl restart mariadb
     sleep 2
 
-    # set root password using mysqladmin
-    echo "Setting MySQL root password..."
-    # add default my.cnf file for mysqladmin to prevent hight priority ~/.my.cnf
+    # 3. Securely set the root password using mysqladmin
+    echo "Setting MariaDB root password..."
+    # /etc/my.cnf configures the global MariaDB server and sets the baseline for the entire system
+    # while ~/.my.cnf is a user-specific configuration file that can override or supplement the settings in /etc/my.cnf for that particular user.
+    # ~/my.cnf must be set to 600
+    # /etc/my.cnf (Global) is loaded first and applies to all users, while ~/.my.cnf (User-Specific) is loaded afterward and can override settings for that user.
     if [ -s ~/.my.cnf ]; then
-        /usr/local/mariadb/bin/mysqladmin --defaults-file=/etc/my.cnf -u root password "${DB_Root_Password}"
+        /usr/local/mariadb/bin/mysqladmin --defaults-file=/etc/my.cnf -u root password "${DB_Root_Password}" || {
+            Echo_Red "Error: failed to set MariaDB root password using mysqladmin."
+            exit 1
+        }
     else
-        /usr/local/mariadb/bin/mysqladmin -u root password "${DB_Root_Password}"
+        /usr/local/mariadb/bin/mysqladmin -u root password "${DB_Root_Password}" || {
+            Echo_Red "Error: failed to set MariaDB root password using mysqladmin."
+            exit 1
+        }
     fi
 
     systemctl restart mariadb
 
     Make_TempMycnf "${DB_Root_Password}"
-    Do_Query ""
-    if [ $? -ne 0 ]; then
-        echo "failed, try other way..."
-        systemctl restart myriadb
+    MariaDB_Do_Query "SELECT 1;" || {
+        Echo_Red "Error: MariaDB root password verification failed after initial setup."
+        Echo_Red "Try another way to set root password..."
+        systemctl restart mariadb
         cat >~/.emptymy.cnf <<EOF
 [client]
 user=root
 password=''
 EOF
-
-        /usr/local/mariadb/bin/mariadb --defaults-file=~/.emptymy.cnf -e "ALTER USER 'root'@'localhost' IDENTIFIED VIA mysql_native_password USING PASSWORD('${DB_Root_Password}');" 
-        [ $? -eq 0 ] && echo "Set password Sucessfully." || echo "Set password failed!"
-        /usr/local/mariadb/bin/mariadb --defaults-file=~/.emptymy.cnf -e "FLUSH PRIVILEGES;"
-        [ $? -eq 0 ] && echo "FLUSH PRIVILEGES Sucessfully." || echo "FLUSH PRIVILEGES failed!"
+        trap 'rm -f ~/.emptymy.cnf' EXIT
+        /usr/local/mariadb/bin/mariadb --defaults-file=~/.emptymy.cnf -e "ALTER USER 'root'@'localhost' IDENTIFIED VIA mysql_native_password USING PASSWORD('${DB_Root_Password}');" || {
+            Echo_Red "Error: fallback MariaDB root password setup failed."
+            exit 1
+        }
+        echo "Set password Sucessfully."
+        /usr/local/mariadb/bin/mariadb --defaults-file=~/.emptymy.cnf -e "FLUSH PRIVILEGES;" || {
+            Echo_Red "Error: fallback MariaDB privilege reload failed."
+            exit 1
+        }
+        echo "FLUSH PRIVILEGES Sucessfully."
+        MariaDB_Do_Query "SELECT 1;" || {
+            Echo_Red "Error: Double-check of MariaDB root password verification failed."
+            exit 1
+        }
         rm -f ~/.emptymy.cnf
-    fi
+    }
+    echo "OK, Mariadb root password correct."
 
-    Do_Query ""
-    if [ $? -eq 0 ]; then
-        echo "OK, Mariadb root password correct."
-    fi
-    echo "Remove anonymous users..."
-    Do_Query "DELETE FROM mysql.user WHERE User='';"
-    Do_Query "DROP USER IF EXISTS''@'%';"
-    [ $? -eq 0 ] && echo " ... Success." || echo " ... Failed!"
-    echo "Disallow root login remotely..."
-    Do_Query "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
-    [ $? -eq 0 ] && echo " ... Success." || echo " ... Failed!"
-    echo "Remove test database..."
-    Do_Query "DROP DATABASE IF EXISTS test;"
-    [ $? -eq 0 ] && echo " ... Success." || echo " ... Failed!"
-    echo "Reload privilege tables..."
-    Do_Query "FLUSH PRIVILEGES;"
-    [ $? -eq 0 ] && echo " ... Success." || echo " ... Failed!"
+    # 4. Remove anonymous users, disallow root login remotely, remove test database, and reload privilege tables
+    echo "Removing anonymous users..."
+    MariaDB_Do_Query "DELETE FROM mysql.user WHERE User='';" || {
+        Echo_Red "Error: Failed to remove anonymous MariaDB users."
+        exit 1
+    }
+    echo " ... Success."
 
+    echo "Disallowing root login remotely..."
+    MariaDB_Do_Query "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');" || {
+        Echo_Red "Error: Failed to remove remote MariaDB root users."
+        exit 1
+    }
+    echo " ... Success."
+
+    echo "Removing test database..."
+    MariaDB_Do_Query "DROP DATABASE IF EXISTS test;" || {
+        Echo_Red "Error: Failed to remove MariaDB test database."
+        exit 1
+    }
+    echo " ... Success."
+
+    echo "Reloading privilege tables..."
+    MariaDB_Do_Query "FLUSH PRIVILEGES;" || {
+        Echo_Red "Error: Failed to reload MariaDB privilege tables."
+        exit 1
+    }
+    echo " ... Success."
+
+    echo "MariaDB secure installation completed successfully."
+    echo "Stopping MariaDB service..."
     systemctl stop mariadb
 }
 
 Check_MariaDB_Data_Dir() {
     if [ -d "${MariaDB_Data_Dir}" ]; then
         datetime=$(date +"%Y%m%d%H%M%S")
-        mkdir /root/mariadb-data-dir-backup${datetime}/
-        \cp ${MariaDB_Data_Dir}/* /root/mariadb-data-dir-backup${datetime}/
-        rm -rf ${MariaDB_Data_Dir}
-        mkdir -p ${MariaDB_Data_Dir}
+        backup_dir="/root/mariadb-data-dir-backup${datetime}"
+        echo "Move existing MariaDB data directory to ${backup_dir}..."
+        mv "${MariaDB_Data_Dir}" "${backup_dir}" || {
+            Echo_Red "Error: failed to backup existing MariaDB data directory."
+            exit 1
+        }
+        mkdir -p "${MariaDB_Data_Dir}" || {
+            Echo_Red "Error: failed to create MariaDB data directory."
+            exit 1
+        }
     else
-        mkdir -p ${MariaDB_Data_Dir}
+        mkdir -p "${MariaDB_Data_Dir}" || {
+            Echo_Red "Error: failed to create MariaDB data directory."
+            exit 1
+        }
     fi
-    chown -R mariadb:mariadb /usr/local/mariadb
-    chown -R mariadb:mariadb ${MariaDB_Data_Dir}
+    chown -R mariadb:mariadb /usr/local/mariadb || {
+        Echo_Red "Error: failed to set MariaDB ownership."
+        exit 1
+    }
+    chown -R mariadb:mariadb "${MariaDB_Data_Dir}" || {
+        Echo_Red "Error: failed to set MariaDB data directory ownership."
+        exit 1
+    }
 }
 
 MariaDB_Set_SSL_Cert() {
@@ -323,122 +382,6 @@ ssl-key=/usr/local/mariadb/ssl/server-key.pem' /etc/my.cnf
         
     }
 
-Install_MariaDB_55() {
-    if [ "${Bin}" = "y" ]; then
-        Echo_Blue "[+] Installing ${Mariadb_Ver} Using Generic Binaries..."
-        Tar_Cd ${MariaDB_FileName}.tar.gz
-        mkdir /usr/local/mariadb
-        mv ${MariaDB_FileName}/* /usr/local/mariadb/
-    else
-        Echo_Blue "[+] Installing ${Mariadb_Ver} Using Source code..."
-        Tar_Cd ${Mariadb_Ver}.tar.gz ${Mariadb_Ver}
-        MariaDB_Symbol_Check
-        mkdir -p mariadb-build && cd mariadb-build
-        cmake .. \
-            -DCMAKE_INSTALL_PREFIX=/usr/local/mariadb \
-            -DWITH_SSL=bundled \
-            -DWITH_ARIA_STORAGE_ENGINE=1 \
-            -DWITH_XTRADB_STORAGE_ENGINE=1 \
-            -DWITH_INNOBASE_STORAGE_ENGINE=1 \
-            -DWITH_PARTITION_STORAGE_ENGINE=1 \
-            -DWITH_MYISAM_STORAGE_ENGINE=1 \
-            -DWITH_FEDERATED_STORAGE_ENGINE=1 \
-            -DEXTRA_CHARSETS=all \
-            -DDEFAULT_CHARSET=utf8mb4 \
-            -DDEFAULT_COLLATION=utf8mb4_general_ci \
-            -DWITH_READLINE=1 \
-            -DWITH_EMBEDDED_SERVER=1 \
-            -DWITHOUT_TOKUDB=1 \
-            ${MariaDBSymbolCheck} \
-            -DENABLED_LOCAL_INFILE=1
-        Make_Install
-    fi
-
-    MariaDB_Add_UG
-    MariaDB_My_Cnf
-    MariaDB_Enable_Innodb
-    MariaDB_Disable_Explicit_Timestamp
-    MySQL_Opt
-    Check_MariaDB_Data_Dir
-    MariaDB_Set_SSL_Cert
-    MariaDB_Initialize_DB
-
-    ln -sf /usr/local/mariadb/bin/mysql /usr/bin/mysql
-    ln -sf /usr/local/mariadb/bin/mysql /usr/local/mariadb/bin/mariadb
-    ln -sf /usr/local/mariadb/bin/mariadb /usr/bin/mariadb
-    ln -sf /usr/local/mariadb/bin/mysqld /usr/bin/mysqld
-    ln -sf /usr/local/mariadb/bin/mysqld /usr/local/mariadb/bin/mariadbd
-    ln -sf /usr/local/mariadb/bin/mariadbd /usr/bin/mariadbd
-
-    ln -sf /usr/local/mariadb/bin/mysqldump /usr/bin/mysqldump
-    ln -sf /usr/local/mariadb/bin/mysqld_safe /usr/bin/mysqld_safe
-    ln -sf /usr/local/mariadb/bin/mysqlcheck /usr/bin/mysqlcheck
-
-    ln -sf /usr/local/mariadb/bin/myisamchk /usr/bin/myisamchk
-
-    # add startup script
-    \cp /usr/local/mariadb/support-files/mysql.server /etc/init.d/mariadb
-    chmod 755 /etc/init.d/mariadb
-    \cp ${cur_dir}/init.d/mariadb.service /etc/systemd/system/mariadb.service
-    sed -i 's/^Type=notify/Type=simple/g' /etc/systemd/system/mariadb.service
-    sed -i '/^ExecStart=/ s/$/ --console/' /etc/systemd/system/mariadb.service
-    systemctl daemon-reload
-    systemctl enable mariadb
-    systemctl start mariadb
-    
-    # optimize mariadb settings
-    cat >/etc/ld.so.conf.d/mariadb.conf <<EOF
-    /usr/local/mariadb/lib
-    /usr/local/lib
-EOF
-    ldconfig
-
-    if [ -d "/proc/vz" ]; then
-        ulimit -s unlimited
-    fi
-
-    if [ -d "/etc/mysql" ]; then
-        mv /etc/mysql /etc/mysql.backup.$(date +%Y%m%d)
-    fi
-
-    # set root password
-    /usr/local/mariadb/bin/mysqladmin -u root password "${DB_Root_Password}"
-    systemctl restart mariadb
-
-    Make_TempMycnf "${DB_Root_Password}"
-    Do_Query ""
-    if [ $? -ne 0 ]; then
-        echo "failed, try other way..."
-        systemctl restart myriadb
-        cat >~/.emptymy.cnf <<EOF
-[client]
-user=root
-password=''
-EOF
-        /usr/local/mariadb/bin/mariadb --defaults-file=~/.emptymy.cnf -e "UPDATE mysql.user SET Password=PASSWORD('${DB_Root_Password}') WHERE User='root';"
-        [ $? -eq 0 ] && echo "Set password Sucessfully." || echo "Set password failed!"
-        /usr/local/mariadb/bin/mariadb --defaults-file=~/.emptymy.cnf -e "FLUSH PRIVILEGES;"
-        [ $? -eq 0 ] && echo "FLUSH PRIVILEGES Sucessfully." || echo "FLUSH PRIVILEGES failed!"
-        rm -f ~/.emptymy.cnf
-    fi
-
-    echo "Remove anonymous users..."
-    Do_Query "DELETE FROM mysql.user WHERE User='';"
-    Do_Query "DROP USER ''@'%';"
-    [ $? -eq 0 ] && echo " ... Success." || echo " ... Failed!"
-    echo "Disallow root login remotely..."
-    Do_Query "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
-    [ $? -eq 0 ] && echo " ... Success." || echo " ... Failed!"
-    echo "Remove test database..."
-    Do_Query "DROP DATABASE test;"
-    [ $? -eq 0 ] && echo " ... Success." || echo " ... Failed!"
-    echo "Reload privilege tables..."
-    Do_Query "FLUSH PRIVILEGES;"
-    [ $? -eq 0 ] && echo " ... Success." || echo " ... Failed!"
-
-    systemctl stop mariadb
-}
-
 Install_MariaDB_103() {
     if [ "${Bin}" = "y" ]; then
         Echo_Blue "[+] Installing ${Mariadb_Ver} Using Generic Binaries..."
@@ -463,8 +406,11 @@ Install_MariaDB_103() {
             -DWITH_READLINE=1 \
             -DWITH_EMBEDDED_SERVER=1 \
             -DENABLED_LOCAL_INFILE=1 \
-            -DWITHOUT_TOKUDB=1
-        Make_Install
+            -DWITHOUT_TOKUDB=1 || {
+            Echo_Red "Error: failed to configure MariaDB."
+            exit 1
+        }
+        MariaDB_Make_Install
     fi
 
     MariaDB_Add_UG
@@ -497,11 +443,13 @@ Install_MariaDB_104() {
             -DWITH_READLINE=1 \
             -DWITH_EMBEDDED_SERVER=1 \
             -DENABLED_LOCAL_INFILE=1 \
-            -DWITHOUT_TOKUDB=1
-        Make_Install
+            -DWITHOUT_TOKUDB=1 || {
+            Echo_Red "Error: failed to configure MariaDB."
+            exit 1
+        }
+        MariaDB_Make_Install
     fi
     MariaDB_Check_Config
-
     MariaDB_Add_UG
     MariaDB_My_Cnf
     MariaDB_Set_MyCNF_104
@@ -533,8 +481,11 @@ Install_MariaDB_105() {
             -DWITH_READLINE=1 \
             -DWITH_EMBEDDED_SERVER=1 \
             -DENABLED_LOCAL_INFILE=1 \
-            -DWITHOUT_TOKUDB=1
-        Make_Install
+            -DWITHOUT_TOKUDB=1 || {
+            Echo_Red "Error: failed to configure MariaDB."
+            exit 1
+        }   
+        MariaDB_Make_Install
     fi
 
     MariaDB_Add_UG
@@ -567,8 +518,11 @@ Install_MariaDB_106() {
             -DWITH_READLINE=1 \
             -DWITH_EMBEDDED_SERVER=1 \
             -DENABLED_LOCAL_INFILE=1 \
-            -DWITHOUT_TOKUDB=1
-        Make_Install
+            -DWITHOUT_TOKUDB=1 || {
+            Echo_Red "Error: failed to configure MariaDB."
+            exit 1
+        }
+        MariaDB_Make_Install
     fi
 
     MariaDB_Add_UG
@@ -601,8 +555,11 @@ Install_MariaDB_1011() {
             -DWITH_READLINE=1 \
             -DWITH_EMBEDDED_SERVER=1 \
             -DENABLED_LOCAL_INFILE=1 \
-            -DWITHOUT_TOKUDB=1
-        Make_Install
+            -DWITHOUT_TOKUDB=1 || {
+            Echo_Red "Error: failed to configure MariaDB."
+            exit 1
+        }
+        MariaDB_Make_Install
     fi
 
     MariaDB_Add_UG
@@ -635,8 +592,11 @@ Install_MariaDB_114() {
             -DWITH_READLINE=1 \
             -DWITH_EMBEDDED_SERVER=1 \
             -DENABLED_LOCAL_INFILE=1 \
-            -DWITHOUT_TOKUDB=1
-        Make_Install
+            -DWITHOUT_TOKUDB=1 || {
+            Echo_Red "Error: failed to configure MariaDB."
+            exit 1
+        }
+        MariaDB_Make_Install
     fi
 
     MariaDB_Add_UG
@@ -669,8 +629,11 @@ Install_MariaDB_118() {
             -DWITH_READLINE=1 \
             -DWITH_EMBEDDED_SERVER=1 \
             -DENABLED_LOCAL_INFILE=1 \
-            -DWITHOUT_TOKUDB=1
-        Make_Install
+            -DWITHOUT_TOKUDB=1 || {
+            Echo_Red "Error: failed to configure MariaDB."
+            exit 1
+        }
+        MariaDB_Make_Install
     fi
 
     MariaDB_Add_UG

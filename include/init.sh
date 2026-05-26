@@ -623,6 +623,30 @@ PHP_Make_Install() {
     PHP_ENV_UNSET
 }
 
+MySQL_Make_Install()
+{
+    make -j"$(nproc)" || make || {
+        Echo_Red "Error: failed to build MySQL."
+        exit 1
+    }
+    make install || {
+        Echo_Red "Error: failed to install MySQL."
+        exit 1
+    }
+}
+
+MariaDB_Make_Install()
+{
+    make -j"$(nproc)" || make || {
+        Echo_Red "Error: failed to build MariaDB."
+        exit 1
+    }
+    make install || {
+        Echo_Red "Error: failed to install MariaDB."
+        exit 1
+    }
+}
+
 # deprecated as only for php 5.2 which is dropped support
 # autoconf 2.69 is required for php 5.6, but we've dropped support for 5.6
 Install_Autoconf() {

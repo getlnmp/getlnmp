@@ -54,18 +54,6 @@ MySQL_Add_UG() {
     fi
 }
 
-MySQL_Make_Install()
-{
-    make -j"$(nproc)" || make || {
-        Echo_Red "Error: failed to build MySQL."
-        exit 1
-    }
-    make install || {
-        Echo_Red "Error: failed to install MySQL."
-        exit 1
-    }
-}
-
 MySQL_SQL_Escape()
 {
     local value=$1
@@ -79,7 +67,8 @@ MySQL_SQL_Escape()
 
 
 MySQL_Sec_Setting()
-{
+{   
+    # 1. system set up
     if [ -d "/proc/vz" ]; then
         ulimit -s unlimited
     fi
@@ -87,59 +76,61 @@ MySQL_Sec_Setting()
     if [ -d "/etc/mysql" ]; then
         mv /etc/mysql /etc/mysql.backup.$(date +%Y%m%d)
     fi
-
-    if command -v systemctl >/dev/null 2>&1; then
-        systemctl enable mysql.service
-    fi
-    echo "Starting MySQL..."
+    
+    # 2. service management and symlinks
+    systemctl enable mysql
     systemctl start mysql
 
-    ln -sf /usr/local/mysql/bin/mysql /usr/bin/mysql
-    ln -sf /usr/local/mysql/bin/mysqld /usr/bin/mysqld
-    ln -sf /usr/local/mysql/bin/mysqldump /usr/bin/mysqldump
-    ln -sf /usr/local/mysql/bin/myisamchk /usr/bin/myisamchk
-    ln -sf /usr/local/mysql/bin/mysqld_safe /usr/bin/mysqld_safe
-    ln -sf /usr/local/mysql/bin/mysqlcheck /usr/bin/mysqlcheck
+    local bin_dir="/usr/local/mysql/bin"
+    local bins=("mysql" "mysqld" "mysqldump" "mysqld_safe" "mysqlcheck" "myisamchk")
+    
+    for bin in "${bins[@]}"; do
+        if [ -f "$bin_dir/$bin" ]; then
+            ln -sf "$bin_dir/$bin" "/usr/bin/$bin"
+        fi
+    done
     
     echo "Waiting for MySQL to re-start..."
     systemctl restart mysql
     sleep 2
-    # set root password using mysqladmin
+
+    # 3. Securely set the root password using mysqladmin
     echo "Setting MySQL root password..."
-    # add default my.cnf file for mysqladmin to prevent hight priority ~/.my.cnf
+    # /etc/my.cnf configures the global MySQL server and sets the baseline for the entire system
+    # while ~/.my.cnf is a user-specific configuration file that can override or supplement the settings in /etc/my.cnf for that particular user.
+    # ~/my.cnf must be set to 600
+    # /etc/my.cnf (Global) is loaded first and applies to all users, while ~/.my.cnf (User-Specific) is loaded afterward and can override settings for that user.
     if [ -s ~/.my.cnf ]; then
-        /usr/local/mysql/bin/mysqladmin --defaults-file=/etc/my.cnf -u root password "${DB_Root_Password}"
-    else
-        /usr/local/mysql/bin/mysqladmin -u root password "${DB_Root_Password}"
-    fi
-    if [ $? -ne 0 ]; then
-        echo "failed, try other way..."
-        systemctl restart mysql || {
-            Echo_Red "Error: failed to restart MySQL service."
-            exit 1
+        /usr/local/mysql/bin/mysqladmin --defaults-file=/etc/my.cnf -u root password "${DB_Root_Password}" || {
+            Echo_Red "Error: failed to set MariaDB root password using mysqladmin."
+            return 1
         }
+    else
+        /usr/local/mysql/bin/mysqladmin -u root password "${DB_Root_Password}" || {
+            Echo_Red "Error: failed to set MariaDB root password using mysqladmin."
+            return 1
+        }
+    fi
+
+    if [ $? -ne 0 ]; then
+        echo "Failed, try other way..."
+        systemctl restart mysql
         cat >~/.emptymy.cnf<<EOF
 [client]
 user=root
 password=''
 EOF
-        mysql_root_password_sql=$(MySQL_SQL_Escape "${DB_Root_Password}")
-        /usr/local/mysql/bin/mysql --defaults-file=~/.emptymy.cnf -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${mysql_root_password_sql}';"
-        if [ $? -eq 0 ]; then
-            echo "Set password Sucessfully."
-        else
-            rm -f ~/.emptymy.cnf
-            Echo_Red "Error: failed to set MySQL root password."
+        trap 'rm -f ~/.emptymy.cnf' EXIT
+        /usr/local/mysql/bin/mysql --defaults-file=~/.emptymy.cnf -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_Root_Password}';" || {
+            Echo_Red "Error: fallback MariaDB root password setup failed."
             exit 1
-        fi
-        /usr/local/mysql/bin/mysql --defaults-file=~/.emptymy.cnf -e "FLUSH PRIVILEGES;"
-        if [ $? -eq 0 ]; then
-            echo "FLUSH PRIVILEGES Sucessfully."
-        else
-            rm -f ~/.emptymy.cnf
+        }
+        echo "Set MySQL root password successfully using fallback method."
+        /usr/local/mysql/bin/mysql --defaults-file=~/.emptymy.cnf -e "FLUSH PRIVILEGES;" || {
             Echo_Red "Error: failed to reload MySQL privilege tables."
             exit 1
-        fi
+        }
+        echo "FlUSH PRIVILEGES successfully."
         rm -f ~/.emptymy.cnf
     fi
     systemctl restart mysql || {
@@ -148,43 +139,47 @@ EOF
     }
 
     Make_TempMycnf "${DB_Root_Password}"
-    if Do_Query ""; then
-        echo "OK, MySQL root password correct."
-    else
-        Echo_Red "Error: MySQL root password validation failed."
-        exit 1
-    fi
+    MySQL_Do_Query "SELECT 1;" || {
+         Echo_Red "Error: MySQL root password verification failed after setup."
+         exit 1
+    }
+    echo "OK, MySQL root password correct."
 
-    echo "Remove anonymous users..."
-    Do_Query "DELETE FROM mysql.user WHERE User='';" || {
+    # 4. Remove anonymous users, disallow root login remotely, remove test database, and reload privilege tables
+    echo "Removing anonymous users..."
+    MySQL_Do_Query "DELETE FROM mysql.user WHERE User='';" || {
         Echo_Red "Error: failed to remove anonymous MySQL users."
         exit 1
     }
-    Do_Query "DROP USER IF EXISTS ''@'%';" || {
+    MySQL_Do_Query "DROP USER IF EXISTS ''@'%';" || {
         Echo_Red "Error: failed to drop anonymous MySQL users."
         exit 1
     }
     echo " ... Success."
-    echo "Disallow root login remotely..."
-    Do_Query "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');" || {
+
+    echo "Disallowing root login remotely..."
+    MySQL_Do_Query "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');" || {
         Echo_Red "Error: failed to disallow remote MySQL root login."
         exit 1
     }
     echo " ... Success."
-    echo "Remove test database..."
-    Do_Query "DROP DATABASE IF EXISTS test;" || {
+
+    echo "Removing test database..."
+    MySQL_Do_Query "DROP DATABASE IF EXISTS test;" || {
         Echo_Red "Error: failed to remove MySQL test database."
         exit 1
     }
     echo " ... Success."
-    echo "Reload privilege tables..."
-    Do_Query "FLUSH PRIVILEGES;" || {
+
+    echo "Reloading privilege tables..."
+    MySQL_Do_Query "FLUSH PRIVILEGES;" || {
         Echo_Red "Error: failed to reload MySQL privilege tables."
         exit 1
     }
     echo " ... Success."
 
-    systemctl restart mysql
+    echo "MySQL secure installation completed successfully."
+    echo "Stopping MySQL service..."
     systemctl stop mysql
 }
 

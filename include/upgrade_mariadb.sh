@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 
+# Since Mariadb 10.4+, it supports hybrid authentication, which means you can use unix socket authentication(default mode) to login as root user without password or use password to login at the same time
+# and we can backup databases with root user without password. This is more secure and more convenient.
 Backup_MariaDB()
 {
     echo "Starting backup all databases..."
     echo "If the database is large, the backup time will be longer."
-    if [ -s /usr/local/mariadb/bin/mariadb-dump ]; then
-        /usr/local/mariadb/bin/mariadb-dump --defaults-file=~/.my.cnf --all-databases > /root/mariadb_all_backup${Upgrade_Date}.sql
+    if [ -x /usr/local/mariadb/bin/mariadb-dump ]; then
+        /usr/local/mariadb/bin/mariadb-dump --defaults-file=~/.my.cnf --all-databases --routines --triggers --events --single-transaction > /root/mariadb_all_backup${Upgrade_Date}.sql
     else
-        /usr/local/mariadb/bin/mysqldump --defaults-file=~/.my.cnf --all-databases > /root/mariadb_all_backup${Upgrade_Date}.sql
+        /usr/local/mariadb/bin/mysqldump --defaults-file=~/.my.cnf --all-databases --routines --triggers --events --single-transaction > /root/mariadb_all_backup${Upgrade_Date}.sql
     fi
     if [ $? -eq 0 ]; then
         echo "MariaDB databases backup successfully.";
@@ -18,14 +20,16 @@ Backup_MariaDB()
     lnmp stop
     
     if [[ ! "${MariaDB_Data_Dir}" =~ ^/usr/local/mariadb/.+ ]]; then
-        mv ${MariaDB_Data_Dir} ${MariaDB_Data_Dir}${Upgrade_Date}
+        mv "${MariaDB_Data_Dir}" "${MariaDB_Data_Dir}""${Upgrade_Date}"
     fi
-    mv /usr/local/mariadb /usr/local/oldmariadb${Upgrade_Date}
-    mv /etc/systemd/system/mariadb.service /usr/local/oldmariadb${Upgrade_Date}/mariadb.service.${Upgrade_Date}
-    mv /etc/my.cnf /usr/local/oldmariadb${Upgrade_Date}/my.cnf.mariadb.bak.${Upgrade_Date}
-    if echo "${mariadb_version}" | grep -Eqi '^5\.5\.' &&  echo "${cur_mariadb_version}" | grep -Eqi '^10\.';then
-        sed -i 's/STATS_PERSISTENT=0//g' /root/mariadb_all_backup${Upgrade_Date}.sql
-    fi
+    mv /usr/local/mariadb /usr/local/oldmariadb"${Upgrade_Date}"
+    mv /etc/systemd/system/mariadb.service /usr/local/oldmariadb"${Upgrade_Date}"/mariadb.service."${Upgrade_Date}"
+    mv /etc/my.cnf /usr/local/oldmariadb"${Upgrade_Date}"/my.cnf.mariadb.bak."${Upgrade_Date}"
+
+    #remove support for downgrading from MariaDB 10.0+ to 5.5 as we've dropped support for MariaDB 5.5.
+    #if echo "${mariadb_version}" | grep -Eqi '^5\.5\.' &&  echo "${cur_mariadb_version}" | grep -Eqi '^10\.';then
+    #    sed -i 's/STATS_PERSISTENT=0//g' /root/mariadb_all_backup"${Upgrade_Date}".sql
+    #fi
 }
 
 Upgrade_MariaDB()
@@ -37,7 +41,7 @@ Upgrade_MariaDB()
     fi
 
     Verify_DB_Password
-    if [ -s /usr/local/mariadb/bin/mariadb-config ]; then
+    if [ -x /usr/local/mariadb/bin/mariadb-config ]; then
         cur_mariadb_version=$(/usr/local/mariadb/bin/mariadb-config --version)
     else
         cur_mariadb_version=$(/usr/local/mariadb/bin/mysql_config --version)
@@ -134,9 +138,9 @@ Upgrade_MariaDB()
     echo "You will upgrade MariaDB V${cur_mariadb_version} to V${mariadb_version}"
     echo "====================================================================="
 
-    if [ -s /usr/local/include/jemalloc/jemalloc.h ] && lsof -n|grep "libjemalloc.so"|grep -q "mysqld"; then
+    if [ -s /usr/local/include/jemalloc/jemalloc.h ] && lsof -n|grep "libjemalloc.so"|grep -q "mariadbd"; then
         MariaDBMAOpt=''
-    elif [ -s /usr/local/include/gperftools/tcmalloc.h ] && lsof -n|grep "libtcmalloc.so"|grep -q "mysqld"; then
+    elif [ -s /usr/local/include/gperftools/tcmalloc.h ] && lsof -n|grep "libtcmalloc.so"|grep -q "mariadbd"; then
         MariaDBMAOpt="-DCMAKE_EXE_LINKER_FLAGS='-ltcmalloc' -DWITH_SAFEMALLOC=OFF"
     else
         MariaDBMAOpt=''
@@ -145,29 +149,29 @@ Upgrade_MariaDB()
     Press_Start
 
     echo "============================check files=================================="
-    cd ${cur_dir}/src
+    cd "${cur_dir}"/src
     if [ "${Bin}" = "y" ]; then
         MariaDB_FileName="mariadb-${mariadb_version}-linux-systemd-${DB_ARCH}"
     else
         MariaDB_FileName="mariadb-${mariadb_version}"
     fi
-    if [ -s ${MariaDB_FileName}.tar.gz ]; then
+    if [ -s "${MariaDB_FileName}.tar.gz" ]; then
         echo "${MariaDB_FileName}.tar.gz [found]"
     else
         echo "Notice: ${MariaDB_FileName}.tar.gz not found!!!download now......"
-        Download_Files https://downloads.mariadb.org/rest-api/mariadb/${mariadb_version}/${MariaDB_FileName}.tar.gz ${MariaDB_FileName}.tar.gz
+        Download_Files https://downloads.mariadb.org/rest-api/mariadb/${mariadb_version}/${MariaDB_FileName}.tar.gz "${MariaDB_FileName}.tar.gz"
         if [ $? -eq 0 ]; then
             echo "Download ${MariaDB_FileName}.tar.gz successfully!"
         else
 			if [ "${Bin}" = "y" ]; then
-			    Download_Files https://archive.mariadb.org/mariadb-${mariadb_version}/bintar-linux-systemd-x86_64/${MariaDB_FileName}.tar.gz ${MariaDB_FileName}.tar.gz
+			    Download_Files https://archive.mariadb.org/mariadb-${mariadb_version}/bintar-linux-systemd-x86_64/${MariaDB_FileName}.tar.gz "${MariaDB_FileName}.tar.gz"
 			else
-			    Download_Files https://archive.mariadb.org/mariadb-${mariadb_version}/source/${MariaDB_FileName}.tar.gz ${MariaDB_FileName}.tar.gz
+			    Download_Files https://archive.mariadb.org/mariadb-${mariadb_version}/source/${MariaDB_FileName}.tar.gz "${MariaDB_FileName}.tar.gz"
 			fi
 			if [ $? -eq 0 ]; then
 			    echo "Download ${MariaDB_FileName}.tar.gz successfully!"
 			else
-                echo "You enter MariaDB Version was:"${mariadb_version}
+                echo "You enter MariaDB Version was: ${mariadb_version}"
                 Echo_Red "Error! You entered a wrong version number or can't download from mariadb mirror, please check!"
                 sleep 5
                 exit 1
@@ -180,18 +184,18 @@ Upgrade_MariaDB()
     DB_BIN_Opt
     if [ "${Bin}" = "y" ]; then
         Echo_Blue "[+] Starting upgrade mariadb-${mariadb_version} Using Generic Binaries..."
-        if [ -d ${MariaDB_FileName} ]; then
-            rm -rf ${MariaDB_FileName}
+        if [ -d "${MariaDB_FileName}" ]; then
+            rm -rf "${MariaDB_FileName}"
         fi
-        Tar_Cd ${MariaDB_FileName}.tar.gz
+        Tar_Cd "${MariaDB_FileName}.tar.gz"
         mkdir /usr/local/mariadb
-        mv ${MariaDB_FileName}/* /usr/local/mariadb/
+        mv "${MariaDB_FileName}"/* /usr/local/mariadb/
     else
         Echo_Blue "[+] Starting upgrade mariadb-${mariadb_version} Using Source code..."
-        if [ -d mariadb-${mariadb_version} ]; then
-            rm -rf mariadb-${mariadb_version}
+        if [ -d "mariadb-${mariadb_version}" ]; then
+            rm -rf "mariadb-${mariadb_version}"
         fi
-        Tar_Cd mariadb-${mariadb_version}.tar.gz mariadb-${mariadb_version}
+        Tar_Cd "mariadb-${mariadb_version}.tar.gz" "mariadb-${mariadb_version}"
         mkdir -p mariadb-build && cd mariadb-build
         cmake .. \
             -DCMAKE_INSTALL_PREFIX=/usr/local/mariadb \
@@ -202,8 +206,11 @@ Upgrade_MariaDB()
             -DWITH_READLINE=1 \
             -DWITH_EMBEDDED_SERVER=1 \
             -DENABLED_LOCAL_INFILE=1 \
-            -DWITHOUT_TOKUDB=1
-        Make_Install
+            -DWITHOUT_TOKUDB=1 || {
+                Echo_Red "Error: MariaDB cmake configuration failed."
+                exit 1
+            }
+        MariaDB_Make_Install
     fi
     MariaDB_Check_Config
 
@@ -211,14 +218,7 @@ Upgrade_MariaDB()
     MariaDB_My_Cnf
     MariaDB_Enable_Innodb
     MySQL_Opt
-    if [ -d "${MariaDB_Data_Dir}" ]; then
-        rm -rf ${MariaDB_Data_Dir}
-        mkdir -p ${MariaDB_Data_Dir}
-    else
-        mkdir -p ${MariaDB_Data_Dir}
-    fi
-    chown -R mariadb:mariadb /usr/local/mariadb
-    chown -R mariadb:mariadb ${MariaDB_Data_Dir}
+    Check_MariaDB_Data_Dir
 
     MariaDB_Initialize_DB
     MariaDB_Set_Startup
@@ -226,13 +226,25 @@ Upgrade_MariaDB()
     systemctl start mariadb
 
     echo "Restore backup databases..."
-    /usr/local/mariadb/bin/mariadb --defaults-file=~/.my.cnf < /root/mariadb_all_backup${Upgrade_Date}.sql
+    /usr/local/mariadb/bin/mariadb --defaults-file=~/.my.cnf < /root/mariadb_all_backup${Upgrade_Date}.sql || {
+        Echo_Red "Error: MariaDB databases import failed, old data remains in the backup location."
+        systemctl stop mariadb
+        TempMycnf_Clean
+        exit 1
+    }
     echo "Repair databases..."
-    /usr/local/mariadb/bin/mariadb-upgrade -u root -p${DB_Root_Password}
+    # mariadb-upgrade will check and repair tables if necessary, and also upgrade the system tables in the mysql database to be compatible with the new version.
+    # it's required for major version upgrade, and also recommended for minor version upgrade.
+    /usr/local/mariadb/bin/mariadb-upgrade -u root -p${DB_Root_Password} || {
+        Echo_Red "Error: mariadb-upgrade failed."
+        systemctl stop mariadb
+        TempMycnf_Clean
+        exit 1
+    }
 
     systemctl stop mariadb
     TempMycnf_Clean
-    cd ${cur_dir} && rm -rf ${cur_dir}/src/mariadb-${mariadb_version}
+    cd "${cur_dir}" && rm -rf "${cur_dir}"/src/mariadb-"${mariadb_version}"
 
     lnmp start
     if [[ -s /usr/local/mariadb/bin/mariadb && -s /etc/my.cnf ]]; then
@@ -240,6 +252,6 @@ Upgrade_MariaDB()
     else
         Echo_Red "======== upgrade MariaDB failed ======"
         Echo_Red "upgrade MariaDB log: /root/upgrade_mariadb${Upgrade_Date}.log"
-        echo "You upload upgrade_mariadb${Upgrade_Date}.log to LNMP Forum for help."
+        echo "Upload upgrade_mariadb${Upgrade_Date}.log to LNMP Forum for help."
     fi
 }

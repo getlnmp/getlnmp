@@ -23,7 +23,7 @@ Backup_MySQL()
     fi
     lnmp stop
     if [[ ! "${MySQL_Data_Dir}" =~ ^/usr/local/mysql/ ]]; then
-        mv ${MySQL_Data_Dir} ${MySQL_Data_Dir}${Upgrade_Date}
+        mv "${MySQL_Data_Dir}" "${MySQL_Data_Dir}${Upgrade_Date}"
     fi
     mv /usr/local/mysql /usr/local/oldmysql${Upgrade_Date}
     mv /etc/my.cnf /usr/local/oldmysql${Upgrade_Date}/my.cnf.bak.${Upgrade_Date}
@@ -76,7 +76,10 @@ Upgrade_MySQL57()
             -DWITH_SYSTEMD=1 \
             -DDOWNLOAD_BOOST=ON \
 			-DWITH_BOOST=/usr/local/mysql57_boost \
-            ${MySQL_WITH_SSL}
+            ${MySQL_WITH_SSL} || {
+                Echo_Red "Error: MySQL cmake configuration failed."
+                exit 1
+            }
         MYSQL_Make_Install
     fi
 
@@ -156,14 +159,14 @@ EOF
 
     MySQL_Opt
     if [ -d "${MySQL_Data_Dir}" ]; then
-        rm -rf ${MySQL_Data_Dir}
-        mkdir -p ${MySQL_Data_Dir}
+        mv "${MySQL_Data_Dir}" "${MySQL_Data_Dir}${Upgrade_Date}"
+        mkdir -p "${MySQL_Data_Dir}"
     else
-        mkdir -p ${MySQL_Data_Dir}
+        mkdir -p "${MySQL_Data_Dir}"
     fi
     chown -R mysql:mysql /usr/local/mysql/
-    /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir=${MySQL_Data_Dir} --user=mysql
-    chown -R mysql:mysql ${MySQL_Data_Dir}
+    /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir="${MySQL_Data_Dir}" --user=mysql
+    chown -R mysql:mysql "${MySQL_Data_Dir}"
 
     rm -rf /etc/systemd/system/mysql.service
     rm -rf /etc/systemd/system/mysqld.service
@@ -213,7 +216,10 @@ Upgrade_MySQL80()
             -DENABLED_LOCAL_INFILE=1 \
             -DWITH_SYSTEMD=1 \
             -DDOWNLOAD_BOOST=ON \
-			-DWITH_BOOST=/usr/local/mysql80_boost
+			-DWITH_BOOST=/usr/local/mysql80_boost || {
+                Echo_Red "Error: MySQL cmake configuration failed."
+                exit 1
+            }
         MYSQL_Make_Install
     fi
 
@@ -301,15 +307,15 @@ EOF
 
     MySQL_Opt
     if [ -d "${MySQL_Data_Dir}" ]; then
-        rm -rf ${MySQL_Data_Dir}
-        mkdir -p ${MySQL_Data_Dir}
+        mv "${MySQL_Data_Dir}" "${MySQL_Data_Dir}${Upgrade_Date}"
+        mkdir -p "${MySQL_Data_Dir}"
     else
-        mkdir -p ${MySQL_Data_Dir}
+        mkdir -p "${MySQL_Data_Dir}"
     fi
     chown -R mysql:mysql /usr/local/mysql/
-    /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir=${MySQL_Data_Dir} --user=mysql
-    chown -R mysql:mysql ${MySQL_Data_Dir}
-    
+    /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir="${MySQL_Data_Dir}" --user=mysql
+    chown -R mysql:mysql "${MySQL_Data_Dir}"
+
     rm -rf /etc/systemd/system/mysql.service
     rm -rf /etc/systemd/system/mysqld.service
     # compiled mysql provides systemd service file
@@ -360,7 +366,10 @@ Upgrade_MySQL84()
         -DDEFAULT_CHARSET=utf8mb4 \
         -DDEFAULT_COLLATION=utf8mb4_general_ci \
         -DENABLED_LOCAL_INFILE=1 \
-        -DWITH_SYSTEMD=1 
+        -DWITH_SYSTEMD=1 || {
+            Echo_Red "Error: MySQL cmake configuration failed."
+            exit 1
+        }
         
         MYSQL_Make_Install
     fi
@@ -450,15 +459,15 @@ EOF
 
     MySQL_Opt
     if [ -d "${MySQL_Data_Dir}" ]; then
-        rm -rf ${MySQL_Data_Dir}
-        mkdir -p ${MySQL_Data_Dir}
+        mv "${MySQL_Data_Dir}" "${MySQL_Data_Dir}${Upgrade_Date}"
+        mkdir -p "${MySQL_Data_Dir}"
     else
-        mkdir -p ${MySQL_Data_Dir}
+        mkdir -p "${MySQL_Data_Dir}"
     fi
     chown -R mysql:mysql /usr/local/mysql/
     echo "Initializing MySQL data directory..."
-    /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir=${MySQL_Data_Dir} --user=mysql
-    chown -R mysql:mysql ${MySQL_Data_Dir}
+    /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir="${MySQL_Data_Dir}" --user=mysql
+    chown -R mysql:mysql "${MySQL_Data_Dir}"
 
     rm -rf /etc/systemd/system/mysql.service
     rm -rf /etc/systemd/system/mysqld.service

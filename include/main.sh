@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #DB_Info=('MySQL 5.1.73' 'MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.37' 'MariaDB 5.5.68' 'MariaDB 10.4.33' 'MariaDB 10.5.24' 'MariaDB 10.6.17' 'MariaDB 10.11.7' 'MySQL 8.4.0')
-DB_Info=('MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.37' 'MySQL 8.4.7' 'MariaDB 5.5.68' 'MariaDB 10.4.33' 'MariaDB 10.5.29' 'MariaDB 10.6.24' 'MariaDB 10.11.15' 'MariaDB 11.4.9' 'MariaDB 11.8.5')
+DB_Info=('MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.37' 'MySQL 8.4.7' 'MariaDB 5.5.68' 'MariaDB 10.4.34' 'MariaDB 10.5.29' 'MariaDB 10.6.24' 'MariaDB 10.11.15' 'MariaDB 11.4.9' 'MariaDB 11.8.5')
 PHP_Info=('PHP 5.2.17' 'PHP 5.3.29' 'PHP 5.4.45' 'PHP 5.5.38' 'PHP 5.6.40' 'PHP 7.0.33' 'PHP 7.1.33' 'PHP 7.2.34' 'PHP 7.3.33' 'PHP 7.4.33' 'PHP 8.0.30' 'PHP 8.1.34' 'PHP 8.2.30' 'PHP 8.3.30' 'PHP 8.4.20' 'PHP 8.5.5')
 Apache_Info=('Apache 2.2.34' 'Apache 2.4.66')
 
@@ -1267,31 +1267,47 @@ Check_DB() {
 }
 
 Do_Query() {
-    local sql_file
-    local status
-
-    sql_file=$(mktemp /tmp/lnmp.mysql.XXXXXX) || {
-        Echo_Red "Error: failed to create temporary MySQL query file."
-        return 1
-    }
-    chmod 600 "${sql_file}" || {
-        Echo_Red "Error: failed to secure temporary MySQL query file."
-        rm -f "${sql_file}"
-        return 1
-    }
-    printf "%s\n" "$1" >"${sql_file}" || {
-        Echo_Red "Error: failed to write temporary MySQL query file."
-        rm -f "${sql_file}"
-        return 1
-    }
+    echo "$1" >/tmp/.mysql.tmp
     Check_DB
-    ${MySQL_Bin} --defaults-file=~/.my.cnf <"${sql_file}"
-    status=$?
-    rm -f "${sql_file}"
-    return ${status}
+    ${MySQL_Bin} --defaults-file=~/.my.cnf </tmp/.mysql.tmp
+    return $?
+}
+
+Run_Query() {
+    Check_DB
+    ${MySQL_Bin} --defaults-file=~/.my.cnf -e "$1"
+        if [ $? -ne 0 ]; then
+            echo "Query Failed: $query"
+            return 1
+        fi
+}
+
+Mysql_Do_Query() {
+    local query="$1"
+    local mysql_bin="/usr/local/mysql/bin/mysql"
+
+    "$mysql_bin" --defaults-file=~/.my.cnf -e "$query"
+        if [ $? -ne 0 ]; then
+            echo "Query Failed: $query"
+            return 1
+        fi    
+}
+
+MariaDB_Do_Query() {
+    local query="$1"
+    local mariadb_bin="/usr/local/mariadb/bin/mariadb"
+
+    "$mariadb_bin" --defaults-file=~/.my.cnf -e "$query"
+        if [ $? -ne 0 ]; then
+            echo "Query Failed: $query"
+            return 1
+        fi    
 }
 
 Make_TempMycnf() {
+    if [ -s ~/.my.cnf ]; then
+        cp ~/.my.cnf ~/.my.cnf.$(date +%Y%m%d)
+    fi
     cat >~/.my.cnf <<EOF
 [client]
 user=root
@@ -1306,7 +1322,7 @@ Verify_DB_Password() {
     while [ $status -eq 1 ]; do
         read -s -p "Enter current root password of Database (Password will not shown): " DB_Root_Password
         Make_TempMycnf "${DB_Root_Password}"
-        Do_Query ""
+        Run_Query "SELECT 1;"
         status=$?
     done
     echo "OK, MySQL root password correct."
