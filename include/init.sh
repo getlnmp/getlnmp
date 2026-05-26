@@ -614,11 +614,14 @@ PHP_Make_Install() {
 #        make ZEND_EXTRA_LIBS='-liconv'
 #    fi
 #    make install
-    make -j"$(nproc)"
-    if [ $? -ne 0 ]; then
-        make
-    fi
-    make install
+    make -j"$(nproc)" || make || {
+        Echo_Red "Error: failed to build PHP."
+        exit 1
+    }
+    make install || {
+        Echo_Red "Error: failed to install PHP."
+        exit 1
+    }
     # resetting environment variable to avoid affecting other make processes
     PHP_ENV_UNSET
 }
@@ -817,7 +820,7 @@ EOF
 }
 
 Install_Curl() {
-    if [ -s /usr/local/curl/bin/curl ]; then
+    if [ -x /usr/local/curl/bin/curl ]; then
         echo "Custom curl already compiled with Openssl 1.1.1, skip."
     else
         Echo_Blue "[+] Installing ${Curl_Ver} with Openssl 1.1.1"
@@ -1200,8 +1203,14 @@ Install_Libzip() {
           # -DENABLE_BZIP2=ON 
     
         # Build and install
-        make -j"$(nproc)"
-        make install
+        make -j"$(nproc)" || {
+            echo "Failed to build libzip. Please check the error messages above."
+            exit 1
+        }
+        make install || {
+            echo "Failed to install libzip. Please check the error messages above."
+            exit 1
+        }
         rm -rf ${cur_dir}/src/${Libzip_Ver}
     fi
 

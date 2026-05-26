@@ -37,14 +37,21 @@ Install_PHP_Imap()
         apt-get install -y libc-client-dev libkrb5-dev
     fi
 
-    Download_PHP_Src
+    if echo "${Cur_PHP_Version}" | grep -Eqi '^8\.(4|5)\.'; then
+        printf "\n\n" | ${PHP_Path}/bin/pecl install imap || {
+            Echo_Red "PHP Imap PECL install failed!"
+            exit 1
+        }
+    else
+        Download_PHP_Src
 
-    Tar_Cd php-${Cur_PHP_Version}.tar.bz2 php-${Cur_PHP_Version}/ext/imap
-    ${PHP_Path}/bin/phpize
-    ./configure --with-php-config=${PHP_Path}/bin/php-config --with-imap --with-imap-ssl --with-kerberos
-    make && make install
-    cd -
-    rm -rf php-"${Cur_PHP_Version}"
+        Tar_Cd php-${Cur_PHP_Version}.tar.bz2 php-${Cur_PHP_Version}/ext/imap
+        ${PHP_Path}/bin/phpize
+        ./configure --with-php-config=${PHP_Path}/bin/php-config --with-imap --with-imap-ssl --with-kerberos
+        make && make install
+        cd -
+        rm -rf php-"${Cur_PHP_Version}"
+    fi
 
     cat >${PHP_Path}/conf.d/009-imap.ini<<EOF
 extension = "imap.so"
