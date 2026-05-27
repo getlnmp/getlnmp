@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
-# Author:licess
-# Website:https://www.vpser.net & https://lnmp.org
+
+
+
+
+# Not updated for a long time, may not work with the latest version of DenyHosts
+# Use at your risk, and please check the official documentation of DenyHosts for any changes in configuration or installation steps.
+
+
+
+
+
 
 HOST=$1
 if [ -z "${HOST}" ]; then

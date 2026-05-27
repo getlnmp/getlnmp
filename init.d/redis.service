@@ -1,11 +1,11 @@
-# /etc/systemd/system/mredis.service
+# /etc/systemd/system/redis.service
 # Redis systemd unit for compiled Redis
 # Works on Debian / Ubuntu / RHEL / AlmaLinux / Rocky
 
 # Author:   getlnmp
 # website:  https://getlnmp.com
 [Unit]
-Description=Redis data structure server
+Description=Advanced key-value store
 After=network.target
 Documentation=http://redis.io/documentation, man:redis-server(1)
 
@@ -15,7 +15,7 @@ Documentation=http://redis.io/documentation, man:redis-server(1)
 # Group=redis
 
 # This service is expected to use the sd_notify() function.
-# This requires Redis to be configured with 'daemonize no'.
+# This requires Redis to be configured with 'daemonize no' and 'supervised systemd'
 # Best practice for modern Redis integration
 Type=notify
 
@@ -24,7 +24,7 @@ PIDFile=/var/run/redis.pid
 
 # ExecStart: Start the Redis server using your custom path.
 # IMPORTANT: This requires 'daemonize no' in your /usr/local/redis/etc/redis.conf
-ExecStart=/usr/local/redis/bin/redis-server /usr/local/redis/etc/redis.conf
+ExecStart=/usr/local/redis/bin/redis-server /usr/local/redis/etc/redis.conf --supervised systemd --daemonize no
 
 # --- Restart and Limits ---
 # Set the kill signal to use SIGTERM for graceful shutdown

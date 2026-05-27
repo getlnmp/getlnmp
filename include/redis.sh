@@ -60,7 +60,7 @@ Install_Redis()
         if ! grep -Eqi '^bind[[:space:]]*127.0.0.1' /usr/local/redis/etc/redis.conf; then
             sed -i 's/^# bind 127.0.0.1/bind 127.0.0.1/g' /usr/local/redis/etc/redis.conf
         fi
-        sed -i 's/^# supervised auto/supervised auto/' /usr/local/redis/etc/redis.conf
+        sed -i 's/^# supervised auto/supervised systemd/' /usr/local/redis/etc/redis.conf
         sed -i 's#^pidfile /var/run/redis_6379.pid#pidfile /var/run/redis.pid#g' /usr/local/redis/etc/redis.conf
         cd ../
         rm -rf ${cur_dir}/src/${Redis_Stable_Ver}

@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
 export PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
 
+
+
+
+
+
+# Not updated for a long time, may not work with the latest version of DenyHosts
+# Use at your risk, and please check the official documentation of DenyHosts for any changes in configuration or installation steps.
+
+
+
+
+
+
+
+
+
+
 # Check if user is root
 if [ $(id -u) != "0" ]; then
     echo "Error: You must be root to run this script, please use root to install lnmp"

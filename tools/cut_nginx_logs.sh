@@ -1,30 +1,61 @@
 #!/usr/bin/env bash
-#function:cut nginx log files for lnmp v0.5 and v0.6
-#author: https://lnmp.org
+#function:cut nginx log files
+#author: https://getlnmp.com
 
-#set the path to nginx log files
-log_files_path="/home/wwwlogs/"
-log_files_dir=${log_files_path}$(date -d "yesterday" +"%Y")/$(date -d "yesterday" +"%m")
-#set nginx log files you want to cut
-log_files_name=(access vpser licess)
-#set the path to nginx.
-nginx_sbin="/usr/local/nginx/sbin/nginx"
-#Set how long you want to save
-save_days=30
+# ==========================================
+# Configuration
+# ==========================================
+LOG_FILES_PATH="/home/wwwlogs"
+LOG_FILES_NAME=("access" "getlnmpcom" "getlnmpnet")
+NGINX_SBIN="/usr/local/nginx/sbin/nginx"
+SAVE_DAYS=30
 
-############################################
-#Please do not modify the following script #
-############################################
-mkdir -p $log_files_dir
+# ==========================================
+# Initialization
+# ==========================================
+# Calculate dates once to improve efficiency and prevent edge-case bugs around midnight
+YESTERDAY_YEAR=$(date -d "yesterday" +"%Y")
+YESTERDAY_MONTH=$(date -d "yesterday" +"%m")
+YESTERDAY_DATE=$(date -d "yesterday" +"%Y%m%d")
 
-log_files_num=${#log_files_name[@]}
+LOG_DEST_DIR="${LOG_FILES_PATH}/${YESTERDAY_YEAR}/${YESTERDAY_MONTH}"
 
-#cut nginx log files
-for((i=0;i<$log_files_num;i++));do
-mv ${log_files_path}${log_files_name[i]}.log ${log_files_dir}/${log_files_name[i]}_$(date -d "yesterday" +"%Y%m%d").log
+# ==========================================
+# Execution
+# ==========================================
+
+# 1. Create destination directory
+mkdir -p "$LOG_DEST_DIR"
+
+# 2. Rotate log files safely
+for log_name in "${LOG_FILES_NAME[@]}"; do
+    src_log="${LOG_FILES_PATH}/${log_name}.log"
+    dest_log="${LOG_DEST_DIR}/${log_name}_${YESTERDAY_DATE}.log"
+
+    # Only attempt to move if the source file actually exists
+    if [ -f "$src_log" ]; then
+        mv "$src_log" "$dest_log"
+    else
+        echo "Warning: Log file $src_log not found, skipping."
+    fi
 done
 
-#delete 30 days ago nginx log files
-find $log_files_path -mtime +$save_days -exec rm -rf {} \; 
+# 3. Reload Nginx to release file descriptors and generate new log files
+if [ -x "$NGINX_SBIN" ]; then
+    "$NGINX_SBIN" -s reload
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to reload Nginx."
+        exit 1
+    fi
+else
+    echo "Error: Nginx binary not found or not executable at $NGINX_SBIN"
+    exit 1
+fi
 
-$nginx_sbin -s reload
+# 4. Safely delete logs older than the retention period
+find "$LOG_FILES_PATH" -type f -name "*.log" -mtime "+$SAVE_DAYS" -delete
+
+# 5. Clean up any empty month/year directories left behind
+find "$LOG_FILES_PATH" -type d -empty -delete 2>/dev/null
+
+echo "Log rotation completed successfully."

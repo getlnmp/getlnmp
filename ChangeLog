@@ -12,4 +12,5 @@ Removed support for Apache 2.2
 Removed support for Centos
 Removed support for MariaDB 5.5
 Removed support for Mysql 5.7
+Removed support for denyhosts.sh
 Many other optimizations...
