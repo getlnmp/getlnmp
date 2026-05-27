@@ -22,6 +22,50 @@ DB_SQL_Escape() {
     printf "%s" "${value}"
 }
 
+Stop_Safe_Mode_DB() {
+    local child_pid
+    local pids=()
+    local pid
+
+    if [[ -n "${MYSQLD_SAFE_PID:-}" ]] && command -v pgrep >/dev/null 2>&1; then
+        while read -r child_pid; do
+            [[ -n "${child_pid}" ]] && pids+=("${child_pid}")
+        done < <(pgrep -P "${MYSQLD_SAFE_PID}" 2>/dev/null)
+    fi
+
+    if [[ -n "${MYSQLD_SAFE_PID:-}" ]] && kill -0 "${MYSQLD_SAFE_PID}" 2>/dev/null; then
+        pids+=("${MYSQLD_SAFE_PID}")
+    fi
+
+    for pid in "${pids[@]}"; do
+        kill -TERM "${pid}" 2>/dev/null
+    done
+
+    for pid in "${pids[@]}"; do
+        if kill -0 "${pid}" 2>/dev/null; then
+            wait "${pid}" 2>/dev/null || true
+        fi
+    done
+}
+
+Cleanup_Reset_On_Exit() {
+    local exit_code=$?
+
+    trap - EXIT INT TERM
+
+    if [[ "${RESET_CLEANUP_DONE:-0}" -ne 1 ]]; then
+        if [[ "${SAFE_MODE_STARTED:-0}" -eq 1 ]]; then
+            Stop_Safe_Mode_DB
+        fi
+
+        if [[ "${DB_SERVICE_STOPPED:-0}" -eq 1 ]]; then
+            systemctl start "${DB_NAME}" 2>/dev/null
+        fi
+    fi
+
+    exit "${exit_code}"
+}
+
 clear
 echo "+-------------------------------------------------------------------+"
 echo "|            Reset MySQL/MariaDB root Password for LNMP             |"
@@ -84,9 +128,15 @@ done
 
 echo "-> Stopping ${DB_NAME} service..."
 systemctl stop "${DB_NAME}"
+DB_SERVICE_STOPPED=1
+trap Cleanup_Reset_On_Exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 echo "-> Starting ${DB_NAME} in safe mode (--skip-grant-tables)..."
 "${DB_BIN_DIR}/mysqld_safe" --skip-grant-tables --skip-networking >/dev/null 2>&1 &
+MYSQLD_SAFE_PID=$!
+SAFE_MODE_STARTED=1
 
 # Wait for the safe mode daemon to initialize
 sleep 5
@@ -110,28 +160,30 @@ fi
 
 if [[ $? -eq 0 ]]; then
     echo "-> Password reset successfully in database. Shutting down safe mode..."
-    
-    # Safely terminate mysqld rather than an aggressive killall
-    if command -v pkill >/dev/null 2>&1; then
-        pkill -TERM mysqld
-    else
-        kill -TERM $(pidof mysqld)
-    fi
+    Stop_Safe_Mode_DB
+    SAFE_MODE_STARTED=0
     
     # Wait for the process to actually terminate before trying to start systemd service
     sleep 5
     
     echo "-> Restarting the standard ${DB_NAME} service..."
     systemctl start "${DB_NAME}"
+    DB_SERVICE_STOPPED=0
+    RESET_CLEANUP_DONE=1
+    trap - EXIT INT TERM
     echo ""
     echo "+-------------------------------------------------+"
     echo "| Password successfully reset!                    |"
     echo "+-------------------------------------------------+"
 else
     echo "Error: Failed to reset ${DB_NAME} root password. Check the database error logs."
-    
+
     # Attempt cleanup if it fails
-    pkill -TERM mysqld 2>/dev/null
+    Stop_Safe_Mode_DB
+    SAFE_MODE_STARTED=0
     systemctl start "${DB_NAME}" 2>/dev/null
+    DB_SERVICE_STOPPED=0
+    RESET_CLEANUP_DONE=1
+    trap - EXIT INT TERM
     exit 1
 fi

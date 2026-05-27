@@ -15,6 +15,24 @@ LOG_FILE="/var/log/502-monitor.log"
 
 # Get the current timestamp for logging
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
+LOG_DIR=$(dirname "$LOG_FILE")
+
+if [[ -z "$LOG_FILE" || "$LOG_FILE" == "/" ]]; then
+    echo "[$TIMESTAMP] ERROR: LOG_FILE is not configured correctly." >&2
+    exit 1
+fi
+
+if [[ ! -d "$LOG_DIR" ]]; then
+    if ! mkdir -p "$LOG_DIR"; then
+        echo "[$TIMESTAMP] ERROR: Failed to create log directory: $LOG_DIR" >&2
+        exit 1
+    fi
+fi
+
+if ! touch "$LOG_FILE" 2>/dev/null || [[ ! -w "$LOG_FILE" ]]; then
+    echo "[$TIMESTAMP] ERROR: Log file is not writable: $LOG_FILE" >&2
+    exit 1
+fi
 
 # Fetch only the HTTP status code using curl
 if ! command -v curl >/dev/null 2>&1; then

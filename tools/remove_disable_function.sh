@@ -5,7 +5,9 @@ export PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~
 # ==========================================
 # Configuration
 # ==========================================
-PHP_INI="/usr/local/php/etc/php.ini"
+
+#only for our getlnmp installation, if you use other php version, please change this path accordingly
+PHP_INI="/usr/local/php/etc/php.ini" 
 
 # Check if user is root
 if [[ $EUID -ne 0 ]]; then
@@ -32,7 +34,7 @@ if [[ ! -f "$PHP_INI" ]]; then
 fi
 
 echo "Options:"
-echo "  1: Remove ALL php disable_functions"
+echo "  1: Remove ALL php disable_functions(Default)"
 echo "  2: Only remove 'scandir' function"
 echo "  3: Only remove 'exec' function"
 echo ""
@@ -59,21 +61,57 @@ echo -e "\n"
 # Create a backup of php.ini just in case
 cp -a "$PHP_INI" "${PHP_INI}.bak_$(date +%s)"
 
+replace_php_ini_from_tmp() {
+    local tmp_file="$1"
+
+    if cat "$tmp_file" > "$PHP_INI"; then
+        rm -f "$tmp_file"
+    else
+        rm -f "$tmp_file"
+        echo "Error: Failed to update $PHP_INI."
+        exit 1
+    fi
+}
+
 remove_all_disable_functions() {
-    # Safely clears everything after the equals sign
-    sed -i -E 's/^disable_functions[[:space:]]*=.*/disable_functions =/g' "$PHP_INI"
+    local tmp_file
+
+    tmp_file=$(mktemp "${PHP_INI}.tmp.XXXXXX") || exit 1
+    awk '
+        /^[[:space:]]*disable_functions[[:space:]]*=/ && !/^[[:space:]]*;/ {
+            print "disable_functions ="
+            next
+        }
+        { print }
+    ' "$PHP_INI" > "$tmp_file" && replace_php_ini_from_tmp "$tmp_file"
 }
 
 remove_specific_function() {
     local func_name="$1"
-    
-    # 1. Remove the specific word (using \b word boundaries so we don't accidentally remove "exec_dir" when searching for "exec")
-    sed -i -E "s/\b${func_name}\b//g" "$PHP_INI"
-    
-    # 2. Clean up messy commas that might be left behind
-    sed -i -E 's/,[[:space:]]*,/,/g' "$PHP_INI"                                    # Fix double commas: ,, -> ,
-    sed -i -E 's/disable_functions[[:space:]]*=[[:space:]]*,/disable_functions = /g' "$PHP_INI" # Fix leading comma: = ,func -> = func
-    sed -i -E 's/,[[:space:]]*$//g' "$PHP_INI"                                     # Fix trailing comma: func, -> func
+    local tmp_file
+
+    tmp_file=$(mktemp "${PHP_INI}.tmp.XXXXXX") || exit 1
+    awk -v func_name="$func_name" '
+        /^[[:space:]]*disable_functions[[:space:]]*=/ && !/^[[:space:]]*;/ {
+            value = $0
+            sub(/^[^=]*=/, "", value)
+
+            output = ""
+            count = split(value, functions, ",")
+            for (i = 1; i <= count; i++) {
+                item = functions[i]
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", item)
+                if (item == "" || tolower(item) == tolower(func_name)) {
+                    continue
+                }
+                output = output ? output ", " item : item
+            }
+
+            print "disable_functions = " output
+            next
+        }
+        { print }
+    ' "$PHP_INI" > "$tmp_file" && replace_php_ini_from_tmp "$tmp_file"
 }
 
 # Execute based on choice

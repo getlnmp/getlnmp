@@ -44,7 +44,8 @@ fi
 
 echo "-> Downloading Fail2Ban..."
 mkdir -p ../src/fail2ban
-cd ../src/fail2ban || exit 1
+FAIL2BAN_SRC_DIR=$(cd ../src/fail2ban && pwd) || exit 1
+cd "${FAIL2BAN_SRC_DIR}" || exit 1
 Download_Files "${FAIL2BAN_DL}" "${FAIL2BAN_VER_SHORT}.tar.gz"
 
 echo "-> Extracting and Installing Fail2Ban..."
@@ -53,7 +54,13 @@ cd "${FAIL2BAN_VER}" || exit 1
 python3 setup.py install
 
 echo "-> Configuring Fail2Ban..."
-\cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+JAIL_LOCAL_CREATED=0
+if [[ -f /etc/fail2ban/jail.local ]]; then
+    echo "Existing /etc/fail2ban/jail.local found, keeping local Fail2Ban policy unchanged."
+else
+    \cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+    JAIL_LOCAL_CREATED=1
+fi
 
 # Use best-practice jail.d overrides instead of a messy sed injection
 mkdir -p /etc/fail2ban/jail.d
@@ -78,7 +85,9 @@ mkdir -p /var/run/fail2ban
 
 # Apply RHEL-specific systemd tweaks if necessary
 if [[ "${PM}" == "yum" || "${PM}" == "dnf" ]]; then
-    sed -i 's#^before = paths-debian.conf#before = paths-fedora.conf#' /etc/fail2ban/jail.local
+    if [[ "${JAIL_LOCAL_CREATED}" -eq 1 ]]; then
+        sed -i 's#^before = paths-debian.conf#before = paths-fedora.conf#' /etc/fail2ban/jail.local
+    fi
     sed -i 's/^Environment="PYTHONNOUSERSITE=1"/#Environment="PYTHONNOUSERSITE=1"/' /etc/systemd/system/fail2ban.service
     sed -i 's/-xf start/-x start/' /etc/systemd/system/fail2ban.service
 fi
@@ -87,8 +96,8 @@ fi
 systemctl daemon-reload
 
 # Clean up source files
-cd ../..
-rm -rf "../src/fail2ban/${FAIL2BAN_VER}"
+cd "${FAIL2BAN_SRC_DIR}" || exit 1
+rm -rf "./${FAIL2BAN_VER}"
 
 # Execute framework startup tracker
 StartUp fail2ban
