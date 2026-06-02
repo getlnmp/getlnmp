@@ -1,12 +1,12 @@
-# GetLNMP一键安装包 - Readme
+# GetLNMP One-Click Installer - Readme
 
-## GetLNMP一键安装包是什么?
+## What is GetLNMP?
 
-LNMP一键安装包是一个用Linux Shell编写的可以为Debian/Ubuntu/RHEL/Rocky/AlmaLinux VPS或独立主机安装LNMP(Nginx/MySQL/PHP)、LNMPA(Nginx/MySQL/PHP/Apache)、LAMP(Apache/MySQL/PHP)生产环境的Shell程序。
+GetLNMP is a Linux Shell-based installer for deploying production LNMP (Nginx/MySQL/PHP), LNMPA (Nginx/MySQL/PHP/Apache), and LAMP (Apache/MySQL/PHP) environments on Debian, Ubuntu, RHEL, Rocky Linux, AlmaLinux VPSes, or dedicated servers.
 
-## 支持版本
+## Supported Versions
 
-| 发行版名称 | EOL时间 | kernel | glibc | Openssl | GCC | ICU |  
+| Distribution | EOL | kernel | glibc | OpenSSL | GCC | ICU |
 | :------: | :------: | :------: | :------: | :------: | :------: | :------: |
 | Debian 11 | 2026.8 | 5.1 | 2.31 | 1.1.1 | 10.2 | 67.1 |
 | Debian 12 | 2028.6 | 6.1 | 2.36 | 3.0.* | 12.2 | 72.1 |
@@ -17,128 +17,179 @@ LNMP一键安装包是一个用Linux Shell编写的可以为Debian/Ubuntu/RHEL/R
 | RHEL 9 | 2032.5 | 5.1 | 2.34 | 3.0.* | 11.2 | 67.1 |
 | RHEL 10 | 2035.5 | 6.1 | * | * | * | * |
 
-## 安装建议
-由于系统自带的OPENSSL版本对可使用的PHP版本影响很大，为了保证最大的稳定性，我们建议:  
-系统自带的OPENSSL版本为1.1.1的，建议安装PHP7.1-8.*  
-系统自带的OPENSSL版本为3.*的，建议安装PHP8.1+  
+## Installation Recommendations
 
-换句话说:
-* Debian 11 建议安装PHP 7.1+
-* Debian 12 建议安装PHP 8.1+
-* Debian 13 建议安装PHP 8.1+
-* Ubuntu 22 LTS 建议安装 PHP 8.1+
-* Ubuntu 24 LTS 建议安装 PHP 8.1+
-* RHEL 8/Rocky 8/AlmaLinux 8 建议安装 PHP 7.1+
-* RHEL 9/Rocky 9/AlmaLinux 9 建议安装 PHP 8.1+
-* RHEL 10/Rocky 10/AlmaLinux 10 建议安装 PHP 8.1+
+The system OpenSSL version has a large impact on which PHP versions can be used. For best stability, we recommend:
 
-## 软件版本
-* PHP目前支持PHP 7.2-7.4, PHP 8.0-8.5
-* Mysql支持5.7, 8.0和8.4， RHEL10系列只支持8.4
-* Mariadb支持10.5, 10.6, 10.11, 11.4, 11.8
-* Nginx默认安装最新的稳定版
-* Apache目前只支持2.4
+Systems with OpenSSL 1.1.1: install PHP 7.3-8.*  
+Systems with OpenSSL 3.*: install PHP 8.1+
 
+In other words:
 
+* Debian 11: PHP 7.3+
+* Debian 12: PHP 8.1+
+* Debian 13: PHP 8.1+
+* Ubuntu 22 LTS: PHP 8.1+
+* Ubuntu 24 LTS: PHP 8.1+
+* RHEL 8/Rocky 8/AlmaLinux 8: PHP 7.3+
+* RHEL 9/Rocky 9/AlmaLinux 9: PHP 8.1+
+* RHEL 10/Rocky 10/AlmaLinux 10: PHP 8.1+
 
-## GetLNMP一键安装包有哪些功能？
+## Software Versions
 
-支持自定义Nginx、PHP编译参数及网站和数据库目录、支持生成Let's Ecrypt/ZeroSSL/BuyPass免费SSL证书、支持无人值守、LNMP模式支持多PHP版本、支持单独安装Nginx/MySQL/MariaDB/Pureftpd服务器，同时提供一些实用的辅助工具如：虚拟主机管理、FTP用户管理、Nginx、MySQL/MariaDB、PHP的升级、常见PHP模块exif、fileinfo、ldap、bz2、sodium、imap和swoole的一键安装、常用缓存组件Redis/Xcache等的安装、重置MySQL root密码、502自动重启、日志切割、SSH防护DenyHosts/Fail2Ban、备份等许多实用脚本。
+* PHP currently supports PHP 7.3-7.4 and PHP 8.0-8.5.
+* MySQL supports 5.7, 8.0, and 8.4. RHEL 10 series supports only MySQL 8.4.
+* MariaDB supports 10.5, 10.6, 10.11, 11.4, and 11.8.
+* Nginx installs the latest stable version by default.
+* Apache currently supports only 2.4.
 
-* LNMP官网：<https://getlnmp.com>
-* 作者: getlnmp <admin@getlnmp.com>
+## What Features Does GetLNMP Provide?
 
-## GetLNMP安装
+GetLNMP supports custom Nginx and PHP compile options, custom website and database directories, Let's Encrypt/ZeroSSL free SSL certificate generation, unattended installation, multiple PHP versions in LNMP mode, standalone Nginx/MySQL/MariaDB/PureFTPd installation, and many utility scripts. These include virtual host management, firewall management, FTP user management, Nginx/MySQL/MariaDB/PHP upgrades, one-click installation of common PHP modules such as exif, fileinfo, ldap, bz2, sodium, imap, and swoole, cache components such as Redis/Xcache, MySQL root password reset, automatic restart on 502 errors, log rotation, SSH protection with Fail2Ban, backups, and more.
 
-安装前确认已经安装wget和git命令
-如提示wget: command not found ，使用`yum install wget` 或 `apt-get install wget` 命令安装。
-如提示git: command not found ，使用`yum install git` 或 `apt-get install git` 命令安装。
-为防止掉线等情况，建议使用screen，可以先执行：screen -S lnmp 命令后，再执行LNMP安装命令：
+* LNMP official site: <https://getlnmp.com>
+* Author: getlnmp <admin@getlnmp.com>
+
+## Installing GetLNMP
+
+Before installation, make sure `wget` and `git` are installed.
+
+If you see `wget: command not found`, install it with `yum install wget` or `apt-get install wget`.
+If you see `git: command not found`, install it with `yum install git` or `apt-get install git`.
+
+To avoid interruption from disconnected SSH sessions, `screen` is recommended. You can run `screen -S lnmp` first, then run the GetLNMP installation command:
+
 `wget http://soft.lnmp.com/lnmp/lnmp2.1.tar.gz -cO lnmp2.1.tar.gz && tar zxf lnmp2.1.tar.gz && cd lnmp2.1 && ./install.sh {lnmp|lnmpa|lamp}`
 
-如断线可使用`screen -r lnmp` 恢复。**详细安装教程参考：<https://lnmp.org/install.html>**
+If the connection drops, use `screen -r lnmp` to reconnect.
 
-## 常用功能说明
+## Common Usage
 
-**以下操作需在getlnmp安装包目录下执行，如lnmp2.1**
+**Run the following commands from the GetLNMP package directory.**
 
-### 自定义参数
-lnmp.conf配置文件，可以修改lnmp.conf自定义下载服务器地址、网站/数据库目录及添加nginx模块和php编译参数；不论安装升级都会调用该文件里的设置(如果修改了默认的参数建议备份此文件)；
+### Custom Parameters
 
-### FTP服务器
-执行：`./pureftpd.sh` 安装，可使用 `lnmp ftp {add|list|del}` 进行管理。
+The `lnmp.conf` file can be used to customize the download server, website/database directories, Nginx modules, and PHP compile parameters. It is used during both installation and upgrade. If you change default parameters, back up this file.
 
-### 升级脚本：
-执行：`./upgrade.sh` 按提示进行选择
-也可以直接带参数：`./upgrade.sh {nginx|mysql|mariadb|php|phpa|m2m|phpmyadmin}`
-* 参数: nginx   可升级至任意Nginx版本。
-* 参数: mysql   可升级至任意MySQL版本，MySQL升级风险较大，虽然会自动备份数据，依然建议自行再备份一下。
-* 参数: mariadb 可升级已安装的Mariadb，虽然会自动备份数据，依然建议自行再备份一下。
-* 参数: m2m     可从MySQL升级至Mariadb，虽然会自动备份数据，依然建议自行再备份一下。
-* 参数: php     仅适用于LNMP，可升级至大部分PHP版本。
-* 参数: phpa    可升级LNMPA/LAMP的PHP至大部分版本。
-* 参数: mphp    多PHP版本升级工具，只支持7.2.x-7.2.x类似小版本升级，大版本直接新装即可；
-* 参数: phpmyadmin    可升级phpMyadmin。
+### FTP Server
 
-### 扩展插件
-执行: `./addons.sh {install|uninstall} {memcached|opcache|redis|apcu|imagemagick|ioncube|exif|fileinfo|ldap|bz2|sodium|imap|swoole}`
-以下为扩展插件安装使用说明
-#### 缓存加速：
-* 参数: redis  安装redis
-* 参数: memcached 可选择php-memcache或php-memcached扩展, 这里推荐使用php-memcached
-* 参数: opcache 可访问 http://yourIP/ocp.php 进行管理。
-* 参数: apcu 安装apcu php扩展，支持php7，可访问 http://yourIP/apc.php 进行管理。 
-**请勿安装多个缓存类扩展模块，多个可能导致网站出现问题 ！**
-#### PHP组件/模块：
-* 参数：exif   图片exif信息读取模块。
-* 参数：fileinfo   文件MIME类型编码读取模块，安装要求至少有1GB以上内存，否则可能会安装失败。
-* 参数：ldap    LDAP扩展。
-* 参数：bz2     bz2压缩扩展模块。
-* 参数：imap    imap模块。
-* 参数：swoole  PHP协程框架模块，第三方模块不支持通过lnmp.conf开启安装。
+Run `./pureftpd.sh` to install PureFTPd. You can manage it with `lnmp ftp {add|list|del}`.
 
-#### 图像处理：
-* imageMagick安装卸载执行：`./addons.sh {install|uninstall} imageMagick` imageMagick路径：/usr/local/imagemagick/bin/。
+### Firewall Management
 
-#### 解密：
-* IonCube安装执行：`./addons.sh {install|uninstall} ionCube`。
-* Sodium加密库扩展模块安装/卸载执行：`./addons.sh {install|uninstall} sodium `，一般微信支付之类的需要使用，PHP 7.2以下版本不支持通过lnmp.conf开启安装。
-* SourceGuardian Loader加密库扩展模块安装/卸载执行：`./addons.sh {install|uninstall} sg `，SourceGuardian加密的PHP文件需要使用此组件解码运行。
+`conf/lnmp-fw` is a universal firewall port management script. It uses `firewall-cmd` on RHEL/Rocky/Alma/CentOS/Fedora systems and `ufw` on Debian/Ubuntu systems. Firewall backend support in this helper is independent from the main GetLNMP installer OS support scope.
 
-#### 其他常用脚本：
-* 可选1，多PHP版本安装执行：`./install.sh mphp` 可以安装多个PHP版本 ，只支持LNMP模式，lnmp vhost add时进行选择或使用时需要将nginx虚拟主机配置文件里的include enable-php.conf替换为 include enable-php5.6.conf 即可前面的5.6换成你刚才安装的PHP的大版本号5.* 或7.0之类的。
-* 可选2，数据库安装执行：`./install.sh db` 可以直接单独安装MySQL或MariaDB数据库。
-* 可选3，Nginx安装执行：`./install.sh nginx`可以直接单独安装Nginx。
-**以下工具在lnmp安装包tools目录下**可拷贝到其他目录下运行
-* 可选4，执行：`./reset_mysql_root_password.sh` 可重置MySQL/MariaDB的root密码。
-* 可选5，执行：`./check502.sh`  可检测php-fpm是否挂掉,502报错时重启，配合crontab使用。
-* 可选6，执行：`./cut_nginx_logs.sh` 日志切割脚本。
-* 可选7，执行：`./remove_disable_function.sh` 运行此脚本可删掉禁用函数。
+Before use, copy it to a system command path, for example: `cp conf/lnmp-fw /usr/local/bin/lnmp-fw`.
 
-### 无人值守安装
+Common commands:
 
-**无人值守命令生成工具：<https://lnmp.org/auto.html>**
-* 设置如下环境变量即可完全无人值守安装
+* Allow a port: `lnmp-fw allow <port> [tcp|udp|all]`
+* Deny a port: `lnmp-fw deny <port> [tcp|udp|all]`
+* Delete an allow rule: `lnmp-fw delete-allow <port> [tcp|udp|all]`
+* Delete a deny rule: `lnmp-fw delete-deny <port> [tcp|udp|all]`
+* Show firewall status: `lnmp-fw status`
+* Reload firewall: `lnmp-fw reload`
 
-变量名 | 变量值含义
+Examples:
+
+* Allow HTTP: `lnmp-fw allow 80 tcp`
+* Allow HTTPS: `lnmp-fw allow 443 tcp`
+* Allow DNS over UDP: `lnmp-fw allow 53 udp`
+* Allow both TCP and UDP: `lnmp-fw allow 53 all`
+* Deny the MySQL port: `lnmp-fw deny 3306 tcp`
+* Delete the allow rule for port 8080: `lnmp-fw delete-allow 8080 tcp`
+
+Note: when running `deny` or `delete-allow` against an SSH port, interactive confirmation is required. For unattended scripts, add `--force`, for example `lnmp-fw deny 22 tcp --force`, or set `LNMP_FW_FORCE=1`.
+
+### Upgrade Script
+
+Run `./upgrade.sh` and follow the prompts, or pass an argument directly:
+
+`./upgrade.sh {nginx|mysql|mariadb|php|phpa|m2m|phpmyadmin}`
+
+* `nginx`: upgrade to any Nginx version.
+* `mysql`: upgrade MySQL to any version. MySQL upgrades are risky; although data is backed up automatically, you should still make your own backup.
+* `mariadb`: upgrade the installed MariaDB. Although data is backed up automatically, you should still make your own backup.
+* `m2m`: upgrade from MySQL to MariaDB. Although data is backed up automatically, you should still make your own backup.
+* `php`: upgrade PHP for LNMP only. Most PHP versions are supported.
+* `phpa`: upgrade PHP for LNMPA/LAMP. Most PHP versions are supported.
+* `mphp`: upgrade tool for multiple PHP versions. It only supports minor-version upgrades such as 7.2.x to 7.2.x. Install a new major version directly.
+* `phpmyadmin`: upgrade phpMyAdmin.
+
+### Add-ons
+
+Run:
+
+`./addons.sh {install|uninstall} {memcached|opcache|redis|apcu|imagemagick|ioncube|exif|fileinfo|ldap|bz2|sodium|imap|swoole}`
+
+Add-on installation notes:
+
+#### Cache Acceleration
+
+* `redis`: install Redis.
+* `memcached`: choose either the php-memcache or php-memcached extension. php-memcached is recommended.
+* `opcache`: can be managed at `http://yourIP/ocp.php`.
+* `apcu`: installs the APCu PHP extension and supports PHP 7. It can be managed at `http://yourIP/apc.php`.
+
+**Do not install multiple cache acceleration extensions. Installing several may cause website issues.**
+
+#### PHP Components/Modules
+
+* `exif`: image EXIF metadata reading module.
+* `fileinfo`: file MIME type detection module. At least 1 GB RAM is required, otherwise installation may fail.
+* `ldap`: LDAP extension.
+* `bz2`: bzip2 compression extension.
+* `imap`: IMAP module.
+* `swoole`: PHP coroutine framework module. Third-party modules cannot be enabled for installation through `lnmp.conf`.
+
+#### Image Processing
+
+* Install/uninstall ImageMagick with `./addons.sh {install|uninstall} imageMagick`. ImageMagick path: `/usr/local/imagemagick/bin/`.
+
+#### Loaders and Encryption
+
+* Install IonCube with `./addons.sh {install|uninstall} ionCube`.
+* Install/uninstall the Sodium encryption library extension with `./addons.sh {install|uninstall} sodium`. It is commonly required for services such as WeChat Pay. PHP versions below 7.2 do not support enabling it through `lnmp.conf`.
+* Install/uninstall the SourceGuardian Loader with `./addons.sh {install|uninstall} sg`. This component is required to decode PHP files encrypted with SourceGuardian.
+
+#### Other Common Scripts
+
+* Option 1: run `./install.sh mphp` to install multiple PHP versions. This only supports LNMP mode. When running `lnmp vhost add`, select the desired PHP version. Alternatively, update the nginx virtual host config by replacing `include enable-php.conf` with `include enable-php5.6.conf`, changing `5.6` to the major PHP version you installed, such as `5.*` or `7.0`.
+* Option 2: run `./install.sh db` to install only MySQL or MariaDB.
+* Option 3: run `./install.sh nginx` to install only Nginx.
+
+**The following tools are in the `tools` directory of the LNMP package** and can be copied elsewhere to run:
+
+* Option 4: run `./reset_mysql_root_password.sh` to reset the MySQL/MariaDB root password.
+* Option 5: run `./check502.sh` to check whether php-fpm is down and restart it on 502 errors. Use it with crontab.
+* Option 6: run `./cut_nginx_logs.sh` for log rotation.
+* Option 7: run `./remove_disable_function.sh` to remove disabled PHP functions.
+
+### Unattended Installation
+
+**Unattended command generator: <https://getlnmp.com/auto.html>**
+
+Set the following environment variables to run a fully unattended installation:
+
+Variable | Meaning
 --- | ---
-LNMP_Auto | 启用无人值守自动安装
-DBSelect | 数据库版本序号
-DB_Root_Password | 数据库root密码（不可为空），不安装数据库时可不加该参数
-InstallInnodb | 是否安装Innodb引擎，y 或 n ，不安装数据库时可不加该参数
-PHPSelect | PHP版本序号
-SelectMalloc | 内存分配器版本序号
-ApacheSelect | Apache版本序号，仅LNMPA和LAMP模式需添加该参数
-ServerAdmin | 管理员邮箱，仅LNMPA和LAMP模式需添加该参数
-RHELRepo | (非必选)设为 local 时，RHEL使用本地源，不设置源为163 centos源
-CheckMirror | (非必选)安装时不检查下载镜像，方便无网络安装
-Bin | (非必选)MySQL 5.7-8.0/MariaDB使用二进制方式安装，y 或 n，默认使用二进制方式安装,离线默认使用源码编译安装
+LNMP_Auto | Enable unattended automatic installation
+DBSelect | Database version number
+DB_Root_Password | Database root password. It cannot be empty. Not required if no database is installed
+InstallInnodb | Whether to install the InnoDB engine, `y` or `n`. Not required if no database is installed
+PHPSelect | PHP version number
+SelectMalloc | Memory allocator version number
+ApacheSelect | Apache version number. Required only for LNMPA and LAMP modes
+ServerAdmin | Administrator email. Required only for LNMPA and LAMP modes
+RHELRepo | Optional. Set to `local` to use local repositories on RHEL. If unset, the 163 CentOS mirror is used
+CheckMirror | Optional. Skip download mirror checks during installation, useful for offline installation
+Bin | Optional. Use binary installation for MySQL 5.7-8.0/MariaDB, `y` or `n`. Binary mode is used by default; offline mode defaults to source compilation
 
-* 各程序版本对应序号
+Program version numbers:
 
-MySQL版本 | 对应序号 | PHP版本 | 对应序号 | 内存分配器 | 对应序号 | Apache版本 | 对应序号
+MySQL Version | Number | PHP Version | Number | Memory Allocator | Number | Apache Version | Number
 :------: | :------: | :------: | :------: | :------: | :--------: | :--------: | :--------:
-MySQL 5.1 | 1 | PHP 5.2 | 1 | 不安装 | 1 | Apache 2.2 | 1
+MySQL 5.1 | 1 | PHP 5.2 | 1 | None | 1 | Apache 2.2 | 1
 MySQL 5.5 | 2 | PHP 5.3 | 2 | Jemalloc | 2 | Apache 2.4 | 2
 MySQL 5.6 | 3 | PHP 5.4 | 3 | TCMalloc | 3 | |
 MySQL 5.7 | 4 | PHP 5.5 | 4 | | | |
@@ -149,90 +200,96 @@ MariaDB 10.5 | 8 | PHP 7.2 | 8 | | | |
 MariaDB 10.6 | 9 | PHP 7.3 | 9 | | | |
 MariaDB 10.11 | 10 | PHP 7.4 | 10 | | | |
 MySQL 8.4 | 11 | PHP 8.0 | 11 | | | |
-不安装数据库 | 0 | PHP 8.1 | 12 | | | |
+No database | 0 | PHP 8.1 | 12 | | | |
 | | | PHP 8.2 | 13 | | | |
 | | | PHP 8.3 | 14 | | | |
 
-* 以LNMP模式，默认选项安装MySQL 5.5、MySQL root密码设置为lnmp.org、启用InnoDB、PHP 5.6、不安装内存分配器为例，先执行([建议先运行screen](https://www.vpser.net/manage/run-screen-lnmp.html))，再下载解压lnmp安装包：
+Example: in LNMP mode, install the default MySQL 5.5 option, set the MySQL root password to `lnmp.org`, enable InnoDB, install PHP 5.6, and use no memory allocator. First run screen if needed, then download and extract the LNMP package:
 
 `wget http://soft.lnmp.com/lnmp/lnmp2.0.tar.gz -cO lnmp2.0.tar.gz && tar zxf lnmp2.0.tar.gz && cd lnmp2.0`
 
-然后设置无人值守参数并安装：
+Then set unattended parameters and install:
 
 `LNMP_Auto="y" DBSelect="2" DB_Root_Password="lnmp.org" InstallInnodb="y" PHPSelect="5" SelectMalloc="1" ./install.sh lnmp`
 
-(如果缺失参数的话还是会有要求选择缺失选项的提示)。
+If required parameters are missing, prompts will still appear for the missing options.
 
-### 卸载
-* 卸载LNMP、LNMPA或LAMP可执行：`./uninstall.sh` 按提示选择即可卸载。
+### Uninstall
 
-## 状态管理
-* LNMP/LNMPA/LMAP状态管理：`lnmp {start|stop|reload|restart|kill|status}`
-* Nginx状态管理：`lnmp nginx或systemctl {start|stop|reload|restart} nginx`
-* MySQL状态管理：`lnmp mysql或systemctl {start|stop|restart|reload|force-reload|status} mysql`
-* MariaDB状态管理：`lnmp mariadb或systemctl {start|stop|restart|reload|force-reload|status} mariadb`
-* PHP-FPM状态管理：`lnmp php-fpm或systemctl {start|stop|quit|restart|reload|logrotate} php-fpm`
-* PureFTPd状态管理：`lnmp pureftpd或systemctl {start|stop|restart|kill|status} pureftp`
-* Apache状态管理：`lnmp httpd或systemctl {start|stop|restart|graceful|graceful-stop|configtest|status} httpd`
+* To uninstall LNMP, LNMPA, or LAMP, run `./uninstall.sh` and follow the prompts.
 
-## 虚拟主机管理
-* 添加：`lnmp vhost add`
-* 删除：`lnmp vhost del`
-* 列出：`lnmp vhost list`
-* 数据库管理：`lnmp database {add|list|edit|del}`
-* FTP用户管理：`lnmp ftp {add|list|edit|del|show}`
-* SSL添加：`lnmp ssl add`
-* 通配符/泛域名SSL添加：`lnmp dnsssl {ali|cf|dp|he|gd|aws|namecheap|namesilo}` 需依赖域名dns api
+## Status Management
 
-## 相关图形界面
-* PHPMyAdmin：http://yourIP/phpmyadmin/
-* phpinfo：http://yourIP/phpinfo.php
-* PHP探针：http://yourIP/p.php
-* Xcache管理界面：http://yourIP/xcache/
-* Zend Opcache管理界面：http://yourIP/ocp.php
-* apcu管理界面：http://yourIP/apc.php
+* LNMP/LNMPA/LAMP status management: `lnmp {start|stop|reload|restart|kill|status}`
+* Nginx status management: `lnmp nginx` or `systemctl {start|stop|reload|restart} nginx`
+* MySQL status management: `lnmp mysql` or `systemctl {start|stop|restart|reload|force-reload|status} mysql`
+* MariaDB status management: `lnmp mariadb` or `systemctl {start|stop|restart|reload|force-reload|status} mariadb`
+* PHP-FPM status management: `lnmp php-fpm` or `systemctl {start|stop|quit|restart|reload|logrotate} php-fpm`
+* PureFTPd status management: `lnmp pureftpd` or `systemctl {start|stop|restart|kill|status} pureftp`
+* Apache status management: `lnmp httpd` or `systemctl {start|stop|restart|graceful|graceful-stop|configtest|status} httpd`
 
-## LNMP相关目录文件
+## Virtual Host Management
 
-### 目录位置
-* Nginx：/usr/local/nginx/
-* MySQL：/usr/local/mysql/
-* MariaDB：/usr/local/mariadb/
-* PHP：/usr/local/php/
-* 多PHP目录：/usr/local/php5.6/ 版本号随安装版本不同而不同
-* PHP扩展插件配置文件目录：/usr/local/php/conf.d/
-* PHPMyAdmin：/home/wwwroot/default/phpmyadmin/
-* 默认虚拟主机网站目录：/home/wwwroot/default/
-* Nginx日志目录：/home/wwwlogs/
+* Add: `lnmp vhost add`
+* Delete: `lnmp vhost del`
+* List: `lnmp vhost list`
+* Database management: `lnmp database {add|list|edit|del}`
+* FTP user management: `lnmp ftp {add|list|edit|del|show}`
+* Add SSL: `lnmp ssl add`
+* Add wildcard/multi-domain SSL: `lnmp dnsssl {ali|cf|dp|he|gd|aws|namecheap|namesilo}`. This requires a domain DNS API.
 
-### 配置文件：
-* Nginx主配置文件：/usr/local/nginx/conf/nginx.conf
-* MySQL/MariaDB配置文件：/etc/my.cnf
-* PHP配置文件：/usr/local/php/etc/php.ini
-* PHP-FPM配置文件：/usr/local/php/etc/php-fpm.conf
-* PureFtpd配置文件：/usr/local/pureftpd/etc/pure-ftpd.conf
-* Apache配置文件：/usr/local/apache/conf/httpd.conf
+## Related Web Interfaces
 
-### lnmp.conf 配置文件参数说明
+* phpMyAdmin: `http://yourIP/phpmyadmin/`
+* phpinfo: `http://yourIP/phpinfo.php`
+* PHP probe: `http://yourIP/p.php`
+* Xcache management: `http://yourIP/xcache/`
+* Zend Opcache management: `http://yourIP/ocp.php`
+* APCu management: `http://yourIP/apc.php`
 
-| 参数名称 | 参数介绍 | 例子 |
-| :-------: | :---------: | :--------: | 
-|Download_Mirror|下载镜像|一般默认，如异常可[修改下载镜像](https://lnmp.org/faq/download-url.html)|
-|Nginx_Modules_Options|添加Nginx模块或其他编译参数|--add-module=/第三方模块源码目录|
-|PHP_Modules_Options|添加PHP模块或编译参数|--enable-exif 有些模块需提前安装好依赖包|
-|MySQL_Data_Dir|MySQL数据库目录设置|默认/usr/local/mysql/var|
-|MariaDB_Data_Dir|MariaDB数据库目录设置|默认/usr/local/mariadb/var|
-|Default_Website_Dir|默认虚拟主机网站目录位置|默认/home/wwwroot/default|
-|Enable_Nginx_Openssl|Nginx是否使用新版openssl|默认 y，建议不修改，y是启用并开启到http2|
-|Enable_PHP_Fileinfo|是否安装开启php的fileinfo模块|默认n，根据自己情况而定，安装启用的话改成 y|
-|Enable_Nginx_Lua|是否为Nginx安装lua支持|默认n，安装lua可以使用一些基于lua的waf网站防火墙|
-|Enable_Ngx_FancyIndex|是否按fancyIndex模块|默认n，fancyIndex是一个第三方目录索引模块|
-|Enable_Swap|是否添加SWAP|默认y，当内存不足时可提高编译安装成功概率|
-|Enable_PHP_Exif|是否添加PHP exif模块|默认n，更改为y即安装|
-|Enable_PHP_Fileinfo|是否添加PHP fileinfo模块|默认n，更改为y即安装，需1GB以上内存|
-|Enable_PHP_Ldap|是否添加PHP ldap模块|默认n，更改为y即安装|
-|Enable_PHP_Bz2|是否添加PHP bz2模块|默认n，更改为y即安装|
-|Enable_PHP_Sodium|是否添加PHP sodium模块，PHP 7.2以下不支持lnmp.conf开启安装|默认n，更改为y即安装|
-|Enable_PHP_Imap|是否添加PHP imap模块|默认n，更改为y即安装|
+## LNMP Directories and Files
 
-## 技术支持
+### Directory Locations
+
+* Nginx: `/usr/local/nginx/`
+* MySQL: `/usr/local/mysql/`
+* MariaDB: `/usr/local/mariadb/`
+* PHP: `/usr/local/php/`
+* Multiple PHP directory: `/usr/local/php5.6/`. The version number changes depending on the installed version.
+* PHP extension plugin configuration directory: `/usr/local/php/conf.d/`
+* phpMyAdmin: `/home/wwwroot/default/phpmyadmin/`
+* Default virtual host website directory: `/home/wwwroot/default/`
+* Nginx log directory: `/home/wwwlogs/`
+
+### Configuration Files
+
+* Nginx main configuration file: `/usr/local/nginx/conf/nginx.conf`
+* MySQL/MariaDB configuration file: `/etc/my.cnf`
+* PHP configuration file: `/usr/local/php/etc/php.ini`
+* PHP-FPM configuration file: `/usr/local/php/etc/php-fpm.conf`
+* PureFTPd configuration file: `/usr/local/pureftpd/etc/pure-ftpd.conf`
+* Apache configuration file: `/usr/local/apache/conf/httpd.conf`
+
+### `lnmp.conf` Configuration Parameters
+
+| Parameter | Description | Example |
+| :-------: | :---------: | :--------: |
+| Download_Mirror | Download mirror | Usually keep the default. Change it if downloads are abnormal |
+| Nginx_Modules_Options | Add Nginx modules or other compile parameters | `--add-module=/path/to/third-party-module-source` |
+| PHP_Modules_Options | Add PHP modules or compile parameters | `--enable-exif`; some modules require dependencies to be installed first |
+| MySQL_Data_Dir | MySQL database directory | Default: `/usr/local/mysql/var` |
+| MariaDB_Data_Dir | MariaDB database directory | Default: `/usr/local/mariadb/var` |
+| Default_Website_Dir | Default virtual host website directory | Default: `/home/wwwroot/default` |
+| Enable_Nginx_Openssl | Whether Nginx uses a newer OpenSSL | Default: `y`; recommended not to change. `y` enables it and enables HTTP/2 support |
+| Enable_PHP_Fileinfo | Whether to install and enable the PHP fileinfo module | Default: `n`; set to `y` if needed |
+| Enable_Nginx_Lua | Whether to install Lua support for Nginx | Default: `n`; Lua support can be used by some Lua-based WAF website firewalls |
+| Enable_Ngx_FancyIndex | Whether to install the fancyIndex module | Default: `n`; fancyIndex is a third-party directory index module |
+| Enable_Swap | Whether to add swap | Default: `y`; improves compile/install success rate when memory is low |
+| Enable_PHP_Exif | Whether to add the PHP exif module | Default: `n`; set to `y` to install |
+| Enable_PHP_Fileinfo | Whether to add the PHP fileinfo module | Default: `n`; set to `y` to install, requires more than 1 GB RAM |
+| Enable_PHP_Ldap | Whether to add the PHP ldap module | Default: `n`; set to `y` to install |
+| Enable_PHP_Bz2 | Whether to add the PHP bz2 module | Default: `n`; set to `y` to install |
+| Enable_PHP_Sodium | Whether to add the PHP sodium module. PHP versions below 7.2 do not support enabling it through `lnmp.conf` | Default: `n`; set to `y` to install |
+| Enable_PHP_Imap | Whether to add the PHP imap module | Default: `n`; set to `y` to install |
+
+## Technical Support

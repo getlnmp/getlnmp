@@ -1,40 +1,5 @@
 #!/usr/bin/env bash
 
-Add_Iptables_Rules()
-{
-    #add iptables firewall rules
-    if command -v iptables >/dev/null 2>&1; then
-        iptables -I INPUT 1 -i lo -j ACCEPT
-        iptables -I INPUT 2 -m state --state ESTABLISHED,RELATED -j ACCEPT
-        iptables -I INPUT 3 -p tcp --dport 22 -j ACCEPT
-        iptables -I INPUT 4 -p tcp --dport 80 -j ACCEPT
-        iptables -I INPUT 5 -p tcp --dport 443 -j ACCEPT
-        iptables -I INPUT 6 -p tcp --dport 3306 -j DROP
-        iptables -I INPUT 7 -p icmp -m icmp --icmp-type 8 -j ACCEPT
-        if [ "$PM" = "yum" ]; then
-            yum -y install iptables-services
-            service iptables save
-            service iptables reload
-            if command -v firewalld >/dev/null 2>&1; then
-                systemctl stop firewalld
-                systemctl disable firewalld
-            fi
-            StartUp iptables
-        elif [ "$PM" = "apt" ]; then
-            apt-get --no-install-recommends install -y iptables-persistent
-            if [ -s /etc/init.d/netfilter-persistent ]; then
-                /etc/init.d/netfilter-persistent save
-                /etc/init.d/netfilter-persistent reload
-                StartUp netfilter-persistent
-            else
-                /etc/init.d/iptables-persistent save
-                /etc/init.d/iptables-persistent reload
-                StartUp iptables-persistent
-            fi
-        fi
-    fi
-}
-
 Add_Firewall_Rules() {
     Get_Managemanet_IP
     if [ "${PM}" = "apt" ]; then

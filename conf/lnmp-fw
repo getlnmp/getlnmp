@@ -1,0 +1,572 @@
+#!/usr/bin/env bash
+
+# Universal firewall port manager
+# RHEL/Rocky/Alma/CentOS/Fedora: firewalld/firewall-cmd
+# Debian/Ubuntu: ufw
+# Firewall backend support here is independent from the main LNMP installer OS allowlist.
+
+set -euo pipefail
+
+ACTION="${1:-}"
+PORT="${2:-}"
+PROTO="${3:-tcp}"
+FORCE="${4:-}"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+Echo_Red()    { echo -e "${RED}$*${NC}"; }
+Echo_Green()  { echo -e "${GREEN}$*${NC}"; }
+Echo_Yellow() { echo -e "${YELLOW}$*${NC}"; }
+Echo_Blue()   { echo -e "${BLUE}$*${NC}"; }
+
+usage() {
+    cat <<EOF
+Usage:
+  $0 allow <port> [tcp|udp|all]
+  $0 deny <port> [tcp|udp|all]
+  $0 delete-allow <port> [tcp|udp|all]
+  $0 delete-deny <port> [tcp|udp|all]
+  $0 deny <ssh-port> tcp --force
+  $0 delete-allow <ssh-port> tcp --force
+  $0 status
+  $0 reload
+
+Examples:
+  $0 allow 80 tcp
+  $0 allow 443 tcp
+  $0 allow 53 udp
+  $0 allow 53 all
+  $0 deny 3306 tcp
+  $0 delete-allow 8080 tcp
+  $0 status
+
+Notes:
+  - On RHEL family, this script uses firewall-cmd.
+  - On Debian/Ubuntu, this script uses ufw.
+  - This firewall helper supports some distros independently from LNMP installer support.
+  - "deny" removes any existing allow rule first, then adds an explicit deny/drop rule.
+  - Denying SSH or deleting an SSH allow rule requires interactive confirmation or --force.
+EOF
+}
+
+need_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        Echo_Red "Error: please run as root."
+        exit 1
+    fi
+}
+
+detect_backend() {
+    if [ ! -f /etc/os-release ]; then
+        Echo_Red "Error: /etc/os-release not found. Cannot detect OS."
+        exit 1
+    fi
+
+    # shellcheck disable=SC1091
+    . /etc/os-release
+
+    local id="${ID:-}"
+    local id_like="${ID_LIKE:-}"
+
+    case "${id} ${id_like}" in
+        *rhel*|*fedora*|*centos*|*rocky*|*almalinux*)
+            echo "firewalld"
+            ;;
+        *debian*|*ubuntu*)
+            echo "ufw"
+            ;;
+        *)
+            Echo_Red "Unsupported OS: ID=${id}, ID_LIKE=${id_like}"
+            exit 1
+            ;;
+    esac
+}
+
+check_port() {
+    local port="$1"
+
+    if ! echo "$port" | grep -Eq '^[0-9]+$'; then
+        Echo_Red "Error: invalid port: $port"
+        exit 1
+    fi
+
+    if [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+        Echo_Red "Error: port must be between 1 and 65535."
+        exit 1
+    fi
+}
+
+check_proto() {
+    local proto="$1"
+
+    case "$proto" in
+        tcp|udp|all)
+            ;;
+        *)
+            Echo_Red "Error: protocol must be tcp, udp, or all."
+            exit 1
+            ;;
+    esac
+}
+
+ssh_ports() {
+    local config
+
+    {
+        printf "%s\n" "22"
+
+        if [[ -n "${SSH_CONNECTION:-}" ]]; then
+            printf "%s\n" "$SSH_CONNECTION" | awk '{print $4}'
+        fi
+
+        for config in /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf; do
+            [[ -r "$config" ]] || continue
+            awk '
+                /^[[:space:]]*#/ { next }
+                /^[[:space:]]*Port[[:space:]]+[0-9]+/ { print $2 }
+            ' "$config"
+        done
+    } | awk '/^[0-9]+$/ && $1 >= 1 && $1 <= 65535 && !seen[$1]++'
+}
+
+is_ssh_port() {
+    local port="$1"
+    local ssh_port
+
+    while read -r ssh_port; do
+        if [[ "$port" == "$ssh_port" ]]; then
+            return 0
+        fi
+    done < <(ssh_ports)
+
+    return 1
+}
+
+confirm_ssh_risk() {
+    local action="$1"
+    local port="$2"
+    local proto="$3"
+    local answer
+
+    case "$action" in
+        deny|delete-allow)
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+
+    if [[ "$proto" != "tcp" && "$proto" != "all" ]]; then
+        return 0
+    fi
+
+    if ! is_ssh_port "$port"; then
+        return 0
+    fi
+
+    if [[ "$FORCE" == "--force" || "${LNMP_FW_FORCE:-0}" == "1" ]]; then
+        return 0
+    fi
+
+    Echo_Yellow "Warning: this may block SSH access on port ${port}/${proto}."
+    Echo_Yellow "Current SSH ports are detected from SSH_CONNECTION and sshd_config."
+
+    if [[ ! -t 0 ]]; then
+        Echo_Red "Error: refusing SSH-sensitive firewall change without --force."
+        exit 1
+    fi
+
+    read -r -p "Type YES to continue: " answer
+    if [[ "$answer" != "YES" ]]; then
+        Echo_Red "Aborted."
+        exit 1
+    fi
+}
+
+proto_list() {
+    local proto="$1"
+
+    if [ "$proto" = "all" ]; then
+        echo "tcp udp"
+    else
+        echo "$proto"
+    fi
+}
+
+firewalld_remove_deny_rules() {
+    local port="$1"
+    local proto="$2"
+    local family
+    local target
+
+    for family in ipv4 ipv6; do
+        for target in drop reject; do
+            firewalld_remove_rich_rule_if_present "rule family='${family}' port port='${port}' protocol='${proto}' ${target}"
+        done
+    done
+}
+
+firewalld_remove_port_if_present() {
+    local port_proto="$1"
+    local output
+
+    if output=$(firewall-cmd --permanent --remove-port="$port_proto" 2>&1); then
+        return 0
+    fi
+
+    if [[ "$output" == *"NOT_ENABLED"* || "$output" == *"not enabled"* ]]; then
+        return 0
+    fi
+
+    Echo_Red "Error: failed to delete firewalld allow rule for $port_proto."
+    [[ -n "$output" ]] && Echo_Red "$output"
+    return 1
+}
+
+firewalld_remove_rich_rule_if_present() {
+    local rule="$1"
+    local output
+
+    if output=$(firewall-cmd --permanent --remove-rich-rule="$rule" 2>&1); then
+        return 0
+    fi
+
+    if [[ "$output" == *"NOT_ENABLED"* || "$output" == *"not enabled"* ]]; then
+        return 0
+    fi
+
+    Echo_Red "Error: failed to delete firewalld rich rule: $rule"
+    [[ -n "$output" ]] && Echo_Red "$output"
+    return 1
+}
+
+firewalld_add_drop_rules() {
+    local port="$1"
+    local proto="$2"
+    local family
+    local rule
+    local added_rules=()
+
+    for family in ipv4 ipv6; do
+        rule="rule family='${family}' port port='${port}' protocol='${proto}' drop"
+        if firewall-cmd --permanent --add-rich-rule="$rule" >/dev/null; then
+            added_rules+=("$rule")
+        else
+            for rule in "${added_rules[@]}"; do
+                firewall-cmd --permanent --remove-rich-rule="$rule" >/dev/null 2>&1 || true
+            done
+            return 1
+        fi
+    done
+}
+
+check_firewalld() {
+    if ! command -v firewall-cmd >/dev/null 2>&1; then
+        Echo_Red "Error: firewall-cmd not found. Please install firewalld first."
+        exit 1
+    fi
+
+    if ! firewall-cmd --state >/dev/null 2>&1; then
+        Echo_Yellow "Warning: firewalld is not running."
+        Echo_Yellow "Try: systemctl enable --now firewalld"
+        exit 1
+    fi
+}
+
+check_ufw() {
+    local require_active="${1:-0}"
+
+    if ! command -v ufw >/dev/null 2>&1; then
+        Echo_Red "Error: ufw not found. Please install ufw first."
+        Echo_Yellow "Debian/Ubuntu:"
+        Echo_Yellow "  apt update && apt install -y ufw"
+        exit 1
+    fi
+
+    if ! ufw status | grep -qi "Status: active"; then
+        if [ "$require_active" -eq 1 ]; then
+            Echo_Red "Error: ufw is installed but not active."
+            Echo_Yellow "Firewall rule changes will not take effect until ufw is enabled."
+            Echo_Yellow "Before enabling ufw on SSH servers, make sure SSH is allowed:"
+            Echo_Yellow "  ufw allow 22/tcp"
+            Echo_Yellow "  ufw enable"
+            exit 1
+        fi
+
+        Echo_Yellow "Warning: ufw is installed but not active."
+        Echo_Yellow "Before enabling ufw on SSH servers, make sure SSH is allowed:"
+        Echo_Yellow "  ufw allow 22/tcp"
+        Echo_Yellow "  ufw enable"
+    fi
+}
+
+firewalld_allow() {
+    local port="$1"
+    local proto="$2"
+
+    for p in $(proto_list "$proto"); do
+        firewall-cmd --permanent --add-port="${port}/${p}" >/dev/null
+
+        # Remove possible previous deny rich rules.
+        firewalld_remove_deny_rules "$port" "$p"
+    done
+
+    firewall-cmd --reload >/dev/null
+    for p in $(proto_list "$proto"); do
+        Echo_Green "Allowed ${port}/${p} with firewalld."
+    done
+}
+
+firewalld_deny() {
+    local port="$1"
+    local proto="$2"
+
+    for p in $(proto_list "$proto"); do
+        # Add explicit drop rule for IPv4 and IPv6.
+        firewalld_add_drop_rules "$port" "$p"
+
+        # Remove allow after the full deny rule set has been staged.
+        firewalld_remove_port_if_present "${port}/${p}"
+    done
+
+    firewall-cmd --reload >/dev/null
+    for p in $(proto_list "$proto"); do
+        Echo_Green "Denied ${port}/${p} with firewalld."
+    done
+}
+
+firewalld_delete_allow() {
+    local port="$1"
+    local proto="$2"
+
+    for p in $(proto_list "$proto"); do
+        firewalld_remove_port_if_present "${port}/${p}"
+    done
+
+    firewall-cmd --reload >/dev/null
+    for p in $(proto_list "$proto"); do
+        Echo_Green "Deleted or confirmed absent allow rule for ${port}/${p} from firewalld."
+    done
+}
+
+firewalld_delete_deny() {
+    local port="$1"
+    local proto="$2"
+
+    for p in $(proto_list "$proto"); do
+        firewalld_remove_deny_rules "$port" "$p"
+    done
+
+    firewall-cmd --reload >/dev/null
+    for p in $(proto_list "$proto"); do
+        Echo_Green "Deleted or confirmed absent deny rule for ${port}/${p} from firewalld."
+    done
+}
+
+ufw_allow() {
+    local port="$1"
+    local proto="$2"
+
+    for p in $(proto_list "$proto"); do
+        ufw allow "${port}/${p}" >/dev/null
+        Echo_Green "Allowed ${port}/${p} with ufw."
+    done
+}
+
+ufw_deny() {
+    local port="$1"
+    local proto="$2"
+
+    for p in $(proto_list "$proto"); do
+        # Remove possible allow rule first.
+        ufw_delete_rule_if_present allow "${port}/${p}"
+
+        ufw deny "${port}/${p}" >/dev/null
+        Echo_Green "Denied ${port}/${p} with ufw."
+    done
+}
+
+ufw_delete_rule_if_present() {
+    local action="$1"
+    local port_proto="$2"
+    local output
+
+    if output=$(ufw delete "$action" "$port_proto" 2>&1); then
+        return 0
+    fi
+
+    if [[ "$output" == *"Could not delete non-existent rule"* ]]; then
+        return 0
+    fi
+
+    Echo_Red "Error: failed to delete ufw $action rule for $port_proto."
+    [[ -n "$output" ]] && Echo_Red "$output"
+    return 1
+}
+
+ufw_delete_allow() {
+    local port="$1"
+    local proto="$2"
+
+    for p in $(proto_list "$proto"); do
+        ufw_delete_rule_if_present allow "${port}/${p}"
+        Echo_Green "Deleted or confirmed absent allow rule for ${port}/${p} from ufw."
+    done
+}
+
+ufw_delete_deny() {
+    local port="$1"
+    local proto="$2"
+
+    for p in $(proto_list "$proto"); do
+        ufw_delete_rule_if_present deny "${port}/${p}"
+        Echo_Green "Deleted or confirmed absent deny rule for ${port}/${p} from ufw."
+    done
+}
+
+show_firewalld_active_zone_rules() {
+    local active_zones
+    local zone
+
+    active_zones=$(firewall-cmd --get-active-zones)
+    if [[ -z "$active_zones" ]]; then
+        Echo_Yellow "No active firewalld zones reported."
+        return 0
+    fi
+
+    printf "%s\n" "$active_zones" | awk 'NF == 1 { print $1 }' | while read -r zone; do
+        [[ -n "$zone" ]] || continue
+        echo
+        Echo_Blue "Rules for active zone: $zone"
+        firewall-cmd --zone="$zone" --list-all || true
+    done
+}
+
+show_status() {
+    local backend="$1"
+
+    case "$backend" in
+        firewalld)
+            check_firewalld
+            Echo_Blue "firewalld state:"
+            firewall-cmd --state || true
+            echo
+            Echo_Blue "Default zone:"
+            firewall-cmd --get-default-zone || true
+            echo
+            Echo_Blue "Active zones:"
+            firewall-cmd --get-active-zones || true
+            echo
+            Echo_Blue "Default zone rules:"
+            firewall-cmd --list-all || true
+            show_firewalld_active_zone_rules
+            ;;
+        ufw)
+            check_ufw
+            Echo_Blue "ufw status:"
+            ufw status verbose || true
+            ;;
+    esac
+}
+
+reload_firewall() {
+    local backend="$1"
+
+    case "$backend" in
+        firewalld)
+            check_firewalld
+            firewall-cmd --reload >/dev/null
+            Echo_Green "firewalld reloaded."
+            ;;
+        ufw)
+            check_ufw
+            ufw reload >/dev/null
+            Echo_Green "ufw reloaded."
+            ;;
+    esac
+}
+
+main() {
+    if [ -z "$ACTION" ]; then
+        usage
+        exit 1
+    fi
+
+    need_root
+
+    local backend
+    backend="$(detect_backend)"
+
+    case "$ACTION" in
+        status)
+            show_status "$backend"
+            exit 0
+            ;;
+        reload)
+            reload_firewall "$backend"
+            exit 0
+            ;;
+    esac
+
+    if [ -z "$PORT" ]; then
+        usage
+        exit 1
+    fi
+
+    check_port "$PORT"
+    check_proto "$PROTO"
+    confirm_ssh_risk "$ACTION" "$PORT" "$PROTO"
+
+    case "$backend" in
+        firewalld)
+            check_firewalld
+
+            case "$ACTION" in
+                allow)
+                    firewalld_allow "$PORT" "$PROTO"
+                    ;;
+                deny)
+                    firewalld_deny "$PORT" "$PROTO"
+                    ;;
+                delete-allow)
+                    firewalld_delete_allow "$PORT" "$PROTO"
+                    ;;
+                delete-deny)
+                    firewalld_delete_deny "$PORT" "$PROTO"
+                    ;;
+                *)
+                    usage
+                    exit 1
+                    ;;
+            esac
+            ;;
+        ufw)
+            check_ufw 1
+
+            case "$ACTION" in
+                allow)
+                    ufw_allow "$PORT" "$PROTO"
+                    ;;
+                deny)
+                    ufw_deny "$PORT" "$PROTO"
+                    ;;
+                delete-allow)
+                    ufw_delete_allow "$PORT" "$PROTO"
+                    ;;
+                delete-deny)
+                    ufw_delete_deny "$PORT" "$PROTO"
+                    ;;
+                *)
+                    usage
+                    exit 1
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+main "$@"

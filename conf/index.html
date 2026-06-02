@@ -1,45 +1,291 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-<title>LNMP一键安装包 by Licess</title>
-<meta charset="utf-8">
-<meta name="author" content="Licess">
-<meta name="keywords" content="lnmp,lnmp一键安装包,一键安装包">
-<meta name="description" content="您已成功安装LNMP一键安装包！">
-<style type="text/css">
-<!--
-body {
-color:#333333;
-font-family:"Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Heiti SC", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
-}
-.links {color: #009900}
-#main {
-    margin-top: 50px;
-    margin-right: auto;
-    margin-left: auto;
-    width: 80%;
-}
--->
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GetLNMP Welcome</title>
+  <meta name="author" content="GetLNMP">
+  <meta name="keywords" content="GetLNMP,LNMP,LNMPA,LAMP,Nginx,MySQL,MariaDB,PHP">
+  <meta name="description" content="GetLNMP environment is ready.">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --text: #18212f;
+      --muted: #657084;
+      --line: #dfe4ec;
+      --brand: #126b5d;
+      --brand-dark: #0c4f45;
+      --accent: #b7791f;
+      --shadow: 0 18px 45px rgba(24, 33, 47, 0.10);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, rgba(18, 107, 93, 0.08), rgba(246, 247, 249, 0) 340px),
+        var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    a {
+      color: var(--brand);
+      text-decoration: none;
+    }
+
+    a:hover {
+      color: var(--brand-dark);
+      text-decoration: underline;
+    }
+
+    .page {
+      width: min(1040px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 28px;
+      align-items: center;
+      padding: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 26px;
+      color: var(--brand-dark);
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .mark-icon {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 760px;
+      font-size: clamp(32px, 5vw, 58px);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 760px;
+      margin: 22px 0 0;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 30px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 18px;
+      border: 1px solid var(--brand);
+      border-radius: 6px;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .button:hover {
+      background: var(--brand-dark);
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .button.secondary {
+      background: #fff;
+      color: var(--brand-dark);
+    }
+
+    .button.secondary:hover {
+      background: #eef6f4;
+      color: var(--brand-dark);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 22px;
+    }
+
+    .card {
+      min-height: 150px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      line-height: 1.3;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .quick-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .quick-links a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .quick-links a:hover {
+      border-color: var(--brand);
+      color: var(--brand-dark);
+      text-decoration: none;
+    }
+
+    .notice {
+      margin-top: 22px;
+      padding: 16px 18px;
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+      background: #fffaf0;
+      color: #5f4518;
+      font-size: 14px;
+    }
+
+    .footer {
+      margin-top: 26px;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        width: min(100% - 24px, 1040px);
+        padding: 24px 0;
+      }
+
+      .hero {
+        padding: 28px 22px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .button {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
-<div id="main">
-<div align="center"><b>恭喜您，LNMP一键安装包安装成功！</b></div>
-<div align="center"><img src="lnmp.gif" alt="LNMP一键安装包"></div>
-<br><h2 style="word-break:break-all;"><a href="https://lnmp.org" target="_blank">LNMP一键安装包</a>是一个用Linux Shell编写的可以为CentOS/RHEL/Fedora/Aliyun/Amazon Linux、Debian/Ubuntu/Raspbian/Deepin/Mint Linux VPS或独立主机安装LNMP(Nginx/MySQL/PHP)、LNMPA(Nginx/MySQL/PHP/Apache)、LAMP(Apache/MySQL/PHP)生产环境的Shell程序。</h2>
-<h3>支持自定义Nginx、PHP编译参数及网站和数据库目录、支持生成Let’s Ecrypt免费证书及自备证书、支持HTTP2、TLS 1.3等新特性、LNMP模式支持多PHP版本、支持单独安装Nginx/MySQL/MariaDB/Pureftpd服务器、支持无人值守安装，同时提供一些实用的辅助工具如：虚拟主机管理、FTP用户管理、Nginx/MySQL/MariaDB/PHP/PHPMyAdmin的升级、常用缓存组件Redis/Xcache等的安装、重置MySQL root密码、502自动重启、日志切割、SSH防护DenyHosts/Fail2Ban、备份等许多实用脚本。</h3>
+  <main class="page">
+    <section class="hero" aria-labelledby="welcome-title">
+      <div>
+        <div class="mark">
+          <span class="mark-icon">G</span>
+          <span>GetLNMP</span>
+        </div>
+        <h1 id="welcome-title">Welcome, your web stack is ready.</h1>
+        <p class="lead">
+          GetLNMP has prepared this server for LNMP, LNMPA, or LAMP workloads.
+          Replace this page with your own site files when you are ready to publish.
+        </p>
+        <div class="actions" aria-label="Common local tools">
+          <a class="button" href="/phpinfo.php">phpinfo</a>
+          <a class="button secondary" href="/p.php">PHP probe</a>
+          <a class="button secondary" href="/phpmyadmin/">phpMyAdmin</a>
+        </div>
+      </div>
+    </section>
 
-<p>查看本地环境: <a href="/p.php" target="_blank" class="links">探针</a>&nbsp;&nbsp;<a href="/phpinfo.php" target="_blank" class="links">phpinfo</a>&nbsp;&nbsp;<a href="/phpmyadmin/" target="_blank" class="links">phpMyAdmin</a>(为了安全，建议将phpmyadmin目录重命名为不容易猜到的目录！)</p>
+    <section class="grid" aria-label="Server information">
+      <article class="card">
+        <h2>Web Service</h2>
+        <p>Nginx or Apache is serving the default GetLNMP site from the configured web root.</p>
+      </article>
+      <article class="card">
+        <h2>PHP Runtime</h2>
+        <p>Use the local diagnostic pages to confirm PHP modules, limits, and loaded configuration.</p>
+      </article>
+      <article class="card">
+        <h2>Next Steps</h2>
+        <p>Upload your application, configure virtual hosts, add SSL, and remove public diagnostic files.</p>
+      </article>
+    </section>
 
-<p>更多LNMP一键安装包信息请访问: <a href="https://lnmp.org" target="_blank">https://lnmp.org</a></p>
-<p>LNMP一键安装包常见问题: <a href="https://lnmp.org/faq.html" target="_blank">https://lnmp.org/faq.html</a></p>
-<p>LNMP一键安装包问题反馈&使用交流: <a href="https://bbs.vpser.net/forum-25-1.html" target="_blank">https://bbs.vpser.net/forum-25-1.html</a></p>
-<p>VPS相关教程: <a href="https://www.vpser.net/vps-howto" target="_blank">https://www.vpser.net/vps-howto</a></p>
-<p>美国VPS推荐: <a href="https://www.vpser.net/ten-dollars-vps" target="_blank">https://www.vpser.net/ten-dollars-vps</a></p>
+    <section class="card" aria-labelledby="resources-title" style="margin-top: 16px;">
+      <h2 id="resources-title">Resources</h2>
+      <p>Project documentation and community links are available from the official sites.</p>
+      <div class="quick-links">
+        <a href="https://getlnmp.com" target="_blank" rel="noopener">Official</a>
+        <a href="https://getlnmp.com/faq" target="_blank" rel="noopener">FAQ</a>
+        <a href="https://github.com/getlnmp/getlnmp" target="_blank" rel="noopener">Github</a>
+      </div>
+    </section>
 
-<div align="center"><b>声明：出现该页面只说明您当前访问的域名/网站使用了LNMP一键安装包搭建的环境，当前域名/网站与LNMP一键安装包、VPS侦探和licess不存在任何关系！</b></div>
+    <div class="notice">
+      This page only indicates that the current domain is hosted on a GetLNMP-managed environment.
+      It does not imply any relationship between this domain and the GetLNMP project.
+    </div>
 
-<div align="center"><h3><a href="https://lnmp.org" target="_blank">LNMP一键安装包</a> by <a href="http://blog.licess.com" target="_blank">Licess</a> & <a href="https://www.vpser.net" target="_blank">VPS侦探</a></h3></div>
-</div>
+    <footer class="footer">
+      Powered by GetLNMP
+    </footer>
+  </main>
 </body>
 </html>
