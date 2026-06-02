@@ -1,6 +1,10 @@
 .agents/
 .codex/
+.claude/
+
 AI/
+Claude/
+
 
 AGENTS.md
 PROJECT_OVERVIEW.md

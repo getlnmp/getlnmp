@@ -385,13 +385,19 @@ PHP_with_Intl() {
     php_with_custom_icu='n'
     #PHP_Install_ICU
 
+# ICU >= 68 introduces TRUE and FALSE macros in some of its headers, which causes compilation failure for PHP 8.1 and older that does not define these macros in its internal C++ code.
+# Official fix was introduced in PHP 7.4.13, PHP 7.3.25, and the final release of PHP 8.0.0. For older PHP versions, we need to set compiler flags to define these macros to avoid compilation failure. 
+# Usually need workaround:
+# PHP 7.2.x or older + ICU >= 68
+# PHP 7.3.0 - 7.3.24 + ICU >= 68
+# PHP 7.4.0 - 7.4.12 + ICU >= 68
     if [ "${local_icu_version}" -gt 68 ]; then
-        if ! echo "${php_version}" | grep -Eqi '^8\.[2-5]\.' && ! echo "${Php_Ver}" | grep -Eqi '^php-8\.[2-5]\.'; then
-            echo "Compiler flags need to be set"
+        if echo "${php_version}" | grep -Eqi '^7\.2\.' && ! echo "${Php_Ver}" | grep -Eqi '^php-7\.2\.'; then
+            echo "GCC Compiler flags need to be set for ICU 68+ with PHP 7.2 or older"
             export CXX="g++ -DTRUE=1 -DFALSE=0"
             export CC="gcc -DTRUE=1 -DFALSE=0"
         else
-            echo "Compiler flags does not to be set"
+            echo "GCC Compiler flags does not to be set for ICU 68+ with PHP 7.3 or newer"
         fi
     fi
 }
