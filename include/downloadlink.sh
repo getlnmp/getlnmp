@@ -10,8 +10,13 @@ if [ "${Use_Official}" = "y" ]; then
     Imagick_DL="https://pecl.php.net/get/${Imagick_Ver}.tgz"
     Imagickold_DL="https://pecl.php.net/get/imagick-3.1.2.tgz"
     ZendOpcache_DL="https://pecl.php.net/get/${ZendOpcache_Ver}.tgz"
-    libc_client_2007f_24_el9_DL="https://rpmfind.net/linux/remi/enterprise/9/remi/${ARCH}/libc-client-2007f-30.el9.remi.${ARCH}.rpm"
-    uw_imap_devel_2007f_24_el9_DL="https://rpmfind.net/linux/remi/enterprise/9/remi/${ARCH}/uw-imap-devel-2007f-30.el9.remi.${ARCH}.rpm"
+
+    libc_client_2007f_el9_DL="https://rpmfind.net/linux/remi/enterprise/9/remi/${ARCH}/libc-client-2007f-30.el9.remi.${ARCH}.rpm"
+    uw_imap_devel_2007f_el9_DL="https://rpmfind.net/linux/remi/enterprise/9/remi/${ARCH}/uw-imap-devel-2007f-30.el9.remi.${ARCH}.rpm"
+    libc_client_2007f_el10_DL="https://rpmfind.net/linux/remi/enterprise/10/remi/${ARCH}/libc-client-2007f-32.el10.remi.${ARCH}.rpm"
+    uw_imap_devel_2007f_el10_DL="https://rpmfind.net/linux/remi/enterprise/10/remi/${ARCH}/uw-imap-devel-2007f-32.el10.remi.${ARCH}.rpm"
+
+
     PHPSodium_DL="https://pecl.php.net/get/${PHPSodium_Ver}.tgz"
     PHPSodiumOld_DL="https://pecl.php.net/get/libsodium-1.0.7.tgz"
     PHPSwoole_DL="https://pecl.php.net/get/${PHPSwoole_Ver}.tgz"
@@ -69,6 +74,7 @@ if [ "${Use_Official}" = "y" ]; then
     Libzip_DL="https://libzip.org/download/${Libzip_Ver}.tar.xz"
     Libxml2_DL="https://download.gnome.org/sources/libxml2/2.9/${Libxml2_Ver}.tar.xz"
     Pureftpd_DL="https://download.pureftpd.org/pub/pure-ftpd/releases/${Pureftpd_Ver}.tar.bz2"
+    Redis_DL="https://download.redis.io/releases/${Redis_Stable_Ver}.tar.gz"
 
 else
     Acmesh_DL="${Download_Mirror}/lib/acme.sh/${Acmesh_Ver}.tar.gz";
@@ -80,8 +86,12 @@ else
     Imagick_DL="${Download_Mirror}/web/imagick/${Imagick_Ver}.tgz"
     Imagickold_DL="${Download_Mirror}/web/imagick/imagick-3.1.2.tgz"
     ZendOpcache_DL="${Download_Mirror}/web/opcache/${ZendOpcache_Ver}.tgz"
-    libc_client_2007f_24_el9_DL="${Download_Mirror}/lib/uw-imap/libc-client-2007f-24.el9.remi.${ARCH}.rpm"
-    uw_imap_devel_2007f_24_el9_DL="${Download_Mirror}/lib/uw-imap/uw-imap-devel-2007f-24.el9.remi.${ARCH}.rpm"
+
+    libc_client_2007f_el9_DL="${Download_Mirror}/lib/uw-imap/libc-client-2007f-30.el9.remi.${ARCH}.rpm"
+    uw_imap_devel_2007f_el9_DL="${Download_Mirror}/lib/uw-imap/uw-imap-devel-2007f-30.el9.remi.${ARCH}.rpm"
+    libc_client_2007f_el10_DL="${Download_Mirror}/lib/uw-imap/libc-client-2007f-32.el10.remi.${ARCH}.rpm"
+    uw_imap_devel_2007f_el10_DL="${Download_Mirror}/lib/uw-imap/uw-imap-devel-2007f-32.el10.remi.${ARCH}.rpm"
+
     PHPSodium_DL="${Download_Mirror}/web/sodium/${PHPSodium_Ver}.tgz"
     PHPSodiumOld_DL="${Download_Mirror}/web/sodium/libsodium-1.0.7.tgz"
     PHPSwoole_DL="${Download_Mirror}/web/swoole/${PHPSwoole_Ver}.tgz"
@@ -136,4 +146,5 @@ else
     Libzip_DL="${Download_Mirror}/lib/libzip/${Libzip_Ver}.tar.xz"
     Libxml2_DL="${Download_Mirror}/lib/libxml2/${Libxml2_Ver}.tar.xz"
     Pureftpd_DL="${Download_Mirror}/ftp/pure-ftpd/${Pureftpd_Ver}.tar.bz2"
+    Redis_DL="${Download_Mirror}/db/redis/${Redis_Stable_Ver}.tar.gz"
 fi

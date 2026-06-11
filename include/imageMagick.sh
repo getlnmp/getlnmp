@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-Install_ImageMagic()
+Install_ImageMagick()
 {
-    echo "====== Installing ImageMagic ======"
+    echo "====== Installing ImageMagick ======"
     Press_Start
 
     rm -f ${PHP_Path}/conf.d/008-imagick.ini
@@ -12,13 +12,17 @@ Install_ImageMagic()
         rm -f "${zend_ext}"
     fi
 
+    Get_Dist_Name
+    Get_Dist_Version
+
     if [ "$PM" = "yum" ]; then
-        if [ "${DISTRO}" = "Oracle" ]; then
-            yum -y install oracle-epel-release
-        else
-            yum -y install epel-release
+        if ! rpm -q epel-release oracle-epel-release >/dev/null 2>&1; then
+            if [ "${DISTRO}" = "Oracle" ]; then
+                yum -y install oracle-epel-release
+            else
+                yum -y install epel-release
+            fi
         fi
-        Get_Dist_Version
   #      Get_Country
   #     if [ "${country}" = "CN" ]; then
   #          sed -e 's!^metalink=!#metalink=!g' \
@@ -27,11 +31,11 @@ Install_ImageMagic()
   #              -e 's!//download\.example/pub!//mirrors.ustc.edu.cn!g' \
   #              -i /etc/yum.repos.d/epel*.repo
   #      fi
-        yum install -y libwebp-devel
+        yum install -y libwebp-devel libjpeg-turbo-devel libpng-devel libtiff-devel freetype-devel lcms2-devel libxml2-devel
     elif [ "$PM" = "apt" ]; then
         export DEBIAN_FRONTEND=noninteractive
         apt-get update
-        apt-get install -y libwebp-dev
+        apt-get install -y libwebp-dev libjpeg-dev libpng-dev libtiff-dev libfreetype6-dev liblcms2-dev libxml2-dev
     fi
     ldconfig
 
@@ -47,7 +51,9 @@ Install_ImageMagic()
             Tar_Cd ${ImageMagick_Ver}.tar.xz ${ImageMagick_Ver}
         #fi
 
-        ./configure --prefix=/usr/local/imagemagick || {
+        ./configure --prefix=/usr/local/imagemagick \
+            --with-webp=yes --with-png=yes --with-jpeg=yes --with-tiff=yes \
+            --with-freetype=yes --with-lcms=yes --with-xml=yes || {
             Echo_Red "ImageMagick configure failed!"
             exit 1
         }
@@ -72,20 +78,21 @@ Install_ImageMagic()
         exit 1
     }
     Make_Install_Exit "imagick"
-    cd ../
+    ldconfig
+    cd ${cur_dir}/src
 
     cat >${PHP_Path}/conf.d/008-imagick.ini<<EOF
 extension = "imagick.so"
 EOF
 
     if [ -s "${zend_ext}" ] && [ -s /usr/local/imagemagick/bin/convert ]; then
-        Restart_PHP
         Echo_Green "====== ImageMagick install completed ======"
         Echo_Green "ImageMagick installed successfully, enjoy it!"
     else
         rm -f ${PHP_Path}/conf.d/008-imagick.ini
         Echo_Red "imagick install failed!"
     fi
+    Restart_PHP
 }
 
 Uninstall_ImageMagick()
@@ -93,6 +100,8 @@ Uninstall_ImageMagick()
     echo "You will uninstall ImageMagick..."
     Press_Start
     rm -f ${PHP_Path}/conf.d/008-imagick.ini
+    Addons_Get_PHP_Ext_Dir
+    rm -f "${zend_ext_dir}imagick.so"
     echo "Delete ImageMagick directory..."
     rm -rf /usr/local/imagemagick
     Restart_PHP

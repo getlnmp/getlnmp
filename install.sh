@@ -7,16 +7,25 @@ if [ $(id -u) != "0" ]; then
     exit 1
 fi
 
-cur_dir=$(pwd)
-Stack=$1
-if [ "${Stack}" = "" ]; then
-    Stack="lnmp"
-else
-    Stack=$1
-fi
+# get current dir
+cur_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${cur_dir}" || exit 1
+
+# dispatch stack
+case "${1:-lnmp}" in
+    lnmp|lnmpa|lamp|nginx|db|mphp) 
+        Stack="${1:-lnmp}"
+        ;;
+    *) 
+        Echo_Red "Usage: $0 {lnmp|lnmpa|lamp|nginx|db|mphp}"
+        exit 1
+        ;;
+esac
 
 GetLNMP_Ver='1.0'
 . lnmp.conf
+. include/version.sh
+. include/downloadlink.sh
 . include/main.sh
 . include/init.sh
 . include/mysql.sh
@@ -27,7 +36,6 @@ GetLNMP_Ver='1.0'
 . include/end.sh
 . include/only.sh
 . include/multiplephp.sh
-#. include/downloadlink.sh
 
 Get_Dist_Name
 
@@ -39,9 +47,9 @@ fi
 Block_Dist_Name
 
 if [[ "${Stack}" = "lnmp" || "${Stack}" = "lnmpa" || "${Stack}" = "lamp" ]]; then
-    if [ -f /bin/lnmp ]; then
-        Echo_Red "You have installed LNMP!"
-        echo -e "If you want to reinstall LNMP, please BACKUP your data.\nand run uninstall script: ./uninstall.sh before you install."
+    if [ -x /usr/local/php/sbin/php-fpm ] || [ -x /usr/local/php/bin/php ]; then
+        Echo_Red "You have installed LNMP/LNMPA/LAMP!"
+        echo "If you want to reinstall LNMP/LNMPA/LAMP, please BACKUP your data and run uninstall script: ./uninstall.sh before you install."
         exit 1
     fi
 fi
@@ -59,9 +67,9 @@ echo "+------------------------------------------------------------------------+
 
 Init_Install()
 {
+    Print_APP_Ver
     Press_Install
     Stop_Package_Manager
-    Print_APP_Ver
     Get_Dist_Version
     Print_Sys_Info
     Check_Hosts
@@ -83,10 +91,6 @@ Init_Install()
     Disable_Selinux
     Check_Openssl
     Check_Download
-    #Install_Libiconv
-    #Install_Libmcrypt
-    #Install_Pcre
-    #Install_Icu4c
     Install_Freetype
     if [ "${SelectMalloc}" = "2" ]; then
         Install_Jemalloc
@@ -96,9 +100,11 @@ Init_Install()
     Distro_Lib_Opt
     DB_BIN_Opt
     if [ "${DBSelect}" = "1" ]; then
-        Install_MySQL_55
+        Echo_Red "MySQL 5.5 is no longer supported."
+        exit 1
     elif [ "${DBSelect}" = "2" ]; then
-        Install_MySQL_56
+        Echo_Red "MySQL 5.6 is no longer supported."
+        exit 1
     elif [ "${DBSelect}" = "3" ]; then
         Install_MySQL_57
     elif [ "${DBSelect}" = "4" ]; then
@@ -106,7 +112,8 @@ Init_Install()
     elif [ "${DBSelect}" = "5" ]; then
         Install_MySQL_84
     elif [ "${DBSelect}" = "6" ]; then
-        Install_MariaDB_55
+        Echo_Red "MariaDB 5.5 is no longer supported"
+        exit 1
     elif [ "${DBSelect}" = "7" ]; then
         Install_MariaDB_104
     elif [ "${DBSelect}" = "8" ]; then
@@ -128,21 +135,29 @@ Init_Install()
 Install_PHP()
 {
     if [ "${PHPSelect}" = "1" ]; then
-        Install_PHP_52
+        Echo_Red "PHP 5.2 is no longer supported"
+        exit 1
     elif [ "${PHPSelect}" = "2" ]; then
-        Install_PHP_53
+        Echo_Red "PHP 5.3 is no longer supported"
+        exit 1
     elif [ "${PHPSelect}" = "3" ]; then
-        Install_PHP_54
+        Echo_Red "PHP 5.4 is no longer supported"
+        exit 1
     elif [ "${PHPSelect}" = "4" ]; then
-        Install_PHP_55
+        Echo_Red "PHP 5.5 is no longer supported"
+        exit 1
     elif [ "${PHPSelect}" = "5" ]; then
-        Install_PHP_56
+        Echo_Red "PHP 5.6 is no longer supported"
+        exit 1
     elif [ "${PHPSelect}" = "6" ]; then
-        Install_PHP_70
+        Echo_Red "PHP 7.0 is no longer supported"
+        exit 1
     elif [ "${PHPSelect}" = "7" ]; then
-        Install_PHP_71
+        Echo_Red "PHP 7.1 is no longer supported"
+        exit 1
     elif [ "${PHPSelect}" = "8" ]; then
-        Install_PHP_72
+        Echo_Red "PHP 7.2 is no longer supported"
+        exit 1
     elif [ "${PHPSelect}" = "9" ]; then
         Install_PHP_73
     elif [ "${PHPSelect}" = "10" ]; then
@@ -202,15 +217,15 @@ LAMP_Stack()
 
 case "${Stack}" in
     lnmp)
-        Dispaly_Selection
+        Display_Selection
         LNMP_Stack 2>&1 | tee /root/getlnmp-install.log
         ;;
     lnmpa)
-        Dispaly_Selection
+        Display_Selection
         LNMPA_Stack 2>&1 | tee /root/getlnmp-install.log
         ;;
     lamp)
-        Dispaly_Selection
+        Display_Selection
         LAMP_Stack 2>&1 | tee /root/getlnmp-install.log
         ;;
     nginx)
@@ -223,9 +238,7 @@ case "${Stack}" in
         Install_Multiplephp
         ;;
     *)
-        Echo_Red "Usage: $0 {lnmp|lnmpa|lamp}"
-        Echo_Red "Usage: $0 {nginx|db|mphp}"
+        Echo_Red "Usage: $0 {lnmp|lnmpa|lamp|nginx|db|mphp}"
+        exit 1
         ;;
 esac
-
-exit

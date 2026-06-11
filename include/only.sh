@@ -1,23 +1,35 @@
 #!/usr/bin/env bash
 
+Install_EL9_Chkconfig()
+{
+    [ "${EL_Ver}" = "9" ] && dnf install chkconfig -y
+}
+
 Nginx_Dependent()
 {
     if [ "$PM" = "yum" ]; then
-        rpm -e httpd httpd-tools --nodeps
-        yum -y remove httpd*
-        for packages in make gcc gcc-c++ wget crontabs zlib zlib-devel openssl openssl-devel perl patch bzip2 initscripts xz gzip;
-        do yum -y install $packages; done
-        if  echo "${RHEL_Version}" | grep -Eqi "^9" || echo "${Alma_Version}" | grep -Eqi "^9" || echo "${Rocky_Version}" | grep -Eqi "^9" || echo "${Oracle_Version}" | grep -Eqi "^9"; then
-            dnf install chkconfig -y
+        if rpm -q httpd >/dev/null 2>&1; then
+            Echo_Red "Detected Apache (httpd) installed via distro packages."
+            Echo_Yellow "Nginx-only install will remove it. Back up /etc/httpd now if you need its config."
+            Press_Install
+            rpm -e httpd httpd-tools
         fi
+        for packages in make gcc gcc-c++ wget crontabs zlib zlib-devel openssl openssl-devel perl patch bzip2 bzip2-devel initscripts xz gzip;
+        do yum -y install $packages; done
+        Get_RHEL_Family_Major
+        Install_EL9_Chkconfig
     elif [ "$PM" = "apt" ]; then
         export DEBIAN_FRONTEND=noninteractive
-        apt-get update -y
-        [[ $? -ne 0 ]] && apt-get update --allow-releaseinfo-change -y
-        dpkg -P apache2 apache2-doc apache2-mpm-prefork apache2-utils apache2.2-common
-        for removepackages in apache2 apache2-doc apache2-utils apache2.2-common apache2.2-bin apache2-mpm-prefork apache2-doc apache2-mpm-worker;
-        do apt-get purge -y $removepackages; done
-        for packages in debian-keyring debian-archive-keyring build-essential gcc g++ make autoconf automake wget cron openssl libssl-dev zlib1g zlib1g-dev bzip2 xz-utils gzip;
+        apt-get update -y || apt-get update --allow-releaseinfo-change -y || { Echo_Red "apt-get update failed."; exit 1; }
+        if dpkg -l apache2 2>/dev/null | grep -q '^ii'; then
+            Echo_Red "Detected Apache (apache2) installed via distro packages."
+            Echo_Yellow "Nginx-only install will remove it. Back up /etc/apache2 now if you need its config."
+            Press_Install
+            for removepackages in apache2 apache2-bin apache2-data apache2-utils apache2-doc; do
+                dpkg -l "$removepackages" 2>/dev/null | grep -q '^ii' && apt-get remove -y $removepackages
+            done
+        fi
+        for packages in debian-keyring debian-archive-keyring build-essential gcc g++ make autoconf automake wget cron openssl libssl-dev zlib1g zlib1g-dev bzip2 bzip2-doc xz-utils gzip;
         do apt-get --no-install-recommends install -y $packages; done
     fi
 }
@@ -26,7 +38,7 @@ Install_Only_Nginx()
 {
     clear
     echo "+-----------------------------------------------------------------------+"
-    echo "|              Install Nginx for LNMP, Written by Licess                |"
+    echo "|                        Install Nginx for LNMP                         |"
     echo "+-----------------------------------------------------------------------+"
     echo "|                     A tool to only install Nginx.                     |"
     echo "+-----------------------------------------------------------------------+"
@@ -51,11 +63,14 @@ Install_Only_Nginx()
 DB_Dependent()
 {
     if [ "$PM" = "yum" ]; then
+        # yum resolves reverse-deps; avoid `rpm -e --nodeps` (silently breaks dependents).
         yum -y remove mysql-server mysql mysql-libs mariadb-server mariadb mariadb-libs
-        rpm -qa|grep mysql
-        if [ $? -ne 0 ]; then
-            rpm -e mysql mysql-libs --nodeps
-            rpm -e mariadb mariadb-libs --nodeps
+        # If distro mysql/mariadb packages still remain (e.g. differently-named ones such as
+        # mysql-community-server / mariadb-connector-c), remove them by their actual names too.
+        remaining_db_pkgs=$(rpm -qa --qf '%{NAME}\n' | grep -Ei '^(mysql|mariadb)')
+        if [ -n "${remaining_db_pkgs}" ]; then
+            echo "Removing remaining DB packages: ${remaining_db_pkgs}"
+            yum -y remove ${remaining_db_pkgs}
         fi
         for packages in make cmake gcc gcc-c++ flex bison wget zlib zlib-devel openssl openssl-devel ncurses ncurses-devel libaio-devel rpcgen libtirpc-devel patch cyrus-sasl-devel pkg-config pcre-devel libxml2-devel hostname ncurses-libs numactl-devel libxcrypt gnutls-devel initscripts libxcrypt-compat perl xz gzip systemd-devel;
         do yum -y install $packages; done
@@ -81,71 +96,71 @@ DB_Dependent()
             fi
         fi
 
-        if [ "${EL_Ver}" = "9" ]; then
-            dnf install chkconfig -y
-        fi
-
-        if [ -s /usr/lib64/libtinfo.so.6 ]; then
-            ln -sf /usr/lib64/libtinfo.so.6 /usr/lib64/libtinfo.so.5
-        elif [ -s /usr/lib/libtinfo.so.6 ]; then
-            ln -sf /usr/lib/libtinfo.so.6 /usr/lib/libtinfo.so.5
-        fi
-
-        if [ -s /usr/lib64/libncurses.so.6 ]; then
-            ln -sf /usr/lib64/libncurses.so.6 /usr/lib64/libncurses.so.5
-        elif [ -s /usr/lib/libncurses.so.6 ]; then
-            ln -sf /usr/lib/libncurses.so.6 /usr/lib/libncurses.so.5
-        fi
+        Install_EL9_Chkconfig
     elif [ "$PM" = "apt" ]; then
         export DEBIAN_FRONTEND=noninteractive
-        apt-get update -y
-        [[ $? -ne 0 ]] && apt-get update --allow-releaseinfo-change -y
-        for removepackages in mysql-client mysql-server mysql-common mysql-server-core-5.5 mysql-client-5.5 mariadb-client mariadb-server mariadb-common;
-        do apt-get purge -y $removepackages; done
-        dpkg -l |grep mysql
-        dpkg -P mysql-server mysql-common libmysqlclient15off libmysqlclient15-dev
-        dpkg -P mariadb-client mariadb-server mariadb-common
+        apt-get update -y || apt-get update --allow-releaseinfo-change -y || { Echo_Red "apt-get update failed."; exit 1; }
+        # Back up the distro DB config tree, then remove (not purge) installed packages so
+        # user my.cnf / TLS material is preserved and reverse-deps are respected.
+        [ -d /etc/mysql ] && mv /etc/mysql "/etc/mysql.lnmp_backup.$(date +%Y%m%d%H%M%S)"
+        for removepackages in mysql-client mysql-server mysql-common mariadb-client mariadb-server mariadb-common; do
+            dpkg -l "$removepackages" 2>/dev/null | grep -q '^ii' && apt-get remove -y $removepackages
+        done
         for packages in debian-keyring debian-archive-keyring build-essential gcc g++ make cmake autoconf automake wget openssl libssl-dev zlib1g zlib1g-dev libncurses-dev bison libaio-dev libtirpc-dev libsasl2-dev pkg-config libpcre2-dev libxml2-dev libtinfo-dev libnuma-dev libgnutls28-dev gnutls-dev xz-utils gzip libsystemd-dev;
         do apt-get --no-install-recommends install -y $packages; done
         if echo "${Debian_Version}" | grep -Eqi "^1[3-9]" || echo "${Ubuntu_Version}" | grep -Eqi "^2[4-9]\."; then
             apt-get --no-install-recommends install -y systemd-dev
         fi
     fi
+    Ncurses5_Compat_Check
 }
 
 Install_Database()
 {
+    [ -z "${DBSelect}" ] && { Echo_Red "DBSelect is not set."; exit 1; }
+    case "${DBSelect}" in
+        [1-5])
+            { [ -z "${Mysql_Ver}" ] || [ -z "${Mysql_Ver_Short}" ]; } && { Echo_Red "MySQL version not resolved."; exit 1; }
+            ;;
+        [6-9]|1[0-2])
+            { [ -z "${Mariadb_Ver}" ] || [ -z "${Mariadb_Version}" ]; } && { Echo_Red "MariaDB version not resolved."; exit 1; }
+            ;;
+    esac
     echo "============================check files=================================="
     cd ${cur_dir}/src
 #    Mysql_Ver_Short=$(echo ${Mysql_Ver} | sed 's/mysql-//' | cut -d. -f1-2)
     if [[ "${DBSelect}" =~ ^[1-5]$ ]]; then
+        case "${Mysql_Ver_Short}" in
+            5.6|5.7) MySQL_BIN_Glibc_Tag="glibc2.12" ;;
+            *) MySQL_BIN_Glibc_Tag="glibc2.28" ;;
+        esac
         if [[ "${Bin}" = "y" && "${DBSelect}" =~ ^[2-3]$ ]]; then
-            Download_Files https://cdn.mysql.com/Downloads/MySQL-${Mysql_Ver_Short}/${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}.tar.gz ${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}.tar.gz
-#            [[ $? -ne 0 ]] && Download_Files https://cdn.mysql.com/archives/mysql-${Mysql_Ver_Short}/${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}.tar.gz ${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}.tar.gz
+            Download_Files https://cdn.mysql.com/Downloads/MySQL-${Mysql_Ver_Short}/${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz ${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz
+#            [[ $? -ne 0 ]] && Download_Files https://cdn.mysql.com/archives/mysql-${Mysql_Ver_Short}/${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz ${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz
             if [[ $? -ne 0 ]]; then
-                Download_Files https://cdn.mysql.com/archives/mysql-${Mysql_Ver_Short}/${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}.tar.gz ${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}.tar.gz
-            fi 
-            if [ ! -s ${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}.tar.gz ]; then
+                Download_Files https://cdn.mysql.com/archives/mysql-${Mysql_Ver_Short}/${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz ${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz
+            fi
+            if [ ! -s ${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz ]; then
                 Echo_Red "Error! Unable to download MySQL ${Mysql_Ver_Short} Generic Binaries, please download it to src directory manually."
                 sleep 5
                 exit 1
             fi
         elif [[ "${Bin}" = "y" && "${DBSelect}" = "4" ]]; then
-            Download_Files https://cdn.mysql.com/Downloads/MySQL-8.0/${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
+            Download_Files https://cdn.mysql.com/Downloads/MySQL-8.0/${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.xz
             if [[ $? -ne 0 ]]; then
-                Download_Files https://cdn.mysql.com/archives/mysql-8.0/${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
+                Download_Files https://cdn.mysql.com/archives/mysql-8.0/${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.xz
             fi
-            if [ ! -s ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz ]; then
+            if [ ! -s ${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.xz ]; then
                 Echo_Red "Error! Unable to download MySQL 8.0 Generic Binaries, please download it to src directory manually."
                 sleep 5
                 exit 1
             fi
         elif [[ "${Bin}" = "y" && "${DBSelect}" = "5" ]]; then
-            Download_Files https://cdn.mysql.com/Downloads/MySQL-8.4/${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
+            Download_Files https://cdn.mysql.com/Downloads/MySQL-8.4/${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.xz
             if [[ $? -ne 0 ]]; then
-                Download_Files https://cdn.mysql.com/archives/mysql-8.4/${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
+                Download_Files https://cdn.mysql.com/archives/mysql-8.4/${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.xz ${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.xz
             fi
-            if [ ! -s ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz ]; then
+            if [ ! -s ${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.xz ]; then
                 Echo_Red "Error! Unable to download MySQL 8.4 Generic Binaries, please download it to src directory manually."
                 sleep 5
                 exit 1
@@ -153,7 +168,7 @@ Install_Database()
         else
             Download_Files https://cdn.mysql.com/Downloads/MySQL-${Mysql_Ver_Short}/${Mysql_Ver}.tar.gz ${Mysql_Ver}.tar.gz
             if [[ $? -ne 0 ]]; then
-                Download_Files https://cdn.mysql.com/archives/mysql-${Mysql_Ver_Short}/${Mysql_Ver}.tar.gz ${Mysql_Ver}.tar.g
+                Download_Files https://cdn.mysql.com/archives/mysql-${Mysql_Ver_Short}/${Mysql_Ver}.tar.gz ${Mysql_Ver}.tar.gz
             fi
             if [ ! -s ${Mysql_Ver}.tar.gz ]; then
                 Echo_Red "Error! Unable to download MySQL source code, please download it to src directory manually."
@@ -170,7 +185,7 @@ Install_Database()
         Download_Files https://downloads.mariadb.org/rest-api/mariadb/${Mariadb_Version}/${MariaDB_FileName}.tar.gz ${MariaDB_FileName}.tar.gz
         if [ $? -ne 0 ]; then
             if [ "${Bin}" = "y" ]; then
-                Download_Files https://archive.mariadb.org/mariadb-${Mariadb_Version}/bintar-linux-systemd-x86_64/${MariaDB_FileName}.tar.gz ${MariaDB_FileName}.tar.gz
+                Download_Files https://archive.mariadb.org/mariadb-${Mariadb_Version}/bintar-linux-systemd-${DB_ARCH}/${MariaDB_FileName}.tar.gz ${MariaDB_FileName}.tar.gz
             else
                 Download_Files https://archive.mariadb.org/mariadb-${Mariadb_Version}/source/${MariaDB_FileName}.tar.gz ${MariaDB_FileName}.tar.gz
             fi
@@ -191,18 +206,12 @@ Install_Database()
     DB_Dependent
     Check_Openssl
     DB_BIN_Opt
-    if [ "${DBSelect}" = "1" ]; then
-        Install_MySQL_55
-    elif [ "${DBSelect}" = "2" ]; then
-        Install_MySQL_56
-    elif [ "${DBSelect}" = "3" ]; then
+    if [ "${DBSelect}" = "3" ]; then
         Install_MySQL_57
     elif [ "${DBSelect}" = "4" ]; then
         Install_MySQL_80
     elif [ "${DBSelect}" = "5" ]; then
         Install_MySQL_84
-    elif [ "${DBSelect}" = "6" ]; then
-        Install_MariaDB_55
     elif [ "${DBSelect}" = "7" ]; then
         Install_MariaDB_104
     elif [ "${DBSelect}" = "8" ]; then
@@ -226,16 +235,18 @@ Install_Database()
         StartOrStop start mysql
     fi
 
-    Clean_DB_Src_Dir
     Check_DB_Files
     if [[ "${isDB}" = "ok" ]]; then
+        Clean_DB_Src_Dir
         if [[ "${DBSelect}" =~ ^[1-5]$ ]]; then
-            Echo_Green "MySQL root password: ${DB_Root_Password}"
+            Echo_Green "MySQL/MariaDB root password is stored in /root/.my.cnf (sudo cat /root/.my.cnf)."
             Echo_Green "Install ${Mysql_Ver} completed! enjoy it."
         elif [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
-            Echo_Green "MariaDB root password: ${DB_Root_Password}"
+            Echo_Green "MySQL/MariaDB root password is stored in /root/.my.cnf (sudo cat /root/.my.cnf)."
             Echo_Green "Install ${Mariadb_Ver} completed! enjoy it."
         fi
+    else
+        Echo_Yellow "Source tree preserved at ${cur_dir}/src for debugging."
     fi
 }
 
@@ -257,12 +268,22 @@ Install_Only_Database()
         exit 1
     fi
 
+    Echo_Red "The script will REMOVE MySQL/MariaDB installed via yum or apt-get and their databases!!!"
     Database_Selection
     if [ "${DBSelect}" = "0" ]; then
         echo "DO NOT Install MySQL or MariaDB."
         exit 1
     fi
-    Echo_Red "The script will REMOVE MySQL/MariaDB installed via yum or apt-get and it's databases!!!"
+    if [ "${DBSelect}" = "1" ]; then
+        Echo_Red "MySQL 5.5 is no longer supported."
+        exit 1
+    elif [ "${DBSelect}" = "2" ]; then
+        Echo_Red "MySQL 5.6 is no longer supported."
+        exit 1
+    elif [ "${DBSelect}" = "6" ]; then
+        Echo_Red "MariaDB 5.5 is no longer supported"
+        exit 1
+    fi
     Press_Install
-    Install_Database 2>&1 | tee /root/install_database.log
+    Install_Database 2>&1 | tee "/root/install_only_database$(date +%Y%m%d%H%M%S).log"
 }

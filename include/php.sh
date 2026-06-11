@@ -17,13 +17,13 @@ Check_Autoconf_Version() {
 }
 
 # only used PHP52 and PHP53, deprecated
-Check_Curl() {
-    if [ -s /usr/local/curl/bin/curl ]; then
-        Echo_Green "Curl ...ok"
-    else
-        Install_Curl
-    fi
-}
+# Check_Curl() {
+#     if [ -s /usr/local/curl/bin/curl ]; then
+#         Echo_Green "Curl ...ok"
+#     else
+#         Install_Curl
+#     fi
+# }
 
 PHP_with_curl() {
     echo "Checking Curl..."
@@ -126,7 +126,6 @@ PHP_with_openssl() {
     #    PHP_Openssl_Export
     else
         with_openssl='--with-openssl'
-        apache_with_ssl='--with-ssl'
     fi
 }
 
@@ -178,22 +177,17 @@ PHP_with_Ldap() {
     echo "Checking Ldap..."
     if [ "${Enable_PHP_Ldap}" = "n" ]; then
         with_ldap=''
-    else
-        if [ "$PM" = "yum" ]; then
-            yum -y install openldap-devel cyrus-sasl-devel
-            if [ "${Is_64bit}" == "y" ]; then
-                ln -sf /usr/lib64/libldap* /usr/lib/
-                ln -sf /usr/lib64/liblber* /usr/lib/
-            fi
-        elif [ "$PM" = "apt" ]; then
-            apt-get install -y libldap2-dev libsasl2-dev
-            if [ -s /usr/lib/x86_64-linux-gnu/libldap.so ]; then
-                ln -sf /usr/lib/x86_64-linux-gnu/libldap.so /usr/lib/
-                ln -sf /usr/lib/x86_64-linux-gnu/liblber.so /usr/lib/
-            fi
-        fi
-        with_ldap='--with-ldap --with-ldap-sasl'
+        return 0
     fi
+
+    if [ "$PM" = "yum" ]; then
+        yum -y install openldap-devel cyrus-sasl-devel
+    elif [ "$PM" = "apt" ]; then
+        DEBIAN_FRONTEND=noninteractive apt-get install -y libldap2-dev libsasl2-dev
+    fi
+    # --with-ldap=/usr tells configure the exact prefix; PHP's build system
+    # resolves lib vs lib64 via PHP_LIBDIR, so this works on both RHEL and Debian.
+    with_ldap='--with-ldap=/usr --with-ldap-sasl'
 }
 
 PHP_with_Bz2() {
@@ -212,15 +206,18 @@ PHP_with_Sodium() {
     if [ "${Enable_PHP_Sodium}" = "n" ]; then
         with_sodium=''
     else
-        if echo "${php_version}" | grep -Eqi '(^7\.[0-1]\.*|^5\.*)' || echo "${Php_Ver}" | grep -Eqi "(php-7\.[0-1]\.*|php-5\.*)"; then
+        if echo "${php_version}" | grep -Eqi '^(7\.[01]|5)\.' || echo "${Php_Ver}" | grep -Eqi "(php-7\.[0-1]\.*|php-5\.*)"; then
             Echo_Red 'Below PHP 7.2 please use " . /addons.sh install sodium " to install the PHP Sodium module.'
             with_sodium=''
         else   
             if [ "$PM" = "yum" ]; then
-                if [ "${DISTRO}" = "Oracle" ]; then
-                    yum -y install oracle-epel-release
-                else
-                    yum -y install epel-release
+                # Ensure EPEL is present before installing libsodium-devel
+                if ! rpm -q epel-release oracle-epel-release >/dev/null 2>&1; then
+                    if [ "${DISTRO}" = "Oracle" ]; then
+                        yum -y install oracle-epel-release
+                    else
+                        yum -y install epel-release
+                    fi
                 fi
                 yum -y install libsodium-devel
             elif [ "$PM" = "apt" ]; then
@@ -232,82 +229,117 @@ PHP_with_Sodium() {
 }
 
 PHP_with_Imap() {
-    echo "Checking Imap..."
-    if echo "${php_version}" | grep -Eqi '^8\.(4|5)\.*' || echo "${Php_Ver}" | grep -Eqi "php-8\.(4|5)\.*"; then
-        # since php 8.4, IMAP is not bundled with php core and you need to install it via PECL extension.
+    echo "Checking IMAP..."
+
+    # PHP 8.4+ removed bundled IMAP; install via PECL instead.
+    if echo "${php_version}" | grep -Eqi '^8\.[4-9]\.' || \
+       echo "${Php_Ver}" | grep -Eqi "php-8\.[4-9]\."; then
         with_imap=''
         return 0
     fi
 
     if [ "${Enable_PHP_Imap}" = "n" ]; then
         with_imap=''
-    elif [[ ! "${UseNewOpenssl}" = "y" ]]; then
+        return 0
+    fi
+
+    if [ "${UseNewOpenssl}" = "y" ]; then
+        # Custom-OpenSSL path: build UW IMAP c-client from source linked against our OpenSSL.
+        # Required when UseNewOpenssl=y (e.g. PHP 7.1-8.0 on an OpenSSL-3 host).
+        if [ -s /usr/local/imap-ssl/lib/libc-client.a ]; then
+            echo "UW IMAP c-client already built at /usr/local/imap-ssl, skipping."
+        else
+            Echo_Blue "[+] Building UW IMAP c-client"
+            cd "${cur_dir}/src" || { Echo_Red "Failed to enter source directory for UW IMAP."; exit 1; }
+            rm -rf "${cur_dir}/src/imap-2007f_upstream"
+            Download_Files_Exit \
+                https://github.com/uw-imap/imap/archive/refs/tags/imap-2007f_upstream.tar.gz \
+                "imap-2007f_upstream.tar.gz"
+            Tar_Cd "imap-2007f_upstream.tar.gz" "imap-2007f_upstream" || {
+                Echo_Red "Failed to extract UW IMAP source."
+                exit 1
+            }
+            make slx \
+                SSLTYPE=unix.nopwd \
+                SSLDIR="${Custom_Openssl_Path}" \
+                SSLLIB="${Custom_Openssl_Path}/lib" \
+                SSLCERTS="${Custom_Openssl_Path}/certs" \
+                EXTRACFLAGS="-fPIC" || {
+                Echo_Red "Failed to build UW IMAP."
+                exit 1
+            }
+            rm -rf /usr/local/imap-ssl
+            mkdir -p /usr/local/imap-ssl/include /usr/local/imap-ssl/lib || {
+                Echo_Red "Failed to create UW IMAP install directories."
+                exit 1
+            }
+            cp c-client/*.h /usr/local/imap-ssl/include/ || {
+                Echo_Red "Failed to install UW IMAP headers."
+                exit 1
+            }
+            cp c-client/c-client.a /usr/local/imap-ssl/lib/libc-client.a || {
+                Echo_Red "Failed to install UW IMAP library."
+                exit 1
+            }
+            cd "${cur_dir}/src" && rm -rf "${cur_dir}/src/imap-2007f_upstream"
+        fi
+        with_imap="--with-imap=/usr/local/imap-ssl --with-imap-ssl=${Custom_Openssl_Path}"
+
+    else
+        # System-OpenSSL path: use distro-packaged libc-client / uw-imap-devel.
         if [ "$PM" = "yum" ]; then
-            if [ "${DISTRO}" = "Oracle" ]; then
-                yum -y install oracle-epel-release
-            else
-                yum -y install epel-release
+            # Ensure EPEL is present before installing IMAP packages
+            if ! rpm -q epel-release oracle-epel-release >/dev/null 2>&1; then
+                if [ "${DISTRO}" = "Oracle" ]; then
+                    yum -y install oracle-epel-release
+                else
+                    yum -y install epel-release
+                fi
             fi
+
+            # EL7/EL8: libc-client-devel and uw-imap-devel are available in EPEL
             yum -y install libc-client-devel krb5-devel uw-imap-devel
-            if echo "${CentOS_Version}" | grep -Eqi "^9" || echo "${Alma_Version}" | grep -Eqi "^9" || echo "${Rocky_Version}" | grep -Eqi "^9"; then
-                if ! rpm -qa | grep "libc-client-2007f" || ! rpm -qa | grep "uw-imap-devel"; then
+
+            # EL9/EL10: libc-client was dropped from EPEL; fall back to Remi RPMs
+            if echo "${RHEL_Version}" | grep -Eqi "^(9|10)" || \
+               echo "${Alma_Version}" | grep -Eqi "^(9|10)" || \
+               echo "${Rocky_Version}" | grep -Eqi "^(9|10)"; then
+                if echo "${RHEL_Version}" | grep -Eqi "^10" || \
+                   echo "${Alma_Version}" | grep -Eqi "^10" || \
+                   echo "${Rocky_Version}" | grep -Eqi "^10"; then
+                    libc_client_rpm="libc-client-2007f-32.el10.remi.${ARCH}.rpm"
+                    uw_imap_devel_rpm="uw-imap-devel-2007f-32.el10.remi.${ARCH}.rpm"
+                    libc_client_DL="${libc_client_2007f_el10_DL}"
+                    uw_imap_devel_DL="${uw_imap_devel_2007f_el10_DL}"
+                else
+                    libc_client_rpm="libc-client-2007f-30.el9.remi.${ARCH}.rpm"
+                    uw_imap_devel_rpm="uw-imap-devel-2007f-30.el9.remi.${ARCH}.rpm"
+                    libc_client_DL="${libc_client_2007f_el9_DL}"
+                    uw_imap_devel_DL="${uw_imap_devel_2007f_el9_DL}"
+                fi
+                if ! rpm -q libc-client >/dev/null 2>&1 || \
+                   ! rpm -q uw-imap-devel >/dev/null 2>&1; then
                     if [ "${CheckMirror}" = "n" ]; then
-                        rpm -ivh ${cur_dir}/src/libc-client-2007f-30.el9.${ARCH}.rpm ${cur_dir}/src/uw-imap-devel-2007f-30.el9.${ARCH}.rpm
+                        rpm -Uvh "${cur_dir}/src/${libc_client_rpm}" \
+                                 "${cur_dir}/src/${uw_imap_devel_rpm}"
                     else
-                        rpm -ivh ${libc_client_2007f_24_el9_DL}
-                        rpm -ivh ${uw_imap_devel_2007f_24_el9_DL}
+                        rpm -Uvh "${libc_client_DL}"
+                        rpm -Uvh "${uw_imap_devel_DL}"
                     fi
                 fi
             fi
-            [[ -s /usr/lib64/libc-client.so ]] && ln -sf /usr/lib64/libc-client.so /usr/lib/libc-client.so
+
+            # PHP configure looks for libc-client.so in /usr/lib; symlink from lib64 if needed.
+            # On i686 there is no /usr/lib64, so the package already installs to /usr/lib directly
+            # and this is a no-op.
+            if [[ -s /usr/lib64/libc-client.so && ! -e /usr/lib/libc-client.so ]]; then
+                ln -sf /usr/lib64/libc-client.so /usr/lib/libc-client.so
+            fi
+
         elif [ "$PM" = "apt" ]; then
             apt-get install -y libc-client-dev libkrb5-dev
         fi
         with_imap='--with-imap --with-imap-ssl --with-kerberos'
-    else
-        # build c-library manually
-        Echo_Blue "[+] Building UW IMAP"
-        cd "${cur_dir}/src" || {
-            Echo_Red "Failed to enter source directory for UW IMAP."
-            exit 1
-        }
-        rm -rf "${cur_dir}/src/imap"
-        git clone https://github.com/uw-imap/imap.git || {
-            Echo_Red "Failed to clone UW IMAP source."
-            exit 1
-        }
-        cd imap || {
-            Echo_Red "Failed to enter UW IMAP source directory."
-            exit 1
-        }
-        make slx \
-          SSLTYPE=unix.nopwd \
-          SSLDIR="${Custom_Openssl_Path}" \
-          SSLLIB="${Custom_Openssl_Path}/lib" \
-          SSLCERTS="${Custom_Openssl_Path}/certs"\
-          EXTRACFLAGS="-fPIC" || {
-            Echo_Red "Failed to build UW IMAP."
-            exit 1
-        }
-
-        rm -rf /usr/local/imap-ssl
-        mkdir -p /usr/local/imap-ssl/include /usr/local/imap-ssl/lib || {
-            Echo_Red "Failed to create UW IMAP install directories."
-            exit 1
-        }
-        cp c-client/*.h /usr/local/imap-ssl/include/ || {
-            Echo_Red "Failed to install UW IMAP headers."
-            exit 1
-        }
-        cp c-client/c-client.a /usr/local/imap-ssl/lib/libc-client.a || {
-            Echo_Red "Failed to install UW IMAP library."
-            exit 1
-        }
-
-        with_imap="--with-imap=/usr/local/imap-ssl --with-imap-ssl=${Custom_Openssl_Path}"
-
-        # cleaning
-        rm -rf "${cur_dir}/src/imap"
     fi
 }
 
@@ -478,7 +510,7 @@ PHP_ENV_UNSET() {
         unset CC
         unset CXX
     fi
-    PHP_GCC14_Unset
+#    PHP_GCC14_Unset
 }
 
 PHP_ENV_SET() {
@@ -544,7 +576,16 @@ Ln_PHP_Bin() {
     if [ "${Stack}" = "lnmp" ]; then
         ln -sf /usr/local/php/sbin/php-fpm /usr/bin/php-fpm
     fi
-    rm -f /usr/local/php/conf.d/*
+    if [ -d /usr/local/php/conf.d ]; then
+        local ts=$(date +%Y%m%d%H%M%S)
+        mv /usr/local/php/conf.d /usr/local/php/conf.d.bak.${ts}
+        Echo_Yellow "Notice: previous PHP extension config saved to /usr/local/php/conf.d.bak.${ts}"
+        Echo_Yellow "Notice: PHP extensions (Redis/Memcached/imagick/etc.) are now disabled; re-install them via ./addons.sh"
+    fi
+    mkdir -p /usr/local/php/conf.d || {
+        Echo_Red "Failed to create PHP conf.d directory."
+        exit 1
+    }
 }
 
 Pear_Pecl_Set() {
@@ -556,52 +597,73 @@ Install_Composer_Official() {
     local Composer_Installer="/tmp/composer-setup.php"
     local Expected_Signature
     local Actual_Signature
+    local status
 
-    Expected_Signature="$(curl -sS --connect-timeout 30 -m 60 https://composer.github.io/installer.sig)" || return 1
+    # 1. Fetch expected SHA-384 from Composer's CDN
+    Expected_Signature="$(curl -sS --connect-timeout 30 -m 60 --retry 3 --retry-delay 5 \
+        https://composer.github.io/installer.sig)" || return 1
     if [ -z "${Expected_Signature}" ]; then
-        Echo_Red "Failed to get Composer installer signature."
+        Echo_Red "Failed to fetch Composer installer signature."
         return 1
     fi
 
-    curl -sS --connect-timeout 30 -m 60 https://getcomposer.org/installer -o "${Composer_Installer}" || return 1
-    Actual_Signature="$(php -r "echo hash_file('sha384', '${Composer_Installer}');")"
+    # 2. Download installer
+    curl -sS --connect-timeout 30 -m 120 --retry 3 --retry-delay 5 \
+        https://getcomposer.org/installer -o "${Composer_Installer}" || return 1
+
+    # 3. Verify integrity before executing
+    Actual_Signature=$(sha384sum "${Composer_Installer}" | awk '{print $1}')
     if [ "${Expected_Signature}" != "${Actual_Signature}" ]; then
         rm -f "${Composer_Installer}"
         Echo_Red "Composer installer signature verification failed."
         return 1
     fi
 
+    # 4. Run installer and always clean up the setup script
     php "${Composer_Installer}" --install-dir=/usr/local/bin --filename=composer
-    local Composer_Install_Status=$?
+    status=$?
     rm -f "${Composer_Installer}"
-    return "${Composer_Install_Status}"
+    return ${status}
 }
 
 Install_Composer() {
-    if [ "${CheckMirror}" != "n" ]; then
-        echo "Downloading Composer..."
-        if echo "${PHPSelect}" | grep -Eqi '^(1[0-6]|[1-9])$' || echo "${php_version}" | grep -Eqi '^(5\.[2-6]\.|7\.[0-4]\.|8\.[0-5]\.)' || echo "${Php_Ver}" | grep -Eqi "php-(5\.[2-6]\.|7\.[0-4]\.|8\.[0-5]\.)"; then
-            Install_Composer_Official
-            if [ $? -eq 0 ]; then
-                echo "Composer install successfully."
-            fi
+    echo "Downloading Composer..."
 
+    # CheckMirror=n means offline/local-source mode — use the official path directly
+    if [ "${CheckMirror}" = "n" ]; then
+        if Install_Composer_Official; then
+            echo "Composer installed successfully."
         else
-            wget --progress=dot:giga --prefer-family=IPv4 --no-check-certificate -T 120 -t3 https://mirrors.aliyun.com/composer/composer.phar -O /usr/local/bin/composer
-            if [ $? -eq 0 ]; then
-                echo "Composer install successfully."
-                chmod +x /usr/local/bin/composer
-            else
-                echo "Composer install failed, try to from composer official website..."
-                Install_Composer_Official
-                if [ $? -eq 0 ]; then
-                    echo "Composer install successfully."
-                fi
-            fi
+            Echo_Red "Composer installation failed."
         fi
-        #if [ "${country}" = "CN" ]; then
-        #composer config -g repo.packagist composer https://mirrors.aliyun.com/composer/
-        #fi
+        return
+    fi
+
+    # For known PHP versions use the official installer (SHA-384 verified)
+    if echo "${PHPSelect}" | grep -Eqi '^(1[0-6]|[1-9])$' || \
+       echo "${php_version}" | grep -Eqi '^(7\.[0-4]\.|8\.[0-9]\.)' || \
+       echo "${Php_Ver}" | grep -Eqi "php-(7\.[0-4]\.|8\.[0-9]\.)"; then
+        if Install_Composer_Official; then
+            echo "Composer installed successfully."
+        else
+            Echo_Red "Composer installation failed."
+        fi
+        return
+    fi
+
+    # Newer/unrecognised PHP version: try the latest GitHub release, fall back to official installer
+    if wget --progress=dot:giga --prefer-family=IPv4 --no-check-certificate \
+            -T 120 -t3 https://github.com/composer/composer/releases/latest/download/composer.phar \
+            -O /usr/local/bin/composer; then
+        chmod +x /usr/local/bin/composer
+        echo "Composer installed successfully."
+    else
+        echo "Latest Composer release download failed, trying official installer..."
+        if Install_Composer_Official; then
+            echo "Composer installed successfully."
+        else
+            Echo_Red "Composer installation failed."
+        fi
     fi
 }
 
@@ -611,7 +673,10 @@ PHP_Openssl3_Patch() {
             Php_Ver="php-${php_version}"
         fi
         echo "OpenSSL 3.0, apply a patch to ${Php_Ver}..."
-        patch -p1 <${cur_dir}/src/patch/${Php_Ver}-openssl3.0.patch
+        patch -p1 <${cur_dir}/src/patch/${Php_Ver}-openssl3.0.patch || {
+            Echo_Red "Failed to apply OpenSSL 3.0 patch to ${Php_Ver}."
+            exit 1
+        }
     fi
 }
 
@@ -620,15 +685,24 @@ PHP_ICU70_PKGCONFIG_Patch() {
         echo "checking if ICU 7x+ pkgconfig patch is needed..."
         if [ "$local_icu_version" -ge 70 ]; then
             echo "icu 7x+, apply a pkgconfig patch to ${Php_Ver}..."
-            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-icu-70-pkg-config.patch
+            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-icu-70-pkg-config.patch || {
+                Echo_Red "Failed to apply ICU 70+ pkgconfig patch to ${Php_Ver}."
+                exit 1
+            }
             Php_Buildconf='y'
         elif [ "$local_icu_version" -ge 67 ]; then
             ## patch pkg-config lookup issue
             echo "icu 63+, apply a pkg-config patch to ${Php_Ver}..."
-            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-icu-pkg-config.patch
+            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-icu-pkg-config.patch || {
+                Echo_Red "Failed to apply ICU pkgconfig patch to ${Php_Ver}."
+                exit 1
+            }
             ## patch namespace issue
             echo "icu 63+, apply a ICU namespace patch to ${Php_Ver}..."
-            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-intl-namespace-icu.patch
+            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-intl-namespace-icu.patch || {
+                Echo_Red "Failed to apply ICU namespace patch to ${Php_Ver}."
+                exit 1
+            }
             Php_Buildconf='y'
         else
             echo "No icu 63+ pkgconfig patch is needed for ${Php_Ver}"
@@ -641,7 +715,10 @@ PHP_ICU70_Patch() {
         echo "checking if ICU 7x+ patch is needed..."
         if [ "$local_icu_version" -ge 70 ]; then
             echo "icu 7x+, apply a patch to ${Php_Ver}..."
-            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-icu-70.patch
+            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-icu-70.patch || {
+                Echo_Red "Failed to apply ICU 70+ patch to ${Php_Ver}."
+                exit 1
+            }
         else
             echo "No icu 7x+ patch is needed for ${Php_Ver}"
         fi
@@ -656,7 +733,10 @@ PHP_CPP17_Patch() {
         if [ "$local_icu_version" -ge 75 ]; then
             echo "C++17 patch is required for ICU 75+"
             echo "Apply C++17 patch to ${Php_Ver}..."
-            patch -p1 <"${cur_dir}"/src/patch/php-"${Php_Ver_Short}"-icu-74-c++17.patch
+            patch -p1 <"${cur_dir}"/src/patch/php-"${Php_Ver_Short}"-icu-74-c++17.patch || {
+                Echo_Red "Failed to apply C++17 patch to ${Php_Ver}."
+                exit 1
+            }
             Php_Buildconf='y'
         else
             echo "No C++17 patch is needed for PHP ${Php_Ver}"
@@ -664,7 +744,10 @@ PHP_CPP17_Patch() {
     elif [ "${Php_Ver_Short}" = "8.1" ] && [ "${Php_Third_Ver}" -lt 33 ] && [ "$local_icu_version" -ge 75 ]; then
             echo "C++17 patch is required for ICU 75+"
             echo "Apply C++17 patch to ${Php_Ver}..."
-            patch -p1 <"${cur_dir}"/src/patch/php-"${Php_Ver_Short}"-icu-74-c++17.patch
+            patch -p1 <"${cur_dir}"/src/patch/php-"${Php_Ver_Short}"-icu-74-c++17.patch || {
+                Echo_Red "Failed to apply C++17 patch to ${Php_Ver}."
+                exit 1
+            }
             Php_Buildconf='y'
     else
         echo "No C++17 patch is needed for ${Php_Ver}"
@@ -686,7 +769,10 @@ PHP_Freetype_Patch() {
         echo "checking if Freetype patch is needed..."
         if ! command -v freetype-config >/dev/null 2>&1; then
             echo "Freetype patch is required for ${Php_Ver}"
-            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-freetype2-pkg-config.patch
+            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-freetype2-pkg-config.patch || {
+                Echo_Red "Failed to apply Freetype patch to ${Php_Ver}."
+                exit 1
+            }
             Php_Buildconf='y'
         else
             echo "No Freetype patch is needed for ${Php_Ver}"
@@ -699,7 +785,10 @@ PHP_Readdir_r_Patch() {
         echo "checking if readdir_r patch is needed..."
         if [ "${Main_Gcc_Ver}" -ge 14 ] && [ "${Glibc_Second_Ver}" -ge 24 ]; then
             echo "readdir_r patch is required for ${Php_Ver} with glibc ${Main_Glibc_Ver}"
-            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-readdir_r.patch
+            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-readdir_r.patch || {
+                Echo_Red "Failed to apply readdir_r patch to ${Php_Ver}."
+                exit 1
+            }
         else
             echo "No readdir_r patch is needed for ${Php_Ver}"
         fi
@@ -711,7 +800,10 @@ PHP_Cast_Patch() {
         echo "checking if cast patch is needed..."
         if [ "${Main_Gcc_Ver}" -ge 14 ] && [ "${Glibc_Second_Ver}" -ge 24 ]; then
             echo "cast patch is required for ${Php_Ver} with gcc ${Main_Gcc_Ver}"
-            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-cast.patch
+            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-cast.patch || {
+                Echo_Red "Failed to apply cast patch to ${Php_Ver}."
+                exit 1
+            }
         else
             echo "No cast patch is needed for ${Php_Ver}"
         fi
@@ -723,7 +815,10 @@ PHP_Main_Phpconfig_Patch() {
         echo "checking if main php config patch is needed..."
         if [ "${Main_Gcc_Ver}" -ge 14 ]; then
             echo "main php config patch is required for ${Php_Ver} with gcc ${Main_Gcc_Ver}"
-            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-main-php_config.patch
+            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-main-php_config.patch || {
+                Echo_Red "Failed to apply main php config patch to ${Php_Ver}."
+                exit 1
+            }
         else
             echo "No main php config patch is needed for ${Php_Ver}"
         fi
@@ -735,7 +830,10 @@ PHP_Dom_Iterators_Patch() {
         echo "checking if DOM Iterators patch is needed..."
         if [ "${Main_Gcc_Ver}" -ge 14 ] && [ "${DISTRO}" = "Debian" ] && [ "${DISTRO_Version}" -ge "13" ]; then
             echo "DOM Iterators patch is required for ${Php_Ver} with gcc ${Main_Gcc_Ver}"
-            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-dom-iterators.patch
+            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-dom-iterators.patch || {
+                Echo_Red "Failed to apply DOM Iterators patch to ${Php_Ver}."
+                exit 1
+            }
         else
             echo "No DOM Iterators patch is needed for ${Php_Ver}"
         fi
@@ -749,7 +847,10 @@ PHP_Autoconf_Patch() {
         echo "checking if autoconf patch is needed..."
         if [ "${Main_Gcc_Ver}" -ge 14 ]; then
             echo "autoconf patch is required for ${Php_Ver} with gcc ${Main_Gcc_Ver}"
-            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-autoconf.patch
+            patch -p1 <${cur_dir}/src/patch/php-${Php_Ver_Short}-autoconf.patch || {
+                Echo_Red "Failed to apply autoconf patch to ${Php_Ver}."
+                exit 1
+            }
         else
             echo "No autoconf patch is needed for ${Php_Ver}"
         fi
@@ -764,19 +865,19 @@ PHP_Autoconf_Patch() {
 # /src/php-5.6.40/ext/fileinfo/libmagic/funcs.c:440:1: error: return type defaults to ‘int’ [-Wimplicit-int]
 # 440 | file_replace(struct magic_set *ms, const char *pat, const char *rep)
 # only for php 5.6
-PHP_GCC14_PATCH() {
-    if [[ "${Php_Ver_Short}" = "5.6" ]]; then
-        echo "checking if GCC 14 patch is needed..."
-        if [ "${Main_Gcc_Ver}" -ge 14 ]; then
-            echo "GCC 14 patch is required for ${Php_Ver} with gcc ${Main_Gcc_Ver}"
-           # PHP_GCC_OPTIONS='CFLAGS=-Wno-incompatible-pointer-types -Wno-implicit-int -Wno-implicit-function-declaration'
-        export CFLAGS="-Wno-incompatible-pointer-types -Wno-implicit-int -Wno-implicit-function-declaration"
-        else
-            echo "No GCC 14 patch is needed for ${Php_Ver}"
-        fi
-        sleep 5
-    fi
-}
+# PHP_GCC14_PATCH() {
+#     if [[ "${Php_Ver_Short}" = "5.6" ]]; then
+#         echo "checking if GCC 14 patch is needed..."
+#         if [ "${Main_Gcc_Ver}" -ge 14 ]; then
+#             echo "GCC 14 patch is required for ${Php_Ver} with gcc ${Main_Gcc_Ver}"
+#            # PHP_GCC_OPTIONS='CFLAGS=-Wno-incompatible-pointer-types -Wno-implicit-int -Wno-implicit-function-declaration'
+#         export CFLAGS="-Wno-incompatible-pointer-types -Wno-implicit-int -Wno-implicit-function-declaration"
+#         else
+#             echo "No GCC 14 patch is needed for ${Php_Ver}"
+#         fi
+#         sleep 5
+#     fi
+# }
 
 PHP_GCC14_Unset() {
     if [ -n "${CFLAGS+x}" ]; then
@@ -785,6 +886,8 @@ PHP_GCC14_Unset() {
     fi
 }
 
+#Php_Ver="php-7.4.33"
+#php_version='7.4.33'
 PHP_Patch() {
     Php_Buildconf='n'
     if [ "${php_version}" != '' ]; then
@@ -882,70 +985,71 @@ PHP_CP_Ini() {
     \cp php.ini-production /usr/local/php/etc/php.ini
 }
 
+# readlink and symlink are required by composer/laravel/npm/standard tooling, remove them from disable_functions in php.ini
 PHP_Set_Ini() {
     echo "Modify php.ini......"
-    sed -i 's/post_max_size =.*/post_max_size = 50M/g' /usr/local/php/etc/php.ini
-    sed -i 's/upload_max_filesize =.*/upload_max_filesize = 50M/g' /usr/local/php/etc/php.ini
-    sed -i 's/;date.timezone =.*/date.timezone = America\/New_York/g' /usr/local/php/etc/php.ini
-    sed -i 's/short_open_tag =.*/short_open_tag = On/g' /usr/local/php/etc/php.ini
-    sed -i 's/;cgi.fix_pathinfo=.*/cgi.fix_pathinfo=0/g' /usr/local/php/etc/php.ini
-    sed -i 's/max_execution_time =.*/max_execution_time = 300/g' /usr/local/php/etc/php.ini
-    sed -i 's/disable_functions =.*/disable_functions = passthru,exec,system,chroot,chgrp,chown,shell_exec,proc_open,proc_get_status,popen,ini_alter,ini_restore,dl,openlog,syslog,readlink,symlink,popepassthru,stream_socket_server/g' /usr/local/php/etc/php.ini
+    sed -i 's|post_max_size =.*|post_max_size = 50M|g' /usr/local/php/etc/php.ini
+    sed -i 's|upload_max_filesize =.*|upload_max_filesize = 50M|g' /usr/local/php/etc/php.ini
+    sed -i "s|;date.timezone =.*|date.timezone = ${PHP_Timezone}|g" /usr/local/php/etc/php.ini
+    sed -i 's|short_open_tag =.*|short_open_tag = On|g' /usr/local/php/etc/php.ini
+    sed -i 's|;cgi.fix_pathinfo=.*|cgi.fix_pathinfo=0|g' /usr/local/php/etc/php.ini
+    sed -i 's|max_execution_time =.*|max_execution_time = 300|g' /usr/local/php/etc/php.ini
+    sed -i 's|disable_functions =.*|disable_functions = passthru,exec,system,chroot,chgrp,chown,shell_exec,proc_open,proc_get_status,popen,ini_alter,ini_restore,dl,openlog,syslog|g' /usr/local/php/etc/php.ini
 }
 
-Install_PHP_55() {
-    Echo_Blue "[+] Installing ${Php_Ver}..."
-    Tar_Cd ${Php_Ver}.tar.bz2 ${Php_Ver}
-    if [ "${ARCH}" = "aarch64" ]; then
-        patch -p1 <${cur_dir}/src/patch/php-5.5-5.6-asm-aarch64.patch
-    fi
-    if [ "${Stack}" = "lnmp" ]; then
-        ./configure --prefix=/usr/local/php --with-config-file-path=/usr/local/php/etc --with-config-file-scan-dir=/usr/local/php/conf.d --enable-fpm --with-fpm-user=www --with-fpm-group=www --with-mysql=mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype-dir=/usr --with-jpeg-dir=/usr --with-png-dir=/usr --with-zlib --enable-xml --disable-rpath --enable-bcmath --enable-shmop --enable-sysvsem --enable-inline-optimization ${with_curl} --enable-mbregex --enable-mbstring --with-mcrypt --enable-ftp --with-gd --enable-gd-native-ttf ${with_openssl} --with-mhash --enable-pcntl --enable-sockets --with-xmlrpc --enable-soap --with-gettext ${with_fileinfo} --enable-opcache --enable-intl --with-xsl ${PHP_Buildin_Option} ${PHP_Modules_Options}
-    else
-        ./configure --prefix=/usr/local/php --with-config-file-path=/usr/local/php/etc --with-config-file-scan-dir=/usr/local/php/conf.d --with-apxs2=/usr/local/apache/bin/apxs --with-mysql=mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype-dir=/usr --with-jpeg-dir=/usr --with-png-dir=/usr --with-zlib --enable-xml --disable-rpath --enable-bcmath --enable-shmop --enable-sysvsem --enable-inline-optimization ${with_curl} --enable-mbregex --enable-mbstring --with-mcrypt --enable-ftp --with-gd --enable-gd-native-ttf ${with_openssl} --with-mhash --enable-pcntl --enable-sockets --with-xmlrpc --enable-soap --with-gettext ${with_fileinfo} --enable-opcache --enable-intl --with-xsl ${PHP_Buildin_Option} ${PHP_Modules_Options}
-    fi
-    PHP_Make_Install
+# Install_PHP_55() {
+#     Echo_Blue "[+] Installing ${Php_Ver}..."
+#     Tar_Cd ${Php_Ver}.tar.bz2 ${Php_Ver}
+#     if [ "${ARCH}" = "aarch64" ]; then
+#         patch -p1 <${cur_dir}/src/patch/php-5.5-5.6-asm-aarch64.patch
+#     fi
+#     if [ "${Stack}" = "lnmp" ]; then
+#         ./configure --prefix=/usr/local/php --with-config-file-path=/usr/local/php/etc --with-config-file-scan-dir=/usr/local/php/conf.d --enable-fpm --with-fpm-user=www --with-fpm-group=www --with-mysql=mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype-dir=/usr --with-jpeg-dir=/usr --with-png-dir=/usr --with-zlib --enable-xml --disable-rpath --enable-bcmath --enable-shmop --enable-sysvsem --enable-inline-optimization ${with_curl} --enable-mbregex --enable-mbstring --with-mcrypt --enable-ftp --with-gd --enable-gd-native-ttf ${with_openssl} --with-mhash --enable-pcntl --enable-sockets --with-xmlrpc --enable-soap --with-gettext ${with_fileinfo} --enable-opcache --enable-intl --with-xsl ${PHP_Buildin_Option} ${PHP_Modules_Options}
+#     else
+#         ./configure --prefix=/usr/local/php --with-config-file-path=/usr/local/php/etc --with-config-file-scan-dir=/usr/local/php/conf.d --with-apxs2=/usr/local/apache/bin/apxs --with-mysql=mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype-dir=/usr --with-jpeg-dir=/usr --with-png-dir=/usr --with-zlib --enable-xml --disable-rpath --enable-bcmath --enable-shmop --enable-sysvsem --enable-inline-optimization ${with_curl} --enable-mbregex --enable-mbstring --with-mcrypt --enable-ftp --with-gd --enable-gd-native-ttf ${with_openssl} --with-mhash --enable-pcntl --enable-sockets --with-xmlrpc --enable-soap --with-gettext ${with_fileinfo} --enable-opcache --enable-intl --with-xsl ${PHP_Buildin_Option} ${PHP_Modules_Options}
+#     fi
+#     PHP_Make_Install
 
-    Ln_PHP_Bin
-    PHP_CP_Ini
-    PHP_Set_Ini
-    Install_Composer
-    PHP_Create_Conf
-    PHP_Set_Systemd
-}
+#     Ln_PHP_Bin
+#     PHP_CP_Ini
+#     PHP_Set_Ini
+#     Install_Composer_Official
+#     PHP_Create_Conf
+#     PHP_Set_Systemd
+# }
 
-Install_PHP_56() {
-    Echo_Blue "[+] Installing ${Php_Ver}"
-    Tar_Cd ${Php_Ver}.tar.bz2 ${Php_Ver}
+# Install_PHP_56() {
+#     Echo_Blue "[+] Installing ${Php_Ver}"
+#     Tar_Cd ${Php_Ver}.tar.bz2 ${Php_Ver}
 
-    if [ "${ARCH}" = "aarch64" ]; then
-        patch -p1 <${cur_dir}/src/patch/php-5.5-5.6-asm-aarch64.patch
-    fi
+#     if [ "${ARCH}" = "aarch64" ]; then
+#         patch -p1 <${cur_dir}/src/patch/php-5.5-5.6-asm-aarch64.patch
+#     fi
 
-    #if command -v pkg-config >/dev/null 2>&1 && pkg-config --modversion icu-i18n | grep -Eqi '^6[1-9]|[7-9][0-9]'; then
-    #    patch -p1 < ${cur_dir}/src/patch/php-5.6-icu-70-pkg-config.patch
-    #fi
-    #    if command -v pkg-config >/dev/null 2>&1 && pkg-config --modversion icu-i18n | grep -Eqi '^6[1-9]|[7-9][0-9]'; then
-    #        patch -p1 < ${cur_dir}/src/patch/php-5.6-intl.patch
-    #    fi
-    Install_Libmcrypt
-    PHP_Patch
-    PHP_GCC14_PATCH
-    if [ "${Stack}" = "lnmp" ]; then
-        ./configure --prefix=/usr/local/php --with-config-file-path=/usr/local/php/etc --with-config-file-scan-dir=/usr/local/php/conf.d --enable-fpm --with-fpm-user=www --with-fpm-group=www --with-mysql=mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype-dir=/usr --with-jpeg-dir=/usr --with-png-dir=/usr --with-zlib --enable-xml --disable-rpath --enable-bcmath --enable-shmop --enable-sysvsem --enable-inline-optimization ${with_curl} --enable-mbregex --enable-mbstring --with-mcrypt --enable-ftp --with-gd --enable-gd-native-ttf ${with_openssl} --with-mhash --enable-pcntl --enable-sockets --with-xmlrpc --enable-soap --with-gettext ${with_fileinfo} --enable-opcache --enable-intl --with-xsl ${PHP_Buildin_Option} ${PHP_Modules_Options}
-    else
-        ./configure --prefix=/usr/local/php --with-config-file-path=/usr/local/php/etc --with-config-file-scan-dir=/usr/local/php/conf.d --with-apxs2=/usr/local/apache/bin/apxs --with-mysql=mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype-dir=/usr --with-jpeg-dir=/usr --with-png-dir=/usr --with-zlib --enable-xml --disable-rpath --enable-bcmath --enable-shmop --enable-sysvsem --enable-inline-optimization ${with_curl} --enable-mbregex --enable-mbstring --with-mcrypt --enable-ftp --with-gd --enable-gd-native-ttf ${with_openssl} --with-mhash --enable-pcntl --enable-sockets --with-xmlrpc --enable-soap --with-gettext ${with_fileinfo} --enable-opcache --enable-intl --with-xsl ${PHP_Buildin_Option} ${PHP_Modules_Options}
-    fi
+#     #if command -v pkg-config >/dev/null 2>&1 && pkg-config --modversion icu-i18n | grep -Eqi '^6[1-9]|[7-9][0-9]'; then
+#     #    patch -p1 < ${cur_dir}/src/patch/php-5.6-icu-70-pkg-config.patch
+#     #fi
+#     #    if command -v pkg-config >/dev/null 2>&1 && pkg-config --modversion icu-i18n | grep -Eqi '^6[1-9]|[7-9][0-9]'; then
+#     #        patch -p1 < ${cur_dir}/src/patch/php-5.6-intl.patch
+#     #    fi
+#     Install_Libmcrypt
+#     PHP_Patch
+#     PHP_GCC14_PATCH
+#     if [ "${Stack}" = "lnmp" ]; then
+#         ./configure --prefix=/usr/local/php --with-config-file-path=/usr/local/php/etc --with-config-file-scan-dir=/usr/local/php/conf.d --enable-fpm --with-fpm-user=www --with-fpm-group=www --with-mysql=mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype-dir=/usr --with-jpeg-dir=/usr --with-png-dir=/usr --with-zlib --enable-xml --disable-rpath --enable-bcmath --enable-shmop --enable-sysvsem --enable-inline-optimization ${with_curl} --enable-mbregex --enable-mbstring --with-mcrypt --enable-ftp --with-gd --enable-gd-native-ttf ${with_openssl} --with-mhash --enable-pcntl --enable-sockets --with-xmlrpc --enable-soap --with-gettext ${with_fileinfo} --enable-opcache --enable-intl --with-xsl ${PHP_Buildin_Option} ${PHP_Modules_Options}
+#     else
+#         ./configure --prefix=/usr/local/php --with-config-file-path=/usr/local/php/etc --with-config-file-scan-dir=/usr/local/php/conf.d --with-apxs2=/usr/local/apache/bin/apxs --with-mysql=mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype-dir=/usr --with-jpeg-dir=/usr --with-png-dir=/usr --with-zlib --enable-xml --disable-rpath --enable-bcmath --enable-shmop --enable-sysvsem --enable-inline-optimization ${with_curl} --enable-mbregex --enable-mbstring --with-mcrypt --enable-ftp --with-gd --enable-gd-native-ttf ${with_openssl} --with-mhash --enable-pcntl --enable-sockets --with-xmlrpc --enable-soap --with-gettext ${with_fileinfo} --enable-opcache --enable-intl --with-xsl ${PHP_Buildin_Option} ${PHP_Modules_Options}
+#     fi
 
-    PHP_Make_Install
+#     PHP_Make_Install
 
-    Ln_PHP_Bin
-    PHP_CP_Ini
-    PHP_Set_Ini
-    Install_Composer
-    PHP_Create_Conf
-    PHP_Set_Systemd
-}
+#     Ln_PHP_Bin
+#     PHP_CP_Ini
+#     PHP_Set_Ini
+#     Install_Composer
+#     PHP_Create_Conf
+#     PHP_Set_Systemd
+# }
 
 Install_PHP_70() {
     Echo_Blue "[+] Installing ${Php_Ver}"
@@ -1217,13 +1321,19 @@ eof
         \cp ${cur_dir}/conf/ocp.php ${Default_Website_Dir}/ocp.php
     fi
     echo "============================Install PHPMyAdmin================================="
-    [[ -d ${Default_Website_Dir}/phpmyadmin ]] && rm -rf ${Default_Website_Dir}/phpmyadmin
-    tar Jxf ${PhpMyAdmin_Ver}.tar.xz
+    if [ -d "${Default_Website_Dir}/phpmyadmin" ]; then
+        ts="$(date +%Y%m%d%H%M%S)"
+        mv "${Default_Website_Dir}/phpmyadmin" "${Default_Website_Dir}/phpmyadmin.${ts}.bak"
+    fi
+    [ -s "${PhpMyAdmin_Ver}.tar.xz" ] || { Echo_Red "phpMyAdmin tarball missing"; return 1; }
+    tar Jxf "${PhpMyAdmin_Ver}.tar.xz"
     mv ${PhpMyAdmin_Ver} ${Default_Website_Dir}/phpmyadmin
     \cp ${cur_dir}/conf/config.inc.php ${Default_Website_Dir}/phpmyadmin/config.inc.php
-    sed -i 's/LNMPORG/GETLNMP_'$(date +%s%N | head -c 13)'_GETLNMP/g' ${Default_Website_Dir}/phpmyadmin/config.inc.php
-    mkdir ${Default_Website_Dir}/phpmyadmin/{upload,save}
+    phpmyadmin_secret=$(openssl rand -hex 16)
+    sed -i "s/GETLNMPCOM/${phpmyadmin_secret}/g" ${Default_Website_Dir}/phpmyadmin/config.inc.php
+    mkdir -p ${Default_Website_Dir}/phpmyadmin/{upload,save}
     chmod 755 -R ${Default_Website_Dir}/phpmyadmin/
     chown www:www -R ${Default_Website_Dir}/phpmyadmin/
+    chmod 640 "${Default_Website_Dir}/phpmyadmin/config.inc.php"
     echo "============================phpMyAdmin install completed======================="
 }

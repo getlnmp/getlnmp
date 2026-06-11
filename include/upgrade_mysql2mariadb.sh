@@ -4,8 +4,8 @@ Backup_MySQL2()
 {
     echo "Starting backup all databases..."
     echo "If the database is large, the backup time will be longer."
-    /usr/local/mysql/bin/mysqldump --defaults-file=~/.my.cnf --all-databases --routines --triggers --events --single-transaction > /root/mysql_all_backup${Upgrade_Date}.sql
-    if [ $? -eq 0 ]; then
+    /usr/local/mysql/bin/mysqldump --defaults-file="${HOME}/.my.cnf" --all-databases --routines --triggers --events --single-transaction > /root/mysql_all_backup${Upgrade_Date}.sql
+    if [ -s "/root/mysql_all_backup${Upgrade_Date}.sql" ]; then
         echo "MySQL databases backup successfully.";
     else
         echo "MySQL databases backup failed,Please backup databases manually!"
@@ -15,7 +15,7 @@ Backup_MySQL2()
     echo "Remove autostart..."
     Remove_StartUp mysql
     mv /usr/local/mysql /usr/local/mysql2mariadb${Upgrade_Date}
-    mv /etc/systemd/system/mysql.service /usr/local/mysql2mariadb${Upgrade_Date}/dmysql2mariadb.service.bak.${Upgrade_Date}
+    mv /etc/systemd/system/mysql.service /usr/local/mysql2mariadb${Upgrade_Date}/mysql2mariadb.service.bak.${Upgrade_Date}
     mv /etc/my.cnf /usr/local/mysql2mariadb${Upgrade_Date}/my.cnf.mysql2mariadbbak.${Upgrade_Date}
     if [[ ! "${MySQL_Data_Dir}" =~ ^/usr/local/mysql/ ]]; then
         mv "${MySQL_Data_Dir}" "${MySQL_Data_Dir}""${Upgrade_Date}"
@@ -24,6 +24,23 @@ Backup_MySQL2()
     if echo "${mariadb_version}" | grep -Eqi '^5\.5\.' &&  echo "${cur_mysql_version}" | grep -Eqi '^5\.6\.';then
         sed -i 's/STATS_PERSISTENT=0//g' /root/mysql_all_backup${Upgrade_Date}.sql
     fi
+}
+
+Restore_old_mysql2mariadb() {
+    Echo_Red "Upgrade failed; restoring previous MySQL installation."
+    rm -rf /usr/local/mariadb
+    mv "/usr/local/mysql2mariadb${Upgrade_Date}" /usr/local/mysql 2>/dev/null
+    if [ -d "${MySQL_Data_Dir}${Upgrade_Date}" ]; then
+        rm -rf "${MySQL_Data_Dir}"
+        mv "${MySQL_Data_Dir}${Upgrade_Date}" "${MySQL_Data_Dir}"
+    fi
+    mv "/usr/local/mysql/mysql2mariadb.service.bak.${Upgrade_Date}" /etc/systemd/system/mysql.service 2>/dev/null
+    mv "/usr/local/mysql/my.cnf.mysql2mariadbbak.${Upgrade_Date}" /etc/my.cnf 2>/dev/null
+    rm -f /etc/systemd/system/mariadb.service.d/lnmp-malloc.conf
+    rmdir /etc/systemd/system/mariadb.service.d 2>/dev/null
+    systemctl daemon-reload
+    systemctl start mysql
+    exit 1
 }
 
 Upgrade_MySQL2MariaDB()
@@ -46,7 +63,7 @@ Upgrade_MySQL2MariaDB()
         echo "You will upgrade MySQL to version:${mariadb_version}"
     else
         Echo_Red "Error: You input MariaDB Version was:${mariadb_version}"
-        Echo_Red "We only support to upgrade MySQL to MariaDBLTS version like 10.6.x, 10.11.x, 11.4.x and 11.8.x"
+        Echo_Red "We only support to upgrade MySQL to MariaDB LTS version like 10.6.x, 10.11.x, 11.4.x and 11.8.x"
         exit 1
     fi
 
@@ -57,7 +74,7 @@ Upgrade_MySQL2MariaDB()
 
     if echo "${mariadb_version}" | grep -Eqi '^10\.6\.';then
         if [[ "${DB_ARCH}" = "x86_64" ]]; then
-            read -p "Using Generic Binaries [y/n]: " Bin
+            read -r -p "Using Generic Binaries [y/n]: " Bin
             case "${Bin}" in
             [yY][eE][sS]|[yY])
                 echo "You will install mariadb-${mariadb_version} Using Generic Binaries."
@@ -77,7 +94,7 @@ Upgrade_MySQL2MariaDB()
         fi
     else
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            read -p "Using Generic Binaries [y/n]: " Bin
+            read -r -p "Using Generic Binaries [y/n]: " Bin
             case "${Bin}" in
             [yY][eE][sS]|[yY])
                 echo "You will install mariadb-${mariadb_version} Using Generic Binaries."
@@ -102,7 +119,7 @@ Upgrade_MySQL2MariaDB()
 
     InstallInnodb="y"
     Echo_Yellow "Do you want to install the InnoDB Storage Engine?"
-    read -p "(Default yes, if you want please enter: y , if not please enter: n): " InstallInnodb
+    read -r -p "(Default yes, if you want please enter: y , if not please enter: n): " InstallInnodb
 
     case "${InstallInnodb}" in
     [yY][eE][sS]|[yY])
@@ -122,18 +139,10 @@ Upgrade_MySQL2MariaDB()
     echo "You will upgrade MySQL V${cur_mysql_version} to MariaDB V${mariadb_version}"
     echo "====================================================================="
 
-    if [ -s /usr/local/include/jemalloc/jemalloc.h ] && lsof -n|grep "libjemalloc.so"|grep -q "mysqld"; then
-        MariaDBMAOpt=''
-    elif [ -s /usr/local/include/gperftools/tcmalloc.h ] && lsof -n|grep "libtcmalloc.so"|grep -q "mysqld"; then
-        MariaDBMAOpt="-DCMAKE_EXE_LINKER_FLAGS='-ltcmalloc' -DWITH_SAFEMALLOC=OFF"
-    else
-        MariaDBMAOpt=''
-    fi
-
     Press_Start
 
     echo "============================check files=================================="
-    cd ${cur_dir}/src
+    cd "${cur_dir}/src" || { Echo_Red "Error: cannot enter ${cur_dir}/src"; exit 1; }
     if [ "${Bin}" = "y" ]; then
         MariaDB_FileName="mariadb-${mariadb_version}-linux-systemd-${DB_ARCH}"
     else
@@ -148,7 +157,7 @@ Upgrade_MySQL2MariaDB()
             echo "Download ${MariaDB_FileName}.tar.gz successfully!"
         else
 			if [ "${Bin}" = "y" ]; then
-			    Download_Files https://archive.mariadb.org/mariadb-${mariadb_version}/bintar-linux-systemd-x86_64/${MariaDB_FileName}.tar.gz ${MariaDB_FileName}.tar.gz
+			    Download_Files https://archive.mariadb.org/mariadb-${mariadb_version}/bintar-linux-systemd-${DB_ARCH}/${MariaDB_FileName}.tar.gz ${MariaDB_FileName}.tar.gz
 			else
 			    Download_Files https://archive.mariadb.org/mariadb-${mariadb_version}/source/${MariaDB_FileName}.tar.gz ${MariaDB_FileName}.tar.gz
 			fi
@@ -169,23 +178,37 @@ Upgrade_MySQL2MariaDB()
     if [ "${Bin}" = "y" ]; then
         Echo_Blue "[+] Starting upgrade mariadb-${mariadb_version} Using Generic Binaries..."
         Tar_Cd ${MariaDB_FileName}.tar.gz
-        mkdir /usr/local/mariadb
-        mv ${MariaDB_FileName}/* /usr/local/mariadb/
+        mkdir /usr/local/mariadb || Restore_old_mysql2mariadb
+        mv ${MariaDB_FileName}/* /usr/local/mariadb/ || Restore_old_mysql2mariadb
     else
         Echo_Blue "[+] Starting upgrade mariadb-${mariadb_version} Using Source code..."
         Tar_Cd mariadb-${mariadb_version}.tar.gz mariadb-${mariadb_version}
-        MariaDB_WITHSSL
-        if echo "${mariadb_version}" | grep -Eqi '^(10\.[5-9]|1[09]\.)';then
-            cmake -DCMAKE_INSTALL_PREFIX=/usr/local/mariadb -DMYSQL_UNIX_ADDR=/tmp/mysql.sock -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_READLINE=1 -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 -DWITHOUT_TOKUDB=1
+        # if echo "${mariadb_version}" | grep -Eqi '^10\.4.';then
+        #     patch -p1 < ${cur_dir}/src/patch/mariadb_10.4_install_db.patch
+        # fi
+        mkdir -p mariadb-build && cd mariadb-build
+        if echo "${mariadb_version}" | grep -Eqi '^(10\.([5-9]|1[0-9])|1[1-9])\.';then
+            cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/mariadb -DMYSQL_UNIX_ADDR=/tmp/mysql.sock -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_READLINE=1 -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 -DWITHOUT_TOKUDB=1 || {
+                Echo_Red "Error: MariaDB cmake configuration failed."
+                Restore_old_mysql2mariadb
+            }
         elif echo "${mariadb_version}" | grep -Eqi '^10\.4.';then
-            patch -p1 < ${cur_dir}/src/patch/mariadb_10.4_install_db.patch
-            cmake -DCMAKE_INSTALL_PREFIX=/usr/local/mariadb -DMYSQL_UNIX_ADDR=/tmp/mysql.sock -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_READLINE=1 -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 -DWITHOUT_TOKUDB=1
+            cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/mariadb -DMYSQL_UNIX_ADDR=/tmp/mysql.sock -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_READLINE=1 -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 -DWITHOUT_TOKUDB=1 || {
+                Echo_Red "Error: MariaDB cmake configuration failed."
+                Restore_old_mysql2mariadb
+            }
         elif echo "${mariadb_version}" | grep -Eqi '^10\.[123].';then
-            cmake -DCMAKE_INSTALL_PREFIX=/usr/local/mariadb -DWITH_ARIA_STORAGE_ENGINE=1 -DWITH_XTRADB_STORAGE_ENGINE=1 -DWITH_INNOBASE_STORAGE_ENGINE=1 -DWITH_PARTITION_STORAGE_ENGINE=1 -DWITH_MYISAM_STORAGE_ENGINE=1 -DWITH_FEDERATED_STORAGE_ENGINE=1 -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_READLINE=1 -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 -DWITHOUT_TOKUDB=1 ${MariaDBWITHSSL}
+            cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/mariadb -DWITH_ARIA_STORAGE_ENGINE=1 -DWITH_XTRADB_STORAGE_ENGINE=1 -DWITH_INNOBASE_STORAGE_ENGINE=1 -DWITH_PARTITION_STORAGE_ENGINE=1 -DWITH_MYISAM_STORAGE_ENGINE=1 -DWITH_FEDERATED_STORAGE_ENGINE=1 -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_READLINE=1 -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 -DWITHOUT_TOKUDB=1 ${MariaDBWITHSSL} || {
+                Echo_Red "Error: MariaDB cmake configuration failed."
+                Restore_old_mysql2mariadb
+            }
         else
-            cmake -DCMAKE_INSTALL_PREFIX=/usr/local/mariadb -DWITH_ARIA_STORAGE_ENGINE=1 -DWITH_XTRADB_STORAGE_ENGINE=1 -DWITH_INNOBASE_STORAGE_ENGINE=1 -DWITH_PARTITION_STORAGE_ENGINE=1 -DWITH_MYISAM_STORAGE_ENGINE=1 -DWITH_FEDERATED_STORAGE_ENGINE=1 -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_READLINE=1 -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 ${MariaDBWITHSSL}
+            cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/mariadb -DWITH_ARIA_STORAGE_ENGINE=1 -DWITH_XTRADB_STORAGE_ENGINE=1 -DWITH_INNOBASE_STORAGE_ENGINE=1 -DWITH_PARTITION_STORAGE_ENGINE=1 -DWITH_MYISAM_STORAGE_ENGINE=1 -DWITH_FEDERATED_STORAGE_ENGINE=1 -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_READLINE=1 -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 ${MariaDBWITHSSL} || {
+                Echo_Red "Error: MariaDB cmake configuration failed."
+                Restore_old_mysql2mariadb
+            }
         fi
-        MariaDB_Make_Install
+        MariaDB_Make_Install || Restore_old_mysql2mariadb
     fi
 
     MariaDB_Add_UG
@@ -195,25 +218,28 @@ Upgrade_MySQL2MariaDB()
     Check_MariaDB_Data_Dir
     MariaDB_Initialize_DB
 
-    \cp ${cur_dir}/init.d/mariadb.service /etc/systemd/system/mariadb.service
+    MariaDB_Set_Startup
 
-    Mariadb_Sec_Setting
+    MariaDB_Sec_Setting
     systemctl start mariadb
 
     echo "Restore backup databases..."
-    /usr/local/mariadb/bin/mysql --defaults-file=~/.my.cnf < /root/mysql_all_backup${Upgrade_Date}.sql || {
-        Echo_Red "Error: MariaDB databases import failed, old data remains in the backup location."
+    import_log="/root/mysql2mariadb_import${Upgrade_Date}.log"
+    /usr/local/mariadb/bin/mysql --defaults-file="${HOME}/.my.cnf" < /root/mysql_all_backup${Upgrade_Date}.sql 2>"${import_log}"
+    if [ $? -ne 0 ] || grep -qi '^ERROR' "${import_log}"; then
+        Echo_Red "Error: MariaDB databases import failed, see ${import_log} for details. Old data remains in the backup location."
+        cat "${import_log}"
         systemctl stop mariadb
         TempMycnf_Clean
-        exit 1
-    }
+        Restore_old_mysql2mariadb
+    fi
 
     echo "Repair databases..."
-    /usr/local/mariadb/bin/mysql_upgrade -u root -p${DB_Root_Password} || {
+    MYSQL_PWD="${DB_Root_Password}" /usr/local/mariadb/bin/mariadb-upgrade -u root || {
         Echo_Red "Error: mariadb-upgrade failed."
         systemctl stop mariadb
         TempMycnf_Clean
-        exit 1
+        Restore_old_mysql2mariadb
     }
 
     echo "Add to autostart..."
@@ -221,16 +247,21 @@ Upgrade_MySQL2MariaDB()
     echo "Stopping MariaDB..."
     systemctl stop mariadb
     TempMycnf_Clean
-    cd ${cur_dir} && rm -rf ${cur_dir}/src/mariadb-${mariadb_version}
-
-    sed -i 's#/etc/init.d/mysql#/etc/init.d/mariadb#g' /bin/lnmp
+    cd "${cur_dir}/src" && rm -rf "${cur_dir}"/src/mariadb-"${mariadb_version}" "${cur_dir}"/src/mariadb-"${mariadb_version}"-linux-*
 
     lnmp start
-    if [[ -s /usr/local/mariadb/bin/mysql && -s /usr/local/mariadb/bin/mysqld_safe && -s /etc/my.cnf ]]; then
+    if [ -x /usr/local/mariadb/bin/mariadb-config ]; then
+        new_mariadb_version=$(/usr/local/mariadb/bin/mariadb-config --version)
+    else
+        new_mariadb_version=$(/usr/local/mariadb/bin/mysql_config --version)
+    fi
+    if [ "${new_mariadb_version}" = "${mariadb_version}" ]; then
         Echo_Green "======== upgrade MySQL to MariaDB completed ======"
     else
         Echo_Red "======== upgrade MySQL to MariaDB failed ======"
         Echo_Red "upgrade MariaDB log: /root/upgrade_mysql2mariadb${Upgrade_Date}.log"
         echo "You upload upgrade_mysql2mariadb${Upgrade_Date}.log to LNMP Forum for help."
+        lnmp stop 2>/dev/null
+        Restore_old_mysql2mariadb
     fi
 }

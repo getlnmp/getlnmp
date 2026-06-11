@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 
-# use America/New_York timezone by default, you can change it to your local timezone if needed
+# set your PHP timezone in lnmp.conf, UTC by default
 Set_Timezone() {
-    Echo_Blue "[+] Setting timezone to New York Time..."
-    rm -rf /etc/localtime
-    ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
+    local tz="${LNMP_Timezone:-}"
+    if [ -z "${tz}" ]; then
+        tz=$(timedatectl show -p Timezone --value 2>/dev/null \
+             || cat /etc/timezone 2>/dev/null \
+             || readlink -f /etc/localtime 2>/dev/null | sed 's@.*/zoneinfo/@@')
+    fi
+    [ -z "${tz}" ] && tz="UTC"
+    Echo_Blue "[+] Setting timezone to ${tz}..."
+    ln -sf "/usr/share/zoneinfo/${tz}" /etc/localtime
 }
 
 # chrony contains both chronyd and chronyc, chronyd is the daemon that runs in the background to sync time, while chronyc is the command-line tool to interact with chronyd
@@ -26,7 +32,7 @@ Sync_Time() {
             systemctl enable --now chronyd
             ;;
         apt)
-            apt-get update --allow-releaseinfo-change -y
+            apt-get update -y || apt-get update --allow-releaseinfo-change -y
             apt-get install -y chrony
             systemctl enable --now chronyd
             ;;
@@ -66,23 +72,23 @@ Sync_Time() {
 
 RHEL_RemoveAMP() {
     Echo_Blue "[-] Yum remove packages..."
+    # Remove only the distro-provided Apache/PHP/DB packages by explicit name, via yum so
+    # reverse-dependencies are resolved. Avoid `rpm -e --nodeps` (silently breaks dependents)
+    # and `yum remove httpd*`/`php*` globs (which also match third-party packages such as
+    # SCL httpd24-* or php-fpm-pecl-*).
     rpm -qa | grep httpd
-    rpm -e httpd httpd-tools --nodeps
+    yum -y remove httpd httpd-tools
+
     if [[ "${DBSelect}" != "0" ]]; then
         yum -y remove mysql-server mysql mysql-libs mariadb-server mariadb mariadb-libs
         rpm -qa | grep mysql
-        if [ $? -ne 0 ]; then
-            rpm -e mysql mysql-libs --nodeps
-            rpm -e mariadb mariadb-libs --nodeps
-        fi
     fi
+
     rpm -qa | grep php
-    rpm -e php-mysql php-cli php-gd php-common php --nodeps
+    yum -y remove php php-mysql php-cli php-gd php-common php-fpm
 
     Remove_Error_Libcurl
 
-    yum -y remove httpd*
-    yum -y remove php*
     yum clean all
 }
 
@@ -92,16 +98,15 @@ Deb_RemoveAMP() {
     [[ $? -ne 0 ]] && apt-get update --allow-releaseinfo-change -y
     for removepackages in apache2 apache2-doc apache2-utils apache2.2-common apache2.2-bin apache2-mpm-prefork apache2-doc apache2-mpm-worker php5 php5-common php5-cgi php5-cli php5-mysql php5-curl php5-gd; do apt-get purge -y $removepackages; done
     if [[ "${DBSelect}" != "0" ]]; then
-        if echo "${Ubuntu_Version}" | grep -Eqi "^2[0-7]\."; then
+        if dpkg -l | grep -q mysql; then
             dpkg -l | grep mysql
-            dpkg --force-all -P mysql-server
-            dpkg --force-all -P mariadb-client mariadb-server mariadb-common libmariadbd-dev
-            [[ -d "/etc/mysql" ]] && rm -rf /etc/mysql
-            for removepackages in mysql-server mariadb-server; do apt-get purge -y $removepackages; done
-        else
-            dpkg -l | grep mysql
-            dpkg --force-all -P mysql-server mysql-common libmysqlclient15off libmysqlclient15-dev libmysqlclient18 libmysqlclient18-dev libmysqlclient20 libmysqlclient-dev libmysqlclient21
-            dpkg --force-all -P mariadb-client mariadb-server mariadb-common libmariadbd-dev
+            for pkg in mysql-server mysql-common mysql-client mysql-server-core-5.5 mysql-client-5.5 \
+                libmysqlclient15off libmysqlclient15-dev libmysqlclient18 libmysqlclient18-dev \
+                libmysqlclient20 libmysqlclient-dev libmysqlclient21 \
+                mariadb-client mariadb-server mariadb-common libmariadbd-dev; do
+                dpkg -l "${pkg}" 2>/dev/null | grep -q '^ii' && dpkg --force-all -P "${pkg}"
+            done
+            [[ -d "/etc/mysql" ]] && mv /etc/mysql "/etc/mysql.lnmp_backup.$(date +%Y%m%d%H%M%S)"
             for removepackages in mysql-client mysql-server mysql-common mysql-server-core-5.5 mysql-client-5.5 mariadb-client mariadb-server mariadb-common; do apt-get purge -y $removepackages; done
         fi
     fi
@@ -113,9 +118,10 @@ Deb_RemoveAMP() {
     apt-get autoremove -y && apt-get clean
 }
 
+# selinux will affect LNMP compilation and running, so disable it by default
 Disable_Selinux() {
     if [ -s /etc/selinux/config ]; then
-        setenforce 0
+        setenforce 0 2>/dev/null
         sed -i 's/^SELINUX=.*/SELINUX=disabled/g' /etc/selinux/config
     fi
 }
@@ -133,8 +139,13 @@ Check_Hosts() {
         echo "${pingresult}"
         if echo "${pingresult}" | grep -q "unknown host"; then
             echo "DNS...fail"
-            echo "Writing nameserver to /etc/resolv.conf ..."
-            echo -e "nameserver 8.8.8.8\nnameserver 1.1.1.1\nnameserver 8.8.4.4" >/etc/resolv.conf
+            if [ -L /etc/resolv.conf ]; then
+                echo "/etc/resolv.conf is a symlink (likely systemd-resolved), skip rewriting it."
+            else
+                echo "Backing up /etc/resolv.conf and adding public nameservers ..."
+                [ -f /etc/resolv.conf ] && cp -a /etc/resolv.conf "/etc/resolv.conf.lnmp.bak.$(date +%Y%m%d%H%M%S)"
+                echo -e "nameserver 8.8.8.8\nnameserver 1.1.1.1\nnameserver 8.8.4.4" >>/etc/resolv.conf
+            fi
         else
             echo "DNS...ok"
         fi
@@ -355,7 +366,7 @@ Modify_Source() {
                     Echo_Blue "RHELRepo=local, keep current RHEL repository settings."
                 else
                     Echo_Red "RHEL subscription is not active."
-                    Echo_Red "For RHEL, please register the system, configure local repos, or explicitly set RHELRepo=aliyun/centos if you accept third-party compatible repos."
+                    Echo_Red "Either register the system (subscription-manager register), configure local repos in /etc/yum.repos.d/, then set RHELRepo=local in lnmp.conf."
                     exit 1
                 fi
             fi
@@ -568,11 +579,14 @@ Check_Download() {
 }
 
 Make_Install() {
-    make -j"$(nproc)"
-    if [ $? -ne 0 ]; then
-        make
-    fi
-    make install
+    make -j"$(nproc)" || make || { 
+        Echo_Red "Make Failed!"
+        exit 1
+        }
+    make install || { 
+        Echo_Red "Make Install Failed!"
+        exit 1
+        }
 }
 
 # Need to accept an optional argument for app name to provide more specific error messages
@@ -609,11 +623,6 @@ Make_Install_Exit() {
 }
 
 PHP_Make_Install() {
-#    make ZEND_EXTRA_LIBS='-liconv' -j "$(nproc)"
-#    if [ $? -ne 0 ]; then
-#        make ZEND_EXTRA_LIBS='-liconv'
-#    fi
-#    make install
     make -j"$(nproc)" || make || {
         Echo_Red "Error: failed to build PHP."
         exit 1
@@ -630,11 +639,11 @@ MySQL_Make_Install()
 {
     make -j"$(nproc)" || make || {
         Echo_Red "Error: failed to build MySQL."
-        exit 1
+        return 1
     }
     make install || {
         Echo_Red "Error: failed to install MySQL."
-        exit 1
+        return 1
     }
 }
 
@@ -642,11 +651,11 @@ MariaDB_Make_Install()
 {
     make -j"$(nproc)" || make || {
         Echo_Red "Error: failed to build MariaDB."
-        exit 1
+        return 1
     }
     make install || {
         Echo_Red "Error: failed to install MariaDB."
-        exit 1
+        return 1
     }
 }
 
@@ -795,6 +804,8 @@ Install_Freetype() {
         Compile_Freetype
     fi
 }
+
+# actually this function will never run as we block all distros except RHEL family and Debian/Ubuntu family
 Compile_Freetype() {
     if echo "${Ubuntu_Version}" | grep -Eqi "^(1[89]\.|2[0-9]\.)" || echo "${Mint_Version}" | grep -Eqi "^(19|2[0-9])" || echo "${Deepin_Version}" | grep -Eqi "^(15\.[7-9]|15.1[0-9]|1[6-9]|2[0-9])" || echo "${Debian_Version}" | grep -Eqi "^(9|1[0-9])" || echo "${Raspbian_Version}" | grep -Eqi "^(9|1[0-9])" || echo "${Kali_Version}" | grep -Eqi "^202[0-9]" || echo "${UOS_Version}" | grep -Eqi "^2[0-9]" || echo "${CentOS_Version}" | grep -Eqi "^(8|9)" || echo "${RHEL_Version}" | grep -Eqi "^(8|9)" || echo "${Oracle_Version}" | grep -Eqi "^(8|9)" || echo "${Fedora_Version}" | grep -Eqi "^(3[0-9]|29)" || echo "${Rocky_Version}" | grep -Eqi "^(8|9)" || echo "${Alma_Version}" | grep -Eqi "^(8|9)" || echo "${openEuler_Version}" | grep -Eqi "^2[0-9]" || echo "${Anolis_Version}" | grep -Eqi "^(8|9)" || echo "${Kylin_Version}" | grep -Eqi "^V1[0-9]" || echo "${Amazon_Version}" | grep -Eqi "^202[3-9]" || echo "${OpenCloudOS_Version}" | grep -Eqi "^(8|9|23)" || echo "${HCE_Version}" | grep -Eqi "^2\.[0-9]"; then
         Download_Files ${Freetype_New_DL} ${Freetype_New_Ver}.tar.xz
@@ -883,6 +894,7 @@ Install_Jemalloc() {
     ln -sf /usr/local/lib/libjemalloc* /usr/lib/
 }
 
+# We only support 64 bit OS.
 Install_TCMalloc() {
     Echo_Blue "[+] Installing ${TCMalloc_Ver}"
     if [ "${Is_64bit}" = "y" ]; then
@@ -1128,9 +1140,8 @@ Install_Openssl_New() {
 
         echo "/usr/local/openssl1.1.1/lib" > /etc/ld.so.conf.d/openssl1.1.1.conf
         ldconfig
-
-        apache_with_ssl='--with-ssl=/usr/local/openssl1.1.1'
     fi
+        apache_with_ssl='--with-ssl=/usr/local/openssl1.1.1'
 }
 
 Install_Openssl3() {
@@ -1139,7 +1150,6 @@ Install_Openssl3() {
         echo "OpenSSL 3 is already installed."
     else
         rm -rf /usr/local/openssl3
-        rm -rf /etc/ld.so.conf.d/openssl3.conf
         Echo_Blue "[+] Installing ${Openssl_3_Ver}"
         cd ${cur_dir}/src
         Download_Files ${Openssl_3_DL} ${Openssl_3_Ver}.tar.gz
@@ -1148,13 +1158,10 @@ Install_Openssl3() {
         ./config enable-weak-ssl-ciphers -fPIC --prefix=/usr/local/openssl3 --openssldir=/usr/local/openssl3
         make depend
         Make_Install_Exit "OpenSSL 3"
-
         rm -rf ${cur_dir}/src/${Openssl_3_Ver}
-
         if [ -s /etc/ld.so.conf.d/openssl3.conf ]; then
             rm -rf /etc/ld.so.conf.d/openssl3.conf
         fi
-
         echo "/usr/local/openssl3/lib" > /etc/ld.so.conf.d/openssl3.conf
         ldconfig
     fi
@@ -1162,7 +1169,10 @@ Install_Openssl3() {
 }
 
 Install_Nghttp2() {
-    if [[ ! -s /usr/local/nghttp2/lib/libnghttp2.so || ! -s /usr/local/nghttp2/include/nghttp2/nghttp2.h ]]; then
+    if [[ -s /usr/local/nghttp2/lib/libnghttp2.so ]]; then
+        echo "Nghttp2 is already installed"
+    else
+        rm -rf /usr/local/nghttp2
         Echo_Blue "[+] Installing ${Nghttp2_Ver}"
         cd ${cur_dir}/src
         Download_Files ${Nghttp2_DL} ${Nghttp2_Ver}.tar.xz
@@ -1173,6 +1183,9 @@ Install_Nghttp2() {
         cd ${cur_dir}/src/
         rm -rf ${cur_dir}/src/${Nghttp2_Ver}
     fi
+    # always (re)assert the dynamic linker path so a missing/stale conf is fixed without a full rebuild
+    echo "/usr/local/nghttp2/lib" > /etc/ld.so.conf.d/nghttp2.conf
+    ldconfig
 }
 
 # Prior to PHP 7.4.0, libzip was bundled with PHP, and to compile the extension one needed to use the --enable-zip configure option.
@@ -1227,13 +1240,35 @@ Distro_Lib_Opt() {
 RHEL_Lib_Opt() {
     ulimit -v unlimited
 
-    if command -v systemd-detect-virt >/dev/null 2>&1 && [[ "$(systemd-detect-virt)" = "lxc" ]]; then
-        cat >>/etc/security/limits.conf <<eof
+    if ! grep -q "^# lnmp limits" /etc/security/limits.conf; then
+        if command -v systemd-detect-virt >/dev/null 2>&1 && [[ "$(systemd-detect-virt)" = "lxc" ]]; then
+            cat >>/etc/security/limits.conf <<eof
+# lnmp limits
 * soft nofile 65535
 * hard nofile 65535
 eof
-    else
+        else
+            cat >>/etc/security/limits.conf <<eof
+# lnmp limits
+* soft nproc 65535
+* hard nproc 65535
+* soft nofile 65535
+* hard nofile 65535
+eof
+        fi
+    fi
+
+    if ! grep -q "^fs.file-max=65535" /etc/sysctl.conf; then
+        echo "fs.file-max=65535" >>/etc/sysctl.conf
+    fi
+}
+
+Deb_Lib_Opt() {
+    ulimit -v unlimited
+
+    if ! grep -q "^# lnmp limits" /etc/security/limits.conf; then
         cat >>/etc/security/limits.conf <<eof
+# lnmp limits
 * soft nproc 65535
 * hard nproc 65535
 * soft nofile 65535
@@ -1241,20 +1276,9 @@ eof
 eof
     fi
 
-    echo "fs.file-max=65535" >>/etc/sysctl.conf
-}
-
-Deb_Lib_Opt() {
-    ulimit -v unlimited
-
-    cat >>/etc/security/limits.conf <<eof
-* soft nproc 65535
-* hard nproc 65535
-* soft nofile 65535
-* hard nofile 65535
-eof
-
-    echo "fs.file-max=65535" >>/etc/sysctl.conf
+    if ! grep -q "^fs.file-max=65535" /etc/sysctl.conf; then
+        echo "fs.file-max=65535" >>/etc/sysctl.conf
+    fi
 }
 
 Remove_Error_Libcurl() {
@@ -1298,13 +1322,14 @@ Add_Swap() {
     if [[ "${Enable_Swap}" = "y" && "${Swap_Total}" -le 512 && ! -s /var/swapfile ]]; then
         echo "Add Swap file..."
         [ $(cat /proc/sys/vm/swappiness) -eq 0 ] && sysctl vm.swappiness=10
-        dd if=/dev/zero of=/var/swapfile bs=1M count=${DD_Count}
-        chmod 0600 /var/swapfile
         echo "Enable Swap..."
-        /sbin/mkswap /var/swapfile
-        /sbin/swapon /var/swapfile
-        if [ $? -eq 0 ]; then
-            [ $(grep -L '/var/swapfile' '/etc/fstab') ] && echo "/var/swapfile swap swap defaults 0 0" >>/etc/fstab
+        if dd if=/dev/zero of=/var/swapfile bs=1M count=${DD_Count} \
+            && chmod 0600 /var/swapfile \
+            && /sbin/mkswap /var/swapfile \
+            && /sbin/swapon /var/swapfile; then
+            if ! grep -q '^/var/swapfile' /etc/fstab; then
+                echo "/var/swapfile swap swap defaults 0 0" >>/etc/fstab
+            fi
             /sbin/swapon -s
         else
             rm -f /var/swapfile

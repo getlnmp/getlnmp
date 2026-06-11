@@ -31,10 +31,11 @@ ExecStart=/usr/local/redis/bin/redis-server /usr/local/redis/etc/redis.conf --su
 KillSignal=SIGTERM
 
 # Restart automatically if the service exits abnormally
-Restart=always
+Restart=on-failure
+RestartSec=5s
 
 # Set file descriptor limit high, as Redis can use many connections
-LimitNOFILE=10032
+LimitNOFILE=65535
 NoNewPrivileges=yes
 
 # Standard security practice
@@ -44,4 +45,3 @@ PrivateTmp=false
 
 [Install]
 WantedBy=multi-user.target
-Alias=redis.service

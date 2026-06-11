@@ -560,7 +560,7 @@ malloc-lib=/usr/lib/libtcmalloc.so'
     fi
 }
 
-Dispaly_Selection() {
+Display_Selection() {
     Database_Selection
     PHP_Selection
     MemoryAllocator_Selection
@@ -903,7 +903,25 @@ Get_RHEL_Version() {
 }
 
 Get_OS_Bit() {
-    if [[ $(getconf WORD_BIT) = '32' && $(getconf LONG_BIT) = '64' ]]; then
+    local machine
+    machine=$(uname -m)
+
+    if echo "${machine}" | grep -Eqi "arm|aarch64"; then
+        Is_ARM='y'
+        if echo "${machine}" | grep -Eqi "aarch64|arm64"; then
+            Is_64bit='y'
+            ARCH='aarch64'
+            DB_ARCH='aarch64'
+        elif echo "${machine}" | grep -Eqi "armv7|armv6"; then
+            Is_64bit='n'
+            ARCH='armhf'
+            DB_ARCH='armhf'
+        else
+            Is_64bit='n'
+            ARCH='arm'
+            DB_ARCH='arm'
+        fi
+    elif [[ $(getconf WORD_BIT) = '32' && $(getconf LONG_BIT) = '64' ]]; then
         Is_64bit='y'
         ARCH='x86_64'
         DB_ARCH='x86_64'
@@ -911,18 +929,6 @@ Get_OS_Bit() {
         Is_64bit='n'
         ARCH='i386'
         DB_ARCH='i686'
-    fi
-
-    if uname -m | grep -Eqi "arm|aarch64"; then
-        Is_ARM='y'
-        if uname -m | grep -Eqi "armv7|armv6"; then
-            ARCH='armhf'
-        elif uname -m | grep -Eqi "aarch64"; then
-            ARCH='aarch64'
-            DB_ARCH='aarch64'
-        else
-            ARCH='arm'
-        fi
     fi
 }
 
@@ -1006,10 +1012,16 @@ Check_LNMPConf() {
         Echo_Red "Can't get values from lnmp.conf!"
         exit 1
     fi
-    if [[ "${MySQL_Data_Dir}" = "/" || "${MariaDB_Data_Dir}" = "/" || "${Default_Website_Dir}" = "/" ]]; then
-        Echo_Red "Can't set MySQL/MariaDB/Website Directory to / !"
-        exit 1
-    fi
+    local canonical_dir
+    for canonical_dir in \
+        "$(readlink -f "${MySQL_Data_Dir}" 2>/dev/null)" \
+        "$(readlink -f "${MariaDB_Data_Dir}" 2>/dev/null)" \
+        "$(readlink -f "${Default_Website_Dir}" 2>/dev/null)"; do
+        if [ -z "${canonical_dir}" ] || [ "${canonical_dir}" = "/" ]; then
+            Echo_Red "Can't set MySQL/MariaDB/Website Directory to / !"
+            exit 1
+        fi
+    done
 }
 
 Print_APP_Ver() {
@@ -1114,8 +1126,8 @@ Remove_StartUp() {
 Get_Country() {
     if command -v curl >/dev/null 2>&1; then
         country=$(curl -sSk --connect-timeout 30 -m 60 "https://ipinfo.io/country")
-        if [ $? -ne 0 ]; then
-            country=$(curl -sSk --connect-timeout 30 -m 60 "https://ipinfo.io/country")
+        if [ -z "${country}" ]; then
+            country=$(curl -sSk --connect-timeout 30 -m 60 "https://ifconfig.co/country-iso")
         fi
     else
         country=$(wget --timeout=5 --no-check-certificate -q -O - "http://ipinfo.io/country")
@@ -1236,11 +1248,11 @@ Get_PHP_Ext_Dir() {
 }
 
 Check_Stack() {
-    if [[ -s /usr/local/php/sbin/php-fpm && -s /usr/local/php/etc/php-fpm.conf && -s /etc/init.d/php-fpm && -s /usr/local/nginx/sbin/nginx ]]; then
+    if [[ -s /usr/local/php/sbin/php-fpm && -s /usr/local/php/etc/php-fpm.conf && -s /usr/local/nginx/sbin/nginx ]]; then
         Get_Stack="lnmp"
-    elif [[ -s /usr/local/nginx/sbin/nginx && -s /usr/local/apache/bin/httpd && -s /usr/local/apache/conf/httpd.conf && -s /etc/init.d/httpd && ! -s /usr/local/php/sbin/php-fpm ]]; then
+    elif [[ -s /usr/local/nginx/sbin/nginx && -s /usr/local/apache/bin/httpd && ! -s /usr/local/php/sbin/php-fpm ]]; then
         Get_Stack="lnmpa"
-    elif [[ -s /usr/local/apache/bin/httpd && -s /usr/local/apache/conf/httpd.conf && -s /etc/init.d/httpd && ! -s /usr/local/php/sbin/php-fpm ]]; then
+    elif [[ -s /usr/local/apache/bin/httpd && ! -s /usr/local/php/sbin/php-fpm ]]; then
         Get_Stack="lamp"
     else
         Get_Stack="unknow"
@@ -1269,13 +1281,13 @@ Check_DB() {
 Do_Query() {
     echo "$1" >/tmp/.mysql.tmp
     Check_DB
-    ${MySQL_Bin} --defaults-file=~/.my.cnf </tmp/.mysql.tmp
+    ${MySQL_Bin} --defaults-file="${HOME}/.my.cnf" </tmp/.mysql.tmp
     return $?
 }
 
 Run_Query() {
     Check_DB
-    ${MySQL_Bin} --defaults-file=~/.my.cnf -e "$1"
+    ${MySQL_Bin} --defaults-file="${HOME}/.my.cnf" -e "$1"
         if [ $? -ne 0 ]; then
             echo "Query Failed: $query"
             return 1
@@ -1286,7 +1298,7 @@ Mysql_Do_Query() {
     local query="$1"
     local mysql_bin="/usr/local/mysql/bin/mysql"
 
-    "$mysql_bin" --defaults-file=~/.my.cnf -e "$query"
+    "$mysql_bin" --defaults-file="${HOME}/.my.cnf" -e "$query"
         if [ $? -ne 0 ]; then
             echo "Query Failed: $query"
             return 1
@@ -1297,7 +1309,7 @@ MariaDB_Do_Query() {
     local query="$1"
     local mariadb_bin="/usr/local/mariadb/bin/mariadb"
 
-    "$mariadb_bin" --defaults-file=~/.my.cnf -e "$query"
+    "$mariadb_bin" --defaults-file="${HOME}/.my.cnf" -e "$query"
         if [ $? -ne 0 ]; then
             echo "Query Failed: $query"
             return 1
@@ -1368,6 +1380,9 @@ Check_Docker() {
     elif [ -f /proc/self/cgroup ] && grep -q docker /proc/self/cgroup; then
         echo "running on Docker"
         isDocker="y"
+    elif grep -qE 'docker|containerd' /proc/self/mountinfo 2>/dev/null; then
+        echo "running on Docker"
+        isDocker="y"
     else
         isDocker="n"
     fi
@@ -1395,7 +1410,8 @@ Check_Openssl() {
     elif openssl version | grep -Eqi "OpenSSL 1\.1\.*"; then
         isOpenSSL111='y'
         isOpenSSL3='n'
-    else
+    elif openssl version | grep -Eqi "OpenSSL 1\.0\.*"; then
+        isOpenSSL10='y'
         isOpenSSL3='n'
         isOpenSSL111='n'
     fi  
@@ -1410,7 +1426,7 @@ Get_ICU_Version() {
     # Step 2: Try icu-config
     elif command -v icu-config >/dev/null 2>&1; then
         detected_icu=$(icu-config --version)
-        detected_micu_ethod="icu-config"
+        detected_icu_method="icu-config"
     # Step 3: Try binary inspection via ldconfig and strings
     else
         icu_lib=$(ldconfig -p | grep libicuuc.so | head -n1 | awk '{print $NF}')
@@ -1429,17 +1445,33 @@ Get_ICU_Version() {
 
 Gcc14_Check() {
     if ! command -v gcc >/dev/null 2>&1; then
-        apt-get install gcc g++ -y
+        case "${PM}" in
+        apt) apt-get install gcc g++ -y ;;
+        yum | dnf) ${PM} install -y gcc gcc-c++ ;;
+        esac
     fi
     gcc_major_version=$(gcc -dumpversion | cut -f1 -d.)
     if [ "${gcc_major_version}" -eq "14" ]; then
-        apt-get install gcc-13 g++-13 -y
-        if [ -f "/usr/bin/gcc-13" ]; then
-            export CC=/usr/bin/gcc-13
-        fi
-        if [ -f "/usr/bin/g++-13" ]; then
-            export CXX=/usr/bin/g++-13
-        fi
+        case "${PM}" in
+        apt)
+            apt-get install gcc-13 g++-13 -y
+            if [ -f "/usr/bin/gcc-13" ]; then
+                export CC=/usr/bin/gcc-13
+            fi
+            if [ -f "/usr/bin/g++-13" ]; then
+                export CXX=/usr/bin/g++-13
+            fi
+            ;;
+        yum | dnf)
+            ${PM} install -y gcc-toolset-13-gcc gcc-toolset-13-gcc-c++
+            if [ -x "/opt/rh/gcc-toolset-13/root/usr/bin/gcc" ]; then
+                export CC=/opt/rh/gcc-toolset-13/root/usr/bin/gcc
+            fi
+            if [ -x "/opt/rh/gcc-toolset-13/root/usr/bin/g++" ]; then
+                export CXX=/opt/rh/gcc-toolset-13/root/usr/bin/g++
+            fi
+            ;;
+        esac
     fi
 }
 

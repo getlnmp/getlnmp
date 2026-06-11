@@ -30,7 +30,7 @@ ExecReload=/bin/kill -s HUP $MAINPID
 
 # From Official Repo
 TimeoutSec=0
-LimitNOFILE = 10000
+LimitNOFILE=10000
 Restart=on-failure
 RestartPreventExitStatus=1
 

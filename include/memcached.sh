@@ -11,52 +11,52 @@ Install_PHPMemcache()
 {
     echo "Install memcache php extension..."
     cd ${cur_dir}/src
-    if echo "${Cur_PHP_Version}" | grep -Eqi '^8.';then
+    if echo "${Cur_PHP_Version}" | grep -Eqi '^8\.';then
         Download_Files ${PHP8Memcache_DL} ${PHP8Memcache_Ver}.tgz
         Tar_Cd ${PHP8Memcache_Ver}.tgz ${PHP8Memcache_Ver}
-    elif echo "${Cur_PHP_Version}" | grep -Eqi '^7.';then
+    elif echo "${Cur_PHP_Version}" | grep -Eqi '^7\.';then
         Download_Files ${PHP7Memcache_DL} ${PHP7Memcache_Ver}.tgz
         Tar_Cd ${PHP7Memcache_Ver}.tgz ${PHP7Memcache_Ver}
     else
-        if ! gcc -dumpversion|grep -q "^[34]."; then
-            export CFLAGS=" -fgnu89-inline"
-        fi
+        # if ! gcc -dumpversion|grep -q "^[34]."; then
+        #     export CFLAGS=" -fgnu89-inline"
+        # fi
         Download_Files ${PHPMemcache_DL} ${PHPMemcache_Ver}.tgz
         Tar_Cd ${PHPMemcache_Ver}.tgz ${PHPMemcache_Ver}
     fi
     ${PHP_Path}/bin/phpize
     ./configure --with-php-config=${PHP_Path}/bin/php-config
-    Make_Install
-    cd ../
+    Make_Install_Exit "memcache"
+    cd ${cur_dir}/src
 }
 
+# php-memcached extension relies on libmemcached, so we need to install libmemcached first, then install php-memcached
 Install_PHPMemcached()
 {
     echo "Install memcached php extension..."
     cd ${cur_dir}/src
     Get_Dist_Name
+    Get_Dist_Version
     if [ "$PM" = "yum" ]; then
         yum install cyrus-sasl-devel -y
-        Get_Dist_Version
     elif [ "$PM" = "apt" ]; then
         export DEBIAN_FRONTEND=noninteractive
-        apt-get install libsasl2-2 sasl2-bin libsasl2-2 libsasl2-dev libsasl2-modules -y
+        apt-get install libsasl2-2 sasl2-bin libsasl2-dev libsasl2-modules -y
     fi
     Download_Files ${Libmemcached_DL}
     Tar_Cd ${Libmemcached_Ver}.tar.gz ${Libmemcached_Ver}
-    if gcc -dumpversion|grep -Eq "^([7-9]|1[0-5])"; then
+    if gcc -dumpversion | awk -F. '{exit !($1 >= 7)}'; then
         patch -p1 < ${cur_dir}/src/patch/libmemcached-1.0.18-gcc7.patch
     fi
-    ./configure --prefix=/usr/local/libmemcached --with-memcached
-    Make_Install
-    cd ../
-
+    ./configure --prefix=/usr/local/libmemcached
+    Make_Install_Exit "libmemcached"
     cd ${cur_dir}/src
-    if echo "${Cur_PHP_Version}" | grep -Eqi '^8.';then
+
+    if echo "${Cur_PHP_Version}" | grep -Eqi '^8\.';then
         [[ -d "${PHP8Memcached_Ver}" ]] && rm -rf "${PHP8Memcached_Ver}"
         Download_Files ${PHP8Memcached_DL} ${PHP8Memcached_Ver}.tgz
         Tar_Cd ${PHP8Memcached_Ver}.tgz ${PHP8Memcached_Ver}
-    elif echo "${Cur_PHP_Version}" | grep -Eqi '^7.';then
+    elif echo "${Cur_PHP_Version}" | grep -Eqi '^7\.';then
         [[ -d "${PHP7Memcached_Ver}" ]] && rm -rf "${PHP7Memcached_Ver}"
         Download_Files ${PHP7Memcached_DL} ${PHP7Memcached_Ver}.tgz
         Tar_Cd ${PHP7Memcached_Ver}.tgz ${PHP7Memcached_Ver}
@@ -67,17 +67,17 @@ Install_PHPMemcached()
     fi
     ${PHP_Path}/bin/phpize
     ./configure --with-php-config=${PHP_Path}/bin/php-config --enable-memcached --with-libmemcached-dir=/usr/local/libmemcached
-    Make_Install
-    cd ../
+    Make_Install_Exit "memcached"
+    cd ${cur_dir}/src
 }
 
 Install_Memcached()
 {
-    ver="1"
+    ver="2"
     echo "Which memcached php extension do you choose:"
     echo "Install php-memcache, please enter: 1"
     echo "Install php-memcached, please enter: 2"
-    read -r -p "Enter 1 or 2 (Default 1): " ver
+    read -r -p "Enter 1 or 2 (Default 2): " ver
 
     if [ "${ver}" = "1" ]; then
         echo "You choose php-memcache"
@@ -86,9 +86,9 @@ Install_Memcached()
         echo "You choose php-memcached"
         PHP_ZTS="memcached.so"
     else
-        ver="1"
-        echo "You choose php-memcache"
-        PHP_ZTS="memcache.so"
+        ver="2"
+        echo "You choose php-memcached"
+        PHP_ZTS="memcached.so"
     fi
 
     echo "====== Installing memcached ======"
@@ -96,6 +96,10 @@ Install_Memcached()
 
     rm -f ${PHP_Path}/conf.d/005-memcached.ini
     Addons_Get_PHP_Ext_Dir
+    [ -z "${Cur_PHP_Version}" ] && { 
+        Echo_Red "PHP version not detected"
+        exit 1
+        }
     zend_ext=${zend_ext_dir}${PHP_ZTS}
     if [ -s "${zend_ext}" ]; then
         rm -f "${zend_ext}"
@@ -110,17 +114,22 @@ EOF
     if [ -s /usr/local/memcached/bin/memcached ]; then
         echo "Memcached already exists."
     else
-        # memcached should not run as root user, so we create a memcached user to run memcached
-        useradd -r -s /usr/sbin/nologin -M memcached
-
         Download_Files ${Memcached_DL} ${Memcached_Ver}.tar.gz
         Tar_Cd ${Memcached_Ver}.tar.gz ${Memcached_Ver}
         ./configure --prefix=/usr/local/memcached
-        make -j"$(nproc)"
-        make install
-        cd ../
+        Make_Install_Exit "memcached"
+        cd ${cur_dir}/src
         rm -rf ${cur_dir}/src/${Memcached_Ver}
 
+        if [ -s /usr/local/memcached/bin/memcached ]; then
+            echo "Memcached installed successfully."
+        else
+            Echo_Red "Memcached install failed!"
+            return 1
+        fi
+
+        # memcached should not run as root user, so we create a memcached user to run memcached
+        useradd -r -s /usr/sbin/nologin -M memcached
         ln -sf /usr/local/memcached/bin/memcached /usr/bin/memcached
 
         \cp ${cur_dir}/init.d/memcached.service /etc/systemd/system/memcached.service
@@ -158,14 +167,23 @@ Uninstall_Memcached()
     Press_Start
     systemctl stop memcached
     systemctl disable memcached
+    id memcached >/dev/null 2>&1 && userdel memcached
     rm -f ${Default_Website_Dir}/memcached.php
     rm -f ${PHP_Path}/conf.d/005-memcached.ini
     Restart_PHP
     echo "Delete Memcached files..."
-    rm -rf /usr/local/libmemcached
+    Addons_Get_PHP_Ext_Dir
+    # /usr/local/libmemcached is shared by every PHP version's memcached.so,
+    # so only remove it if no other PHP installation still has the extension.
+    if find /usr/local/php*/lib/php/extensions/*/memcached.so 2>/dev/null | grep -vqF "${zend_ext_dir}memcached.so"; then
+        Echo_Yellow "Skipping removal of /usr/local/libmemcached: still used by another PHP version's memcached extension."
+    else
+        rm -rf /usr/local/libmemcached
+    fi
+    rm -f "${zend_ext_dir}memcached.so" "${zend_ext_dir}memcache.so"
     rm -rf /usr/local/memcached
-    rm -rf /etc/systemd/system/memcached.service
-    rm -rf /usr/bin/memcached
+    rm -f /etc/systemd/system/memcached.service
+    rm -f /usr/bin/memcached
     systemctl daemon-reload
     Echo_Green "Uninstall Memcached completed."
 }

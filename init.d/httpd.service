@@ -19,6 +19,9 @@ ExecStart=/usr/local/apache/bin/httpd $OPTIONS -k start
 ExecReload=/usr/local/apache/bin/httpd $OPTIONS -k graceful
 ExecStop=/usr/local/apache/bin/httpd -k stop
 
+Restart=on-failure
+RestartSec=5s
+
 # Signal for graceful shutdown
 KillSignal=SIGWINCH
 KillMode=mixed

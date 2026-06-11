@@ -12,34 +12,37 @@ Upgrade_Multiplephp()
         exit 1
     fi
 
-    if [[ ! -s /usr/local/php7.3/sbin/php-fpm && ! -s /usr/local/nginx/conf/enable-php7.3.conf ]] && [[ ! -s /usr/local/php7.4/sbin/php-fpm && ! -s /usr/local/nginx/conf/enable-php7.4.conf ]] && [[ ! -s /usr/local/php8.0/sbin/php-fpm && ! -s /usr/local/nginx/conf/enable-php8.0.conf ]] && [[ ! -s /usr/local/php8.1/sbin/php-fpm && ! -s /usr/local/nginx/conf/enable-php8.1.conf ]] && [[ ! -s /usr/local/php8.2/sbin/php-fpm && ! -s /usr/local/nginx/conf/enable-php8.2.conf ]] && [[ ! -s /usr/local/php8.3/sbin/php-fpm && ! -s /usr/local/nginx/conf/enable-php8.3.conf ]]; then
+    if [[ ! -s /usr/local/php7.3/sbin/php-fpm ]] && [[ ! -s /usr/local/php7.4/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.0/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.1/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.2/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.3/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.4/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.5/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.6/sbin/php-fpm ]]; then
         echo "Multiple php version not found!"
         exit 1
     else
         echo "List all mutiple php, Please select the PHP version."
-        if [[ -s /usr/local/php7.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.3.conf && -s /etc/init.d/php-fpm7.3 ]]; then
+        if [[ -s /usr/local/php7.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.3.conf ]]; then
             Echo_Green "5: PHP 7.3 [found]"
         fi
-        if [[ -s /usr/local/php7.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.4.conf && -s /etc/init.d/php-fpm7.4 ]]; then
+        if [[ -s /usr/local/php7.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.4.conf ]]; then
             Echo_Green "6: PHP 7.4 [found]"
         fi
-        if [[ -s /usr/local/php8.0/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.0.conf && -s /etc/init.d/php-fpm8.0 ]]; then
+        if [[ -s /usr/local/php8.0/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.0.conf ]]; then
             Echo_Green "7: PHP 8.0 [found]"
         fi
-        if [[ -s /usr/local/php8.1/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.1.conf && -s /etc/init.d/php-fpm8.1 ]]; then
+        if [[ -s /usr/local/php8.1/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.1.conf ]]; then
             Echo_Green "8: PHP 8.1 [found]"
         fi
-        if [[ -s /usr/local/php8.2/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.2.conf && -s /etc/init.d/php-fpm8.2 ]]; then
+        if [[ -s /usr/local/php8.2/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.2.conf ]]; then
             Echo_Green "9: PHP 8.2 [found]"
         fi
-        if [[ -s /usr/local/php8.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.3.conf && -s /etc/init.d/php-fpm8.3 ]]; then
+        if [[ -s /usr/local/php8.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.3.conf ]]; then
             Echo_Green "10: PHP 8.3 [found]"
         fi
-        if [[ -s /usr/local/php8.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.4.conf && -s /etc/init.d/php-fpm8.4 ]]; then
+        if [[ -s /usr/local/php8.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.4.conf ]]; then
             Echo_Green "11: PHP 8.4 [found]"
         fi
-        if [[ -s /usr/local/php8.5/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.5.conf && -s /etc/init.d/php-fpm8.5 ]]; then
+        if [[ -s /usr/local/php8.5/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.5.conf ]]; then
             Echo_Green "12: PHP 8.5 [found]"
+        fi
+        if [[ -s /usr/local/php8.6/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.6.conf ]]; then
+            Echo_Green "13: PHP 8.6 [found]"
         fi
     fi
 
@@ -77,6 +80,9 @@ Upgrade_Multiplephp()
     elif [ "${MPHP_Select}" = "12" ]; then
         Cur_MPHP_Big_Ver="8.5"
         Cur_MPHP_Path='/usr/local/php8.5'
+    else
+        Echo_Red "Invalid selection: ${MPHP_Select}."
+        exit 1
     fi
 
     Echo_Yellow "Please choose which multiple php version to upgrade."
@@ -91,33 +97,25 @@ Upgrade_Multiplephp()
         Echo_Red "Error: You must enter a corrent php version!!"
         exit 1
     fi
-    if echo "${php_version}" | grep -Eqi "${Cur_MPHP_Big_Ver}"; then
-        Echo_Blue "You will upgrade php ${Cur_MPHP_Version} from to ${php_version}."
+    if [ "${php_version}" = "${Cur_MPHP_Version}" ]; then
+        Echo_Red "Refusing to re-install the same version (${Cur_MPHP_Version})."
+        exit 1
+    fi
+    if [[ "${php_version}" == "${Cur_MPHP_Big_Ver}".* ]]; then
+        Echo_Blue "You will upgrade php from ${Cur_MPHP_Version} to ${php_version}."
     else
         Echo_Red "Error: You can't upgrade php cross-version!"
         exit 1
     fi
     Press_Start
     cd ${cur_dir}/src
-    if [ -s php-${php_version}.tar.bz2 ]; then
+    if [ -s "php-${php_version}.tar.bz2" ]; then
         echo "php-${php_version}.tar.bz2 [found]"
     else
         echo "Notice: php-${php_version}.tar.bz2 not found!!!download now..."
-#        Get_Country
-#        if [ "${country}" = "CN" ]; then
-#            Download_Files http://php.vpszt.com/php-${php_version}.tar.bz2 php-${php_version}.tar.bz2
-#            if [ $? -ne 0 ]; then
-#                Download_Files https://www.php.net/distributions/php-${php_version}.tar.bz2 php-${php_version}.tar.bz2
-#            fi
-#        else
-#            Download_Files https://www.php.net/distributions/php-${php_version}.tar.bz2 php-${php_version}.tar.bz2
-#            if [ $? -ne 0 ]; then
-#                Download_Files http://php.vpszt.com/php-${php_version}.tar.bz2 php-${php_version}.tar.bz2
-#            fi
- #       fi
         Download_Files https://www.php.net/distributions/php-${php_version}.tar.bz2 php-${php_version}.tar.bz2
         if [ $? -eq 0 ]; then
-            echo "Download php-${Php_Ver}.tar.bz2 successfully!"
+            echo "Download php-${php_version}.tar.bz2 successfully!"
         else
             Download_Files https://museum.php.net/php5/php-${php_version}.tar.bz2 php-${php_version}.tar.bz2
             if [ $? -eq 0 ]; then
@@ -130,513 +128,171 @@ Upgrade_Multiplephp()
         fi
     fi
 
-    lnmp stop
+    systemctl stop php-fpm${Cur_MPHP_Big_Ver}
 
     Echo_Blue "Backup old multiple php version..."
     mv ${Cur_MPHP_Path} /usr/local/mphp-${Cur_MPHP_Big_Ver}-backup${Upgrade_Date}
-    mv /etc/systemd/system/php-fpm${Cur_MPHP_Big_Ver}.service /usr/local/mphp-${Cur_MPHP_Big_Ver}-backup${Upgrade_Date}/php-fpm.bak.${Upgrade_Date}
+    #mv /etc/systemd/system/php-fpm${Cur_MPHP_Big_Ver}.service /etc/systemd/system/php-fpm${Cur_MPHP_Big_Ver}.service.bak.${Upgrade_Date}
 
     Check_PHP_Option
     cat /etc/issue
     cat /etc/*-release
-    Install_PHP_Dependent
+    #for upgrade, usually it does not need to install any new dependents
+    #Install_PHP_Dependent
     Check_Openssl
 
     if [ "${MPHP_Select}" = "5" ]; then
-        Upgrade_MPHP7.3
+        Upgrade_MPHP7_3
     elif [ "${MPHP_Select}" = "6" ]; then
-        Upgrade_MPHP7.4
+        Upgrade_MPHP7_4
     elif [ "${MPHP_Select}" = "7" ]; then
-        Upgrade_MPHP8.0
+        Upgrade_MPHP8_0
     elif [ "${MPHP_Select}" = "8" ]; then
-        Upgrade_MPHP8.1
+        Upgrade_MPHP8_1
     elif [ "${MPHP_Select}" = "9" ]; then
-        Upgrade_MPHP8.2
+        Upgrade_MPHP8_2
     elif [ "${MPHP_Select}" = "10" ]; then
-        Upgrade_MPHP8.3
+        Upgrade_MPHP8_3
     elif [ "${MPHP_Select}" = "11" ]; then
-        Upgrade_MPHP8.4
+        Upgrade_MPHP8_4
     elif [ "${MPHP_Select}" = "12" ]; then
-        Upgrade_MPHP8.5 
+        Upgrade_MPHP8_5 
     else
         Echo_Red "PHP version: ${php_version} is not supported."
         exit 1
     fi
 }
 
-Upgrade_MPHP7.3()
+Upgrade_MPHP7_3()
 {
-    cd ${cur_dir}/src
-    Download_Files https://www.php.net/distributions/php-${php_version}.tar.bz2 php-${php_version}.tar.bz2
-    Echo_Blue "[+] Upgrading php-${php_version}"
-    Tar_Cd php-${php_version}.tar.bz2 php-${php_version}
-#    PHP_Openssl3_Patch
-    ./configure --prefix=${Cur_MPHP_Path} --with-config-file-path=${Cur_MPHP_Path}/etc --with-config-file-scan-dir=${Cur_MPHP_Path}/conf.d --enable-fpm --with-fpm-systemd --with-fpm-user=www --with-fpm-group=www --enable-mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype-dir=/usr --with-jpeg-dir=/usr --with-png-dir=/usr --with-zlib --enable-xml --disable-rpath --enable-bcmath --enable-shmop --enable-sysvsem --enable-inline-optimization ${with_curl} --enable-mbregex --enable-mbstring --enable-intl --enable-pcntl --enable-ftp --with-gd ${with_openssl} --with-mhash --enable-pcntl --enable-sockets --with-xmlrpc --enable-zip --without-libzip --enable-soap --with-gettext ${with_fileinfo} --enable-opcache --with-xsl ${PHP_Buildin_Option} ${PHP_Modules_Options}
-
+    MPHP_Get_Files
+    MPHP_Set_Config
     PHP_Make_Install
-
-    echo "Copy new php configure file..."
-    mkdir -p ${Cur_MPHP_Path}/{etc,conf.d}
-    \cp php.ini-production ${Cur_MPHP_Path}/etc/php.ini
-
-    # php extensions
-    echo "Modify php.ini......"
-    sed -i 's/post_max_size =.*/post_max_size = 50M/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/upload_max_filesize =.*/upload_max_filesize = 50M/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/;date.timezone =.*/date.timezone = America\/New_York/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/short_open_tag =.*/short_open_tag = On/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/;cgi.fix_pathinfo=.*/cgi.fix_pathinfo=0/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/max_execution_time =.*/max_execution_time = 300/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/disable_functions =.*/disable_functions = passthru,exec,system,chroot,chgrp,chown,shell_exec,proc_open,proc_get_status,popen,ini_alter,ini_restore,dl,openlog,syslog,readlink,symlink,popepassthru,stream_socket_server/g' ${Cur_MPHP_Path}/etc/php.ini
-
-    cd ${cur_dir}/src
-    echo "Install ZendGuardLoader for PHP 7.3..."
-    echo "unavailable now."
-
-    echo "Creating new php-fpm configure file..."
-    cat >${Cur_MPHP_Path}/etc/php-fpm.conf<<EOF
-[global]
-pid = ${Cur_MPHP_Path}/var/run/php-fpm.pid
-error_log = ${Cur_MPHP_Path}/var/log/php-fpm.log
-log_level = notice
-
-[www]
-listen = /tmp/php-cgi7.3.sock
-listen.backlog = -1
-listen.allowed_clients = 127.0.0.1
-listen.owner = www
-listen.group = www
-listen.mode = 0666
-user = www
-group = www
-pm = dynamic
-pm.max_children = 10
-pm.start_servers = 2
-pm.min_spare_servers = 1
-pm.max_spare_servers = 6
-request_terminate_timeout = 100
-request_slowlog_timeout = 0
-slowlog = var/log/slow.log
-EOF
-
-    echo "Copy php-fpm systemd file..."
-    \cp ${cur_dir}/src/php-${php_version}/sapi/fpm/systemd.php-fpm /etc/systemd/system/php-fpm7.3.service
-    sed -i 's@# Provides:          php-fpm@# Provides:          php-fpm7.3@g' /etc/systemd/system/php-fpm7.3.service
-    systemctl daemon-reload
-
-    StartUp php-fpm7.3
-
-    \cp ${cur_dir}/conf/enable-php7.3.conf /usr/local/nginx/conf/enable-php7.3.conf
-
-    sleep 2
-
-    lnmp start
-
-    rm -rf ${cur_dir}/src/php-${php_version}
-
-    if [ -s ${Cur_MPHP_Path}/sbin/php-fpm ] && [ -s ${Cur_MPHP_Path}/etc/php.ini ] && [ -s ${Cur_MPHP_Path}/bin/php ]; then
-        echo "==========================================="
-        Echo_Green "You have successfully upgrade to php-${php_version} "
-        echo "==========================================="
-    else
-        rm -rf ${Cur_MPHP_Path}
-        Echo_Red "Failed to upgrade php-${php_version}, you can download /root/upgrade_mphp${Upgrade_Date}.log from your server, and upload it to LNMP Forum."
-    fi
+    # sert php ini
+    MPHP_U_Set_Ini
+    # php-fpm.conf
+    MPHP_Set_Conf "7.3"
+    # start php-fpm
+    MPHP_U_Startup "7.3"
+    # config nginx php
+    MPHP_Set_Nginx "7.3"
+    # final check
+    MPHP_U_Final_Check "7.3"
 }
 
-Upgrade_MPHP7.4()
+Upgrade_MPHP7_4()
 {
-    cd ${cur_dir}/src
-    Download_Files https://www.php.net/distributions/php-${php_version}.tar.bz2 php-${php_version}.tar.bz2
-    Echo_Blue "[+] Upgrading php-${php_version}"
-    Tar_Cd php-${php_version}.tar.bz2 php-${php_version}
-#    PHP_Openssl3_Patch
-    ./configure --prefix=${Cur_MPHP_Path} --with-config-file-path=${Cur_MPHP_Path}/etc --with-config-file-scan-dir=${Cur_MPHP_Path}/conf.d --enable-fpm --with-fpm-systemd --with-fpm-user=www --with-fpm-group=www --enable-mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype --with-jpeg --with-zlib --enable-xml --disable-rpath --enable-bcmath --enable-shmop --enable-sysvsem --enable-inline-optimization ${with_curl} --enable-mbregex --enable-mbstring --enable-intl --enable-pcntl --enable-ftp --enable-gd ${with_openssl} --with-mhash --enable-pcntl --enable-sockets --with-xmlrpc --enable-soap --with-gettext ${with_fileinfo} --enable-opcache --with-xsl --with-pear --with-webp ${PHP_Buildin_Option} ${PHP_Modules_Options}
-
+    MPHP_Get_Files
+    MPHP_Set_Config
     PHP_Make_Install
-
-    echo "Copy new php configure file..."
-    mkdir -p ${Cur_MPHP_Path}/{etc,conf.d}
-    \cp php.ini-production ${Cur_MPHP_Path}/etc/php.ini
-
-    # php extensions
-    echo "Modify php.ini......"
-    sed -i 's/post_max_size =.*/post_max_size = 50M/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/upload_max_filesize =.*/upload_max_filesize = 50M/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/;date.timezone =.*/date.timezone = America\/New_York/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/short_open_tag =.*/short_open_tag = On/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/;cgi.fix_pathinfo=.*/cgi.fix_pathinfo=0/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/max_execution_time =.*/max_execution_time = 300/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/disable_functions =.*/disable_functions = passthru,exec,system,chroot,chgrp,chown,shell_exec,proc_open,proc_get_status,popen,ini_alter,ini_restore,dl,openlog,syslog,readlink,symlink,popepassthru,stream_socket_server/g' ${Cur_MPHP_Path}/etc/php.ini
-
-    cd ${cur_dir}/src
-    echo "Install ZendGuardLoader for PHP 7.4..."
-    echo "unavailable now."
-
-    echo "Creating new php-fpm configure file..."
-    cat >${Cur_MPHP_Path}/etc/php-fpm.conf<<EOF
-[global]
-pid = ${Cur_MPHP_Path}/var/run/php-fpm.pid
-error_log = ${Cur_MPHP_Path}/var/log/php-fpm.log
-log_level = notice
-
-[www]
-listen = /tmp/php-cgi7.4.sock
-listen.backlog = -1
-listen.allowed_clients = 127.0.0.1
-listen.owner = www
-listen.group = www
-listen.mode = 0666
-user = www
-group = www
-pm = dynamic
-pm.max_children = 10
-pm.start_servers = 2
-pm.min_spare_servers = 1
-pm.max_spare_servers = 6
-request_terminate_timeout = 100
-request_slowlog_timeout = 0
-slowlog = var/log/slow.log
-EOF
-
-    echo "Copy php-fpm systemd file..."
-    \cp ${cur_dir}/src/php-${php_version}/sapi/fpm/systemd.php-fpm /etc/systemd/system/php-fpm7.4.service
-    sed -i 's@# Provides:          php-fpm@# Provides:          php-fpm7.4@g' /etc/systemd/system/php-fpm7.4.service
-    systemctl daemon-reload
-
-    StartUp php-fpm7.4
-
-    \cp ${cur_dir}/conf/enable-php7.4.conf /usr/local/nginx/conf/enable-php7.4.conf
-
-    sleep 2
-
-    lnmp start
-
-    rm -rf ${cur_dir}/src/php-${php_version}
-
-    if [ -s ${Cur_MPHP_Path}/sbin/php-fpm ] && [ -s ${Cur_MPHP_Path}/etc/php.ini ] && [ -s ${Cur_MPHP_Path}/bin/php ]; then
-        echo "==========================================="
-        Echo_Green "You have successfully upgrade to php-${php_version} "
-        echo "==========================================="
-    else
-        rm -rf ${Cur_MPHP_Path}
-        Echo_Red "Failed to upgrade php-${php_version}, you can download /root/upgrade_mphp${Upgrade_Date}.log from your server, and upload it to LNMP Forum."
-    fi
+    # sert php ini
+    MPHP_U_Set_Ini
+    # php-fpm.conf
+    MPHP_Set_Conf "7.4"
+    # start php-fpm
+    MPHP_U_Startup "7.4"
+    # config nginx php
+    MPHP_Set_Nginx "7.4"
+    # final check
+    MPHP_U_Final_Check "7.4"
 }
 
-Upgrade_MPHP8.0()
+Upgrade_MPHP8_0()
 {
-    cd ${cur_dir}/src
-    Download_Files https://www.php.net/distributions/php-${php_version}.tar.bz2 php-${php_version}.tar.bz2
-    Echo_Blue "[+] Upgrading php-${php_version}"
-    Tar_Cd php-${php_version}.tar.bz2 php-${php_version}
-#    PHP_Openssl3_Patch
-    ./configure --prefix=${Cur_MPHP_Path} --with-config-file-path=${Cur_MPHP_Path}/etc --with-config-file-scan-dir=${Cur_MPHP_Path}/conf.d --enable-fpm --with-fpm-systemd --with-fpm-user=www --with-fpm-group=www --enable-mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype --with-jpeg --with-zlib --enable-xml --disable-rpath --enable-bcmath --enable-shmop --enable-sysvsem ${with_curl} --enable-mbregex --enable-mbstring --enable-intl --enable-pcntl --enable-ftp --enable-gd ${with_openssl} --with-mhash --enable-pcntl --enable-sockets --enable-soap --with-gettext ${with_fileinfo} --enable-opcache --with-xsl --with-pear --with-webp ${PHP_Buildin_Option} ${PHP_Modules_Options}
-
+    MPHP_Get_Files
+    MPHP_Set_Config
     PHP_Make_Install
-
-    echo "Copy new php configure file..."
-    mkdir -p ${Cur_MPHP_Path}/{etc,conf.d}
-    \cp php.ini-production ${Cur_MPHP_Path}/etc/php.ini
-
-    # php extensions
-    echo "Modify php.ini......"
-    sed -i 's/post_max_size =.*/post_max_size = 50M/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/upload_max_filesize =.*/upload_max_filesize = 50M/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/;date.timezone =.*/date.timezone = America\/New_York/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/short_open_tag =.*/short_open_tag = On/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/;cgi.fix_pathinfo=.*/cgi.fix_pathinfo=0/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/max_execution_time =.*/max_execution_time = 300/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/disable_functions =.*/disable_functions = passthru,exec,system,chroot,chgrp,chown,shell_exec,proc_open,proc_get_status,popen,ini_alter,ini_restore,dl,openlog,syslog,readlink,symlink,popepassthru,stream_socket_server/g' ${Cur_MPHP_Path}/etc/php.ini
-
-    cd ${cur_dir}/src
-    echo "Install ZendGuardLoader for PHP 8.0..."
-    echo "unavailable now."
-
-    echo "Creating new php-fpm configure file..."
-    cat >${Cur_MPHP_Path}/etc/php-fpm.conf<<EOF
-[global]
-pid = ${Cur_MPHP_Path}/var/run/php-fpm.pid
-error_log = ${Cur_MPHP_Path}/var/log/php-fpm.log
-log_level = notice
-
-[www]
-listen = /tmp/php-cgi8.0.sock
-listen.backlog = -1
-listen.allowed_clients = 127.0.0.1
-listen.owner = www
-listen.group = www
-listen.mode = 0666
-user = www
-group = www
-pm = dynamic
-pm.max_children = 10
-pm.start_servers = 2
-pm.min_spare_servers = 1
-pm.max_spare_servers = 6
-request_terminate_timeout = 100
-request_slowlog_timeout = 0
-slowlog = var/log/slow.log
-EOF
-
-    echo "Copy php-fpm systemd file..."
-    \cp ${cur_dir}/src/php-${php_version}/sapi/fpm/systemd.php-fpm /etc/systemd/system/php-fpm8.0.service
-    sed -i 's@# Provides:          php-fpm@# Provides:          php-fpm8.0@g' /etc/systemd/system/php-fpm8.0.service
-    systemctl daemon-reload
-
-    StartUp php-fpm8.0
-
-    \cp ${cur_dir}/conf/enable-php8.0.conf /usr/local/nginx/conf/enable-php8.0.conf
-
-    sleep 2
-
-    lnmp start
-
-    rm -rf ${cur_dir}/src/php-${php_version}
-
-    if [ -s ${Cur_MPHP_Path}/sbin/php-fpm ] && [ -s ${Cur_MPHP_Path}/etc/php.ini ] && [ -s ${Cur_MPHP_Path}/bin/php ]; then
-        echo "==========================================="
-        Echo_Green "You have successfully upgrade to php-${php_version} "
-        echo "==========================================="
-    else
-        rm -rf ${Cur_MPHP_Path}
-        Echo_Red "Failed to upgrade php-${php_version}, you can download /root/upgrade_mphp${Upgrade_Date}.log from your server, and upload it to LNMP Forum."
-    fi
+    # sert php ini
+    MPHP_U_Set_Ini
+    # php-fpm.conf
+    MPHP_Set_Conf "8.0"
+    # start php-fpm
+    MPHP_U_Startup "8.0"
+    # config nginx php
+    MPHP_Set_Nginx "8.0"
+    # final check
+    MPHP_U_Final_Check "8.0"
 }
 
-Upgrade_MPHP8.1()
+Upgrade_MPHP8_1()
 {
-    cd ${cur_dir}/src
-    Download_Files https://www.php.net/distributions/php-${php_version}.tar.bz2 php-${php_version}.tar.bz2
-    Echo_Blue "[+] Upgrading php-${php_version}"
-    Tar_Cd php-${php_version}.tar.bz2 php-${php_version}
-    ./configure --prefix=${Cur_MPHP_Path} --with-config-file-path=${Cur_MPHP_Path}/etc --with-config-file-scan-dir=${Cur_MPHP_Path}/conf.d --enable-fpm --with-fpm-systemd --with-fpm-user=www --with-fpm-group=www --enable-mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype --with-jpeg --with-zlib --enable-xml --disable-rpath --enable-bcmath --enable-shmop --enable-sysvsem ${with_curl} --enable-mbregex --enable-mbstring --enable-intl --enable-pcntl --enable-ftp --enable-gd ${with_openssl} --enable-pcntl --enable-sockets --enable-soap --with-gettext ${with_fileinfo} --enable-opcache --with-xsl --with-pear --with-webp ${PHP_Buildin_Option} ${PHP_Modules_Options}
-
+    MPHP_Get_Files
+    MPHP_Set_Config
     PHP_Make_Install
-
-    echo "Copy new php configure file..."
-    mkdir -p ${Cur_MPHP_Path}/{etc,conf.d}
-    \cp php.ini-production ${Cur_MPHP_Path}/etc/php.ini
-
-    # php extensions
-    echo "Modify php.ini......"
-    sed -i 's/post_max_size =.*/post_max_size = 50M/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/upload_max_filesize =.*/upload_max_filesize = 50M/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/;date.timezone =.*/date.timezone = America\/New_York/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/short_open_tag =.*/short_open_tag = On/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/;cgi.fix_pathinfo=.*/cgi.fix_pathinfo=0/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/max_execution_time =.*/max_execution_time = 300/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/disable_functions =.*/disable_functions = passthru,exec,system,chroot,chgrp,chown,shell_exec,proc_open,proc_get_status,popen,ini_alter,ini_restore,dl,openlog,syslog,readlink,symlink,popepassthru,stream_socket_server/g' ${Cur_MPHP_Path}/etc/php.ini
-
-    cd ${cur_dir}/src
-    echo "Install ZendGuardLoader for PHP 8.1..."
-    echo "unavailable now."
-
-    echo "Creating new php-fpm configure file..."
-    cat >${Cur_MPHP_Path}/etc/php-fpm.conf<<EOF
-[global]
-pid = ${Cur_MPHP_Path}/var/run/php-fpm.pid
-error_log = ${Cur_MPHP_Path}/var/log/php-fpm.log
-log_level = notice
-
-[www]
-listen = /tmp/php-cgi8.1.sock
-listen.backlog = -1
-listen.allowed_clients = 127.0.0.1
-listen.owner = www
-listen.group = www
-listen.mode = 0666
-user = www
-group = www
-pm = dynamic
-pm.max_children = 10
-pm.start_servers = 2
-pm.min_spare_servers = 1
-pm.max_spare_servers = 6
-request_terminate_timeout = 100
-request_slowlog_timeout = 0
-slowlog = var/log/slow.log
-EOF
-
-    echo "Copy php-fpm systemd file..."
-    \cp ${cur_dir}/src/php-${php_version}/sapi/fpm/systemd.php-fpm /etc/systemd/system/php-fpm8.1.service
-    sed -i 's@# Provides:          php-fpm@# Provides:          php-fpm8.1@g' /etc/systemd/system/php-fpm8.1.service
-    systemctl daemon-reload
-
-    StartUp php-fpm8.1
-
-    \cp ${cur_dir}/conf/enable-php8.1.conf /usr/local/nginx/conf/enable-php8.1.conf
-
-    sleep 2
-
-    lnmp start
-
-    rm -rf ${cur_dir}/src/php-${php_version}
-
-    if [ -s ${Cur_MPHP_Path}/sbin/php-fpm ] && [ -s ${Cur_MPHP_Path}/etc/php.ini ] && [ -s ${Cur_MPHP_Path}/bin/php ]; then
-        echo "==========================================="
-        Echo_Green "You have successfully upgrade to php-${php_version} "
-        echo "==========================================="
-    else
-        rm -rf ${Cur_MPHP_Path}
-        Echo_Red "Failed to upgrade php-${php_version}, you can download /root/upgrade_mphp${Upgrade_Date}.log from your server, and upload it to LNMP Forum."
-    fi
+    # sert php ini
+    MPHP_U_Set_Ini
+    # php-fpm.conf
+    MPHP_Set_Conf "8.1"
+    # start php-fpm
+    MPHP_U_Startup "8.1"
+    # config nginx php
+    MPHP_Set_Nginx "8.1"
+    # final check
+    MPHP_U_Final_Check "8.1"
 }
 
-Upgrade_MPHP8.2()
+Upgrade_MPHP8_2()
 {
-    cd ${cur_dir}/src
-    Download_Files https://www.php.net/distributions/php-${php_version}.tar.bz2 php-${php_version}.tar.bz2
-    Echo_Blue "[+] Upgrading php-${php_version}"
-    Tar_Cd php-${php_version}.tar.bz2 php-${php_version}
-    ./configure --prefix=${Cur_MPHP_Path} --with-config-file-path=${Cur_MPHP_Path}/etc --with-config-file-scan-dir=${Cur_MPHP_Path}/conf.d --enable-fpm --with-fpm-systemd --with-fpm-user=www --with-fpm-group=www --enable-mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype --with-jpeg --with-zlib --enable-xml --disable-rpath --enable-bcmath --enable-shmop --enable-sysvsem ${with_curl} --enable-mbregex --enable-mbstring --enable-intl --enable-pcntl --enable-ftp --enable-gd ${with_openssl} --enable-pcntl --enable-sockets --enable-soap --with-gettext ${with_fileinfo} --enable-opcache --with-xsl --with-pear --with-webp ${PHP_Buildin_Option} ${PHP_Modules_Options}
-
+    MPHP_Get_Files
+    MPHP_Set_Config
     PHP_Make_Install
-
-    echo "Copy new php configure file..."
-    mkdir -p ${Cur_MPHP_Path}/{etc,conf.d}
-    \cp php.ini-production ${Cur_MPHP_Path}/etc/php.ini
-
-    # php extensions
-    echo "Modify php.ini......"
-    sed -i 's/post_max_size =.*/post_max_size = 50M/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/upload_max_filesize =.*/upload_max_filesize = 50M/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/;date.timezone =.*/date.timezone = America\/New_York/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/short_open_tag =.*/short_open_tag = On/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/;cgi.fix_pathinfo=.*/cgi.fix_pathinfo=0/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/max_execution_time =.*/max_execution_time = 300/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/disable_functions =.*/disable_functions = passthru,exec,system,chroot,chgrp,chown,shell_exec,proc_open,proc_get_status,popen,ini_alter,ini_restore,dl,openlog,syslog,readlink,symlink,popepassthru,stream_socket_server/g' ${Cur_MPHP_Path}/etc/php.ini
-
-    cd ${cur_dir}/src
-    echo "Install ZendGuardLoader for PHP 8.2..."
-    echo "unavailable now."
-
-    echo "Creating new php-fpm configure file..."
-    cat >${Cur_MPHP_Path}/etc/php-fpm.conf<<EOF
-[global]
-pid = ${Cur_MPHP_Path}/var/run/php-fpm.pid
-error_log = ${Cur_MPHP_Path}/var/log/php-fpm.log
-log_level = notice
-
-[www]
-listen = /tmp/php-cgi8.2.sock
-listen.backlog = -1
-listen.allowed_clients = 127.0.0.1
-listen.owner = www
-listen.group = www
-listen.mode = 0666
-user = www
-group = www
-pm = dynamic
-pm.max_children = 10
-pm.start_servers = 2
-pm.min_spare_servers = 1
-pm.max_spare_servers = 6
-request_terminate_timeout = 100
-request_slowlog_timeout = 0
-slowlog = var/log/slow.log
-EOF
-
-    echo "Copy php-fpm systemd file..."
-    \cp ${cur_dir}/src/php-${php_version}/sapi/fpm/systemd.php-fpm /etc/systemd/system/php-fpm8.2.service
-    sed -i 's@# Provides:          php-fpm@# Provides:          php-fpm8.2@g' /etc/systemd/system/php-fpm8.2.service
-    systemctl daemon-reload
-
-    StartUp php-fpm8.2
-
-    \cp ${cur_dir}/conf/enable-php8.2.conf /usr/local/nginx/conf/enable-php8.2.conf
-
-    sleep 2
-
-    lnmp start
-
-    rm -rf ${cur_dir}/src/php-${php_version}
-
-    if [ -s ${Cur_MPHP_Path}/sbin/php-fpm ] && [ -s ${Cur_MPHP_Path}/etc/php.ini ] && [ -s ${Cur_MPHP_Path}/bin/php ]; then
-        echo "==========================================="
-        Echo_Green "You have successfully upgrade to php-${php_version} "
-        echo "==========================================="
-    else
-        rm -rf ${Cur_MPHP_Path}
-        Echo_Red "Failed to upgrade php-${php_version}, you can download /root/upgrade_mphp${Upgrade_Date}.log from your server, and upload it to LNMP Forum."
-    fi
+    # sert php ini
+    MPHP_U_Set_Ini
+    # php-fpm.conf
+    MPHP_Set_Conf "8.2"
+    # start php-fpm
+    MPHP_U_Startup "8.2"
+    # config nginx php
+    MPHP_Set_Nginx "8.2"
+    # final check
+    MPHP_U_Final_Check "8.2"
 }
 
-Upgrade_MPHP8.3()
+Upgrade_MPHP8_3()
 {
-    cd ${cur_dir}/src
-    Download_Files https://www.php.net/distributions/php-${php_version}.tar.bz2 php-${php_version}.tar.bz2
-    Echo_Blue "[+] Upgrading php-${php_version}"
-    Tar_Cd php-${php_version}.tar.bz2 php-${php_version}
-    ./configure --prefix=${Cur_MPHP_Path} --with-config-file-path=${Cur_MPHP_Path}/etc --with-config-file-scan-dir=${Cur_MPHP_Path}/conf.d --enable-fpm --with-fpm-systemd --with-fpm-user=www --with-fpm-group=www --enable-mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd --with-freetype --with-jpeg --with-zlib --enable-xml --disable-rpath --enable-bcmath --enable-shmop --enable-sysvsem ${with_curl} --enable-mbregex --enable-mbstring --enable-intl --enable-pcntl --enable-ftp --enable-gd ${with_openssl} --enable-pcntl --enable-sockets --enable-soap --with-gettext ${with_fileinfo} --enable-opcache --with-xsl --with-pear --with-webp ${PHP_Buildin_Option} ${PHP_Modules_Options}
-
+    MPHP_Get_Files
+    MPHP_Set_Config
     PHP_Make_Install
+    # sert php ini
+    MPHP_U_Set_Ini
+    # php-fpm.conf
+    MPHP_Set_Conf "8.3"
+    # start php-fpm
+    MPHP_U_Startup "8.3"
+    # config nginx php
+    MPHP_Set_Nginx "8.3"
+    # final check
+    MPHP_U_Final_Check "8.3"
+}
 
-    echo "Copy new php configure file..."
-    mkdir -p ${Cur_MPHP_Path}/{etc,conf.d}
-    \cp php.ini-production ${Cur_MPHP_Path}/etc/php.ini
+Upgrade_MPHP8_4() {
+    MPHP_Get_Files
+    MPHP_Set_Config
+    PHP_Make_Install
+    # sert php ini
+    MPHP_U_Set_Ini
+    # php-fpm.conf
+    MPHP_Set_Conf "8.4"
+    # start php-fpm
+    MPHP_U_Startup "8.4"
+    # config nginx php
+    MPHP_Set_Nginx "8.4"
+    # final check
+    MPHP_U_Final_Check "8.4"
+}
 
-    # php extensions
-    echo "Modify php.ini......"
-    sed -i 's/post_max_size =.*/post_max_size = 50M/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/upload_max_filesize =.*/upload_max_filesize = 50M/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/;date.timezone =.*/date.timezone = America\/New_York/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/short_open_tag =.*/short_open_tag = On/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/;cgi.fix_pathinfo=.*/cgi.fix_pathinfo=0/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/max_execution_time =.*/max_execution_time = 300/g' ${Cur_MPHP_Path}/etc/php.ini
-    sed -i 's/disable_functions =.*/disable_functions = passthru,exec,system,chroot,chgrp,chown,shell_exec,proc_open,proc_get_status,popen,ini_alter,ini_restore,dl,openlog,syslog,readlink,symlink,popepassthru,stream_socket_server/g' ${Cur_MPHP_Path}/etc/php.ini
-
-    cd ${cur_dir}/src
-    echo "Install ZendGuardLoader for PHP 8.3..."
-    echo "unavailable now."
-
-    echo "Creating new php-fpm configure file..."
-    cat >${Cur_MPHP_Path}/etc/php-fpm.conf<<EOF
-[global]
-pid = ${Cur_MPHP_Path}/var/run/php-fpm.pid
-error_log = ${Cur_MPHP_Path}/var/log/php-fpm.log
-log_level = notice
-
-[www]
-listen = /tmp/php-cgi8.3.sock
-listen.backlog = -1
-listen.allowed_clients = 127.0.0.1
-listen.owner = www
-listen.group = www
-listen.mode = 0666
-user = www
-group = www
-pm = dynamic
-pm.max_children = 10
-pm.start_servers = 2
-pm.min_spare_servers = 1
-pm.max_spare_servers = 6
-request_terminate_timeout = 100
-request_slowlog_timeout = 0
-slowlog = var/log/slow.log
-EOF
-
-    echo "Copy php-fpm systemd file..."
-    \cp ${cur_dir}/src/php-${php_version}/sapi/fpm/systemd.php-fpm /etc/systemd/system/php-fpm8.3.service
-    sed -i 's@# Provides:          php-fpm@# Provides:          php-fpm8.3@g' /etc/systemd/system/php-fpm8.3.service
-    systemctl daemon-reload
-
-    StartUp php-fpm8.3
-
-    \cp ${cur_dir}/conf/enable-php8.3.conf /usr/local/nginx/conf/enable-php8.3.conf
-
-    sleep 2
-
-    lnmp start
-
-    rm -rf ${cur_dir}/src/php-${php_version}
-
-    if [ -s ${Cur_MPHP_Path}/sbin/php-fpm ] && [ -s ${Cur_MPHP_Path}/etc/php.ini ] && [ -s ${Cur_MPHP_Path}/bin/php ]; then
-        echo "==========================================="
-        Echo_Green "You have successfully upgrade to php-${php_version} "
-        echo "==========================================="
-    else
-        rm -rf ${Cur_MPHP_Path}
-        Echo_Red "Failed to upgrade php-${php_version}, you can download /root/upgrade_mphp${Upgrade_Date}.log from your server, and upload it to LNMP Forum."
-    fi
+Upgrade_MPHP8_5() {
+    MPHP_Get_Files
+    MPHP_Set_Config
+    PHP_Make_Install
+    # sert php ini
+    MPHP_U_Set_Ini
+    # php-fpm.conf
+    MPHP_Set_Conf "8.5"
+    # start php-fpm
+    MPHP_U_Startup "8.5"
+    # config nginx php
+    MPHP_Set_Nginx "8.5"
+    # final check
+    MPHP_U_Final_Check "8.5"
 }

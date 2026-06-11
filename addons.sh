@@ -7,16 +7,15 @@ if [ $(id -u) != "0" ]; then
     exit 1
 fi
 
-cur_dir=$(pwd)
-action=$1
-action2=$2
+cur_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${cur_dir}" || exit 1
+action="${1,,}"
+action2="${2,,}"
 
 . lnmp.conf
 . include/main.sh
 . include/init.sh
 . include/version.sh
-# include/eaccelerator.sh
-# include/xcache.sh
 . include/memcached.sh
 . include/opcache.sh
 . include/redis.sh
@@ -30,14 +29,12 @@ action2=$2
 . include/php_sodium.sh
 . include/php_imap.sh
 . include/php_swoole.sh
-. include/php_SourceGuardian.sh
 . include/downloadlink.sh
 
 Display_Addons_Menu()
 {
+    local menu_action="${1:-install}"
     echo "##### cache / optimizer / accelerator #####"
-    #echo "  1: eAccelerator"
-    #echo "  2: XCache"
     echo "  3: Memcached"
     echo "  4: opcache"
     echo "  5: Redis"
@@ -46,7 +43,6 @@ Display_Addons_Menu()
     echo "  7: imageMagick"
     echo "##### encryption/decryption utility for PHP #####"
     echo "  8: ionCube Loader"
-    #echo "  9: SourceGuardian Loader"
     echo "##### PHP Modules/Extensions #####"
     echo " 10: Exif"
     echo " 11: Fileinfo"
@@ -58,9 +54,11 @@ Display_Addons_Menu()
     echo "#################################################"
     echo " exit: Exit current script"
     echo "#################################################"
-    read -p "Enter your choice (3, 4, 5, 6, 7, 8... or exit): " action2
+    read -r -p "Enter the addon to ${menu_action} (3-8, 10-16 or exit): " action2
 }
 
+# In LAMP/LNMPA mode PHP runs as an Apache module, so restart httpd to reload the extension.
+# In LNMP mode (no Apache) restart the selected php-fpm instance (main or an alternative version).
 Restart_PHP()
 {
     if [ -s /usr/local/apache/bin/httpd ] && [ -s /usr/local/apache/conf/httpd.conf ] && [ -s /etc/systemd/system/httpd.service ]; then
@@ -84,92 +82,145 @@ echo "+-----------------------------------------------------------------------+"
 Select_PHP()
 {
     if [ "${action2}" == "exit" ]; then
-        exit 1
+        exit 0
     fi
-    if [[ ! -s /usr/local/php7.3/sbin/php-fpm ]] && [[ ! -s /usr/local/php7.4/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.0/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.1/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.2/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.3/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.4/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.5/sbin/php-fpm ]]; then
+    # Multiple PHP versions only run in LNMP mode (nginx + php-fpm). In LAMP and LNMPA
+    # mode PHP runs as an Apache module, so always operate on the main PHP under Apache.
+    if [ -s /usr/local/apache/bin/httpd ] && [ -s /usr/local/apache/conf/httpd.conf ] && [ -s /etc/systemd/system/httpd.service ]; then
+        PHP_Path='/usr/local/php'
+        PHPFPM_Initd='php-fpm'
+    elif [[ ! -s /usr/local/php7.3/sbin/php-fpm ]] && [[ ! -s /usr/local/php7.4/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.0/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.1/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.2/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.3/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.4/sbin/php-fpm ]] && [[ ! -s /usr/local/php8.5/sbin/php-fpm ]]; then
         PHP_Path='/usr/local/php'
         PHPFPM_Initd='php-fpm'
     else
         echo "Multiple PHP version found, Please select the PHP version."
-        Cur_PHP_Version="$(/usr/local/php/bin/php-config --version)"
-        Echo_Green "1: Default Main PHP ${Cur_PHP_Version}"
-        if [[ -s /usr/local/php7.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.3.conf && -s /etc/systemd/system/php-fpm7.3.service ]]; then
+        if [[ -x /usr/local/php/bin/php-config ]]; then
+            Cur_PHP_Version="$(/usr/local/php/bin/php-config --version)"
+            Echo_Green "1: Default Main PHP ${Cur_PHP_Version}"
+        fi
+        if [[ -s /usr/local/php7.3/sbin/php-fpm && -s /etc/systemd/system/php-fpm7.3.service ]]; then
             Echo_Green "10: PHP 7.3 [found]"
         fi
-        if [[ -s /usr/local/php7.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php7.4.conf && -s /etc/systemd/system/php-fpm7.4.service ]]; then
+        if [[ -s /usr/local/php7.4/sbin/php-fpm && -s /etc/systemd/system/php-fpm7.4.service ]]; then
             Echo_Green "11: PHP 7.4 [found]"
         fi
-        if [[ -s /usr/local/php8.0/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.0.conf && -s /etc/systemd/system/php-fpm8.0.service ]]; then
+        if [[ -s /usr/local/php8.0/sbin/php-fpm && -s /etc/systemd/system/php-fpm8.0.service ]]; then
             Echo_Green "12: PHP 8.0 [found]"
         fi
-        if [[ -s /usr/local/php8.1/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.1.conf && -s /etc/systemd/system/php-fpm8.1.service ]]; then
+        if [[ -s /usr/local/php8.1/sbin/php-fpm && -s /etc/systemd/system/php-fpm8.1.service ]]; then
             Echo_Green "13: PHP 8.1 [found]"
         fi
-        if [[ -s /usr/local/php8.2/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.2.conf && -s /etc/systemd/system/php-fpm8.2.service ]]; then
+        if [[ -s /usr/local/php8.2/sbin/php-fpm && -s /etc/systemd/system/php-fpm8.2.service ]]; then
             Echo_Green "14: PHP 8.2 [found]"
         fi
-        if [[ -s /usr/local/php8.3/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.3.conf && -s /etc/systemd/system/php-fpm8.3.service ]]; then
+        if [[ -s /usr/local/php8.3/sbin/php-fpm && -s /etc/systemd/system/php-fpm8.3.service ]]; then
             Echo_Green "15: PHP 8.3 [found]"
         fi
-        if [[ -s /usr/local/php8.4/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.4.conf && -s /etc/systemd/system/php-fpm8.4.service ]]; then
+        if [[ -s /usr/local/php8.4/sbin/php-fpm && -s /etc/systemd/system/php-fpm8.4.service ]]; then
             Echo_Green "16: PHP 8.4 [found]"
         fi
-        if [[ -s /usr/local/php8.5/sbin/php-fpm && -s /usr/local/nginx/conf/enable-php8.5.conf && -s /etc/systemd/system/php-fpm8.5.service ]]; then
+        if [[ -s /usr/local/php8.5/sbin/php-fpm && -s /etc/systemd/system/php-fpm8.5.service ]]; then
             Echo_Green "17: PHP 8.5 [found]"
         fi
         Echo_Yellow "Enter your choice (1, 10, 11, 12, 13, 14, 15, 16 or 17): "
         read -r php_select
         case "${php_select}" in
             1)
-                echo "Current selection: PHP ${Cur_PHP_Version}"
-                PHP_Path='/usr/local/php'
-                PHPFPM_Initd='php-fpm'
+                if [[ -x /usr/local/php/bin/php-config ]]; then                   
+                    echo "Current selection: PHP ${Cur_PHP_Version}"
+                    PHP_Path='/usr/local/php'
+                    PHPFPM_Initd='php-fpm'
+                else
+                    Echo_Red "Error: Default Main PHP not found under /usr/local/php."
+                    exit 1
+                fi
                 ;;
             10)
-                echo "Current selection: PHP $(/usr/local/php7.3/bin/php-config --version)"
-                PHP_Path='/usr/local/php7.3'
-                PHPFPM_Initd='php-fpm7.3'
+                if [[ -x /usr/local/php7.3/bin/php-config ]]; then
+                    echo "Current selection: PHP $(/usr/local/php7.3/bin/php-config --version)"
+                    PHP_Path='/usr/local/php7.3'
+                    PHPFPM_Initd='php-fpm7.3'
+                else
+                    Echo_Red "Error: PHP 7.3 not found under /usr/local/php7.3."
+                    exit 1
+                fi
                 ;;
             11)
-                echo "Current selection: PHP $(/usr/local/php7.4/bin/php-config --version)"
-                PHP_Path='/usr/local/php7.4'
-                PHPFPM_Initd='php-fpm7.4'
+                if [[ -x /usr/local/php7.4/bin/php-config ]]; then
+                    echo "Current selection: PHP $(/usr/local/php7.4/bin/php-config --version)"
+                    PHP_Path='/usr/local/php7.4'
+                    PHPFPM_Initd='php-fpm7.4'
+                else
+                    Echo_Red "Error: PHP 7.4 not found under /usr/local/php7.4."
+                    exit 1
+                fi
                 ;;
             12)
-                echo "Current selection: PHP $(/usr/local/php8.0/bin/php-config --version)"
-                PHP_Path='/usr/local/php8.0'
-                PHPFPM_Initd='php-fpm8.0'
+                if [[ -x /usr/local/php8.0/bin/php-config ]]; then
+                    echo "Current selection: PHP $(/usr/local/php8.0/bin/php-config --version)"
+                    PHP_Path='/usr/local/php8.0'
+                    PHPFPM_Initd='php-fpm8.0'
+                else
+                    Echo_Red "Error: PHP 8.0 not found under /usr/local/php8.0."
+                    exit 1
+                fi
                 ;;
             13)
-                echo "Current selection: PHP $(/usr/local/php8.1/bin/php-config --version)"
-                PHP_Path='/usr/local/php8.1'
-                PHPFPM_Initd='php-fpm8.1'
+                if [[ -x /usr/local/php8.1/bin/php-config ]]; then
+                    echo "Current selection: PHP $(/usr/local/php8.1/bin/php-config --version)"
+                    PHP_Path='/usr/local/php8.1'
+                    PHPFPM_Initd='php-fpm8.1'
+                else
+                    Echo_Red "Error: PHP 8.1 not found under /usr/local/php8.1."
+                    exit 1
+                fi
                 ;;
             14)
-                echo "Current selection: PHP $(/usr/local/php8.2/bin/php-config --version)"
-                PHP_Path='/usr/local/php8.2'
-                PHPFPM_Initd='php-fpm8.2'
+                if [[ -x /usr/local/php8.2/bin/php-config ]]; then
+                    echo "Current selection: PHP $(/usr/local/php8.2/bin/php-config --version)"
+                    PHP_Path='/usr/local/php8.2'
+                    PHPFPM_Initd='php-fpm8.2'
+                else
+                    Echo_Red "Error: PHP 8.2 not found under /usr/local/php8.2."
+                    exit 1
+                fi
                 ;;
             15)
-                echo "Current selection: PHP $(/usr/local/php8.3/bin/php-config --version)"
-                PHP_Path='/usr/local/php8.3'
-                PHPFPM_Initd='php-fpm8.3'
+                if [[ -x /usr/local/php8.3/bin/php-config ]]; then
+                    echo "Current selection: PHP $(/usr/local/php8.3/bin/php-config --version)"
+                    PHP_Path='/usr/local/php8.3'
+                    PHPFPM_Initd='php-fpm8.3'
+                else
+                    Echo_Red "Error: PHP 8.3 not found under /usr/local/php8.3."
+                    exit 1
+                fi
                 ;;
             16)
-                echo "Current selection: PHP $(/usr/local/php8.4/bin/php-config --version)"
-                PHP_Path='/usr/local/php8.4'
-                PHPFPM_Initd='php-fpm8.4'
+                if [[ -x /usr/local/php8.4/bin/php-config ]]; then
+                    echo "Current selection: PHP $(/usr/local/php8.4/bin/php-config --version)"
+                    PHP_Path='/usr/local/php8.4'
+                    PHPFPM_Initd='php-fpm8.4'
+                else
+                    Echo_Red "Error: PHP 8.4 not found under /usr/local/php8.4."
+                    exit 1
+                fi
                 ;;
             17)
-                echo "Current selection: PHP $(/usr/local/php8.5/bin/php-config --version)"
-                PHP_Path='/usr/local/php8.5'
-                PHPFPM_Initd='php-fpm8.5'
+                if [[ -x /usr/local/php8.5/bin/php-config ]]; then
+                    echo "Current selection: PHP $(/usr/local/php8.5/bin/php-config --version)"
+                    PHP_Path='/usr/local/php8.5'
+                    PHPFPM_Initd='php-fpm8.5'
+                else
+                    Echo_Red "Error: PHP 8.5 not found under /usr/local/php8.5."
+                    exit 1
+                fi
+                ;;
+            [eE][xX][iI][tT])
+                exit 0
                 ;;
             *)
-                echo "Default,Current selection: PHP ${Cur_PHP_Version}"
-                php_select="1"
-                PHP_Path='/usr/local/php'
-                PHPFPM_Initd='php-fpm'
+                Echo_Red "Invalid choice: '${php_select}'. Please select one of the listed PHP versions."
+                exit 1
                 ;;
         esac
     fi
@@ -193,7 +244,8 @@ Addons_Get_PHP_Ext_Dir()
 
 Download_PHP_Src()
 {
-     if [ -s php-${Cur_PHP_Version}.tar.bz2 ]; then
+    cd "${cur_dir}/src" || exit 1
+    if [ -s php-${Cur_PHP_Version}.tar.bz2 ]; then
         echo "php-${Cur_PHP_Version}.tar.bz2 [found]"
     else
         echo "Notice: php-${Cur_PHP_Version}.tar.bz2 not found!!!download now..."
@@ -212,121 +264,119 @@ Download_PHP_Src()
     fi
 }
 
-if [[ "${action}" == "" || "${action2}" == "" ]]; then
+if [[ -z "${action}" ]]; then
     action='install'
-    Display_Addons_Menu
 fi
+if [[ -z "${action2}" ]] && [[ "${action}" == "install" || "${action}" == "uninstall" ]]; then
+    Display_Addons_Menu "${action}"
+fi
+# normalize menu/CLI input so addon and exit matching is case-insensitive
+action2="${action2,,}"
 Get_Dist_Name
 Select_PHP
 Check_Addons_PHP
 
-    case "${action}" in
-    install)
-        case "${action2}" in
-            3|[mM]emcached)
-                Install_Memcached
-                ;;
-            4|opcache)
-                Install_Opcache
-                ;;
-            5|[rR]edis)
-                Install_Redis
-                ;;
-            6|apcu)
-                Install_Apcu
-                ;;
-            7|image[mM]agick)
-                Install_ImageMagic
-                ;;
-            8|ion[cC]ube)
-                Install_ionCube
-                ;;
-            9|[sS][gG])
-                Install_SourceGuardian
-                ;;
-            10|[eE]xif)
-                Install_PHP_Exif
-                ;;
-            11|[fF]ileinfo)
-                Install_PHP_Fileinfo
-                ;;
-            12|[lL]dap)
-                Install_PHP_Ldap
-                ;;
-            13|[bB]z2)
-                Install_PHP_Bz2
-                ;;
-            14|[sS]odium)
-                Install_PHP_Sodium
-                ;;
-            15|[iI]map)
-                Install_PHP_Imap
-                ;;
-            16|[sS]woole)
-                Install_PHP_Swoole
-                ;;
-            [eE][xX][iI][tT])
-                exit 1
-                ;;
-            *)
-                echo "Usage: ./addons.sh install {memcached|opcache|redis|imagemagick|ioncube|sg|exif|fileinfo|ldap|bz2|sodium|imap|swoole}"
-                ;;
-        esac
-        ;;
-    uninstall)
-        case "${action2}" in
-            [mM]emcached)
-                Uninstall_Memcached
-                ;;
-            opcache)
-                Uninstall_Opcache
-                ;;
-            [rR]edis)
-                Uninstall_Redis
-                ;;
-            apcu)
-                Uninstall_Apcu
-                ;;
-            image[mM]agick)
-                Uninstall_ImageMagick
-                ;;
-            ion[cC]ube)
-                Uninstall_ionCube
-                ;;
-            [sS][gG])
-                Uninstall_SourceGuardian
-                ;;
-            [eE]xif)
-                Uninstall_PHP_Exif
-                ;;
-            [fF]ileinfo)
-                Uninstall_PHP_Fileinfo
-                ;;
-            [lL]dap)
-                Uninstall_PHP_Ldap
-                ;;
-            [bB]z2)
-                Uninstall_PHP_Bz2
-                ;;
-            [sS]odium)
-                Uninstall_PHP_Sodium
-                ;;
-            [iI]map)
-                Uninstall_PHP_Imap
-                ;;
-            [sS]woole)
-                Uninstall_PHP_Swoole
-                ;;
-            *)
-                echo "Usage: ./addons.sh uninstall {memcached|opcache|redis|apcu|imagemagick|ioncube|sg|exif|fileinfo|ldap|bz2|sodium|imap|swoole}"
-                ;;
-        esac
-        ;;
-    [eE][xX][iI][tT])
-        exit 1
-        ;;
-    *)
-        echo "Usage: ./addons.sh {install|uninstall} {memcached|opcache|redis|apcu|imagemagick|ioncube|sg|exif|fileinfo|ldap|bz2|sodium|imap|swoole}"
-        exit 1
-        ;;
+case "${action}" in
+install)
+    case "${action2}" in
+        3|[mM]emcached)
+            Install_Memcached
+            ;;
+        4|opcache)
+            Install_Opcache
+            ;;
+        5|[rR]edis)
+            Install_Redis
+            ;;
+        6|apcu)
+            Install_Apcu
+            ;;
+        7|image[mM]agick)
+            Install_ImageMagick
+            ;;
+        8|ion[cC]ube)
+            Install_ionCube
+            ;;
+        10|[eE]xif)
+            Install_PHP_Exif
+            ;;
+        11|[fF]ileinfo)
+            Install_PHP_Fileinfo
+            ;;
+        12|[lL]dap)
+            Install_PHP_Ldap
+            ;;
+        13|[bB]z2)
+            Install_PHP_Bz2
+            ;;
+        14|[sS]odium)
+            Install_PHP_Sodium
+            ;;
+        15|[iI]map)
+            Install_PHP_Imap
+            ;;
+        16|[sS]woole)
+            Install_PHP_Swoole
+            ;;
+        [eE][xX][iI][tT])
+            exit 0
+            ;;
+        *)
+            echo "Usage: ./addons.sh install {memcached|opcache|redis|imagemagick|ioncube|exif|fileinfo|ldap|bz2|sodium|imap|swoole}"
+            ;;
     esac
+    ;;
+uninstall)
+    case "${action2}" in
+        3|[mM]emcached)
+            Uninstall_Memcached
+            ;;
+        4|opcache)
+            Uninstall_Opcache
+            ;;
+        5|[rR]edis)
+            Uninstall_Redis
+            ;;
+        6|apcu)
+            Uninstall_Apcu
+            ;;
+        7|image[mM]agick)
+            Uninstall_ImageMagick
+            ;;
+        8|ion[cC]ube)
+            Uninstall_ionCube
+            ;;
+        10|[eE]xif)
+            Uninstall_PHP_Exif
+            ;;
+        11|[fF]ileinfo)
+            Uninstall_PHP_Fileinfo
+            ;;
+        12|[lL]dap)
+            Uninstall_PHP_Ldap
+            ;;
+        13|[bB]z2)
+            Uninstall_PHP_Bz2
+            ;;
+        14|[sS]odium)
+            Uninstall_PHP_Sodium
+            ;;
+        15|[iI]map)
+            Uninstall_PHP_Imap
+            ;;
+        16|[sS]woole)
+            Uninstall_PHP_Swoole
+            ;;
+        *)
+            echo "Usage: ./addons.sh uninstall {memcached|opcache|redis|apcu|imagemagick|ioncube|exif|fileinfo|ldap|bz2|sodium|imap|swoole}"
+            ;;
+    esac
+    ;;
+[eE][xX][iI][tT])
+    exit 0
+    ;;
+*)
+    echo "Usage: ./addons.sh {install|uninstall} {memcached|opcache|redis|apcu|imagemagick|ioncube|exif|fileinfo|ldap|bz2|sodium|imap|swoole}"
+    exit 1
+    ;;
+esac

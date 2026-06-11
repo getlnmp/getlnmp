@@ -18,6 +18,7 @@ Upgrade_Date=$(date +"%Y%m%d%H%M%S")
 . include/main.sh
 . include/init.sh
 . include/php.sh
+. include/multiplephp.sh
 . include/nginx.sh
 . include/mysql.sh
 . include/mariadb.sh
@@ -66,7 +67,7 @@ fi
         Upgrade_Nginx 2>&1 | tee /root/upgrade_nginx"${Upgrade_Date}".log
         ;;
     2|[mM][yY][sS][qQ][lL])
-        Upgrade_MySQL 2>&1 | tee /root/upgrade_mysq"${Upgrade_Date}".log
+        Upgrade_MySQL 2>&1 | tee /root/upgrade_mysql"${Upgrade_Date}".log
         ;;
     3|[mM][aA][rR][iI][aA][dD][bB])
         Upgrade_MariaDB 2>&1 | tee /root/upgrade_mariadb"${Upgrade_Date}".log

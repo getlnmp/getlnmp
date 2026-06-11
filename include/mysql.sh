@@ -74,7 +74,7 @@ MySQL_Sec_Setting()
     fi
 
     if [ -d "/etc/mysql" ]; then
-        mv /etc/mysql /etc/mysql.backup.$(date +%Y%m%d)
+        mv /etc/mysql "/etc/mysql.backup.$(date +%Y%m%d%H%M%S)"
     fi
     
     # 2. service management and symlinks
@@ -85,7 +85,7 @@ MySQL_Sec_Setting()
     local bins=("mysql" "mysqld" "mysqldump" "mysqld_safe" "mysqlcheck" "myisamchk")
     
     for bin in "${bins[@]}"; do
-        if [ -f "$bin_dir/$bin" ]; then
+        if [ -f "$bin_dir/$bin" ] && { [ ! -e "/usr/bin/$bin" ] || [ -L "/usr/bin/$bin" ]; }; then
             ln -sf "$bin_dir/$bin" "/usr/bin/$bin"
         fi
     done
@@ -100,38 +100,33 @@ MySQL_Sec_Setting()
     # while ~/.my.cnf is a user-specific configuration file that can override or supplement the settings in /etc/my.cnf for that particular user.
     # ~/my.cnf must be set to 600
     # /etc/my.cnf (Global) is loaded first and applies to all users, while ~/.my.cnf (User-Specific) is loaded afterward and can override settings for that user.
+    mysqladmin_ok=0
     if [ -s ~/.my.cnf ]; then
-        /usr/local/mysql/bin/mysqladmin --defaults-file=/etc/my.cnf -u root password "${DB_Root_Password}" || {
-            Echo_Red "Error: failed to set MariaDB root password using mysqladmin."
-            return 1
-        }
+        /usr/local/mysql/bin/mysqladmin --defaults-file=/etc/my.cnf -u root password "${DB_Root_Password}" && mysqladmin_ok=1
     else
-        /usr/local/mysql/bin/mysqladmin -u root password "${DB_Root_Password}" || {
-            Echo_Red "Error: failed to set MariaDB root password using mysqladmin."
-            return 1
-        }
+        /usr/local/mysql/bin/mysqladmin -u root password "${DB_Root_Password}" && mysqladmin_ok=1
     fi
 
-    if [ $? -ne 0 ]; then
-        echo "Failed, try other way..."
+    if [ "${mysqladmin_ok}" -eq 0 ]; then
+        echo "mysqladmin failed; trying ALTER USER fallback..."
         systemctl restart mysql
         cat >~/.emptymy.cnf<<EOF
 [client]
 user=root
 password=''
 EOF
-        trap 'rm -f ~/.emptymy.cnf' EXIT
-        /usr/local/mysql/bin/mysql --defaults-file=~/.emptymy.cnf -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_Root_Password}';" || {
-            Echo_Red "Error: fallback MariaDB root password setup failed."
+        escaped_password=$(MySQL_SQL_Escape "${DB_Root_Password}")
+        /usr/local/mysql/bin/mysql --defaults-file="${HOME}/.emptymy.cnf" -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${escaped_password}';" || {
+            Echo_Red "Error: fallback MySQL root password setup failed."
             exit 1
         }
         echo "Set MySQL root password successfully using fallback method."
-        /usr/local/mysql/bin/mysql --defaults-file=~/.emptymy.cnf -e "FLUSH PRIVILEGES;" || {
+        /usr/local/mysql/bin/mysql --defaults-file="${HOME}/.emptymy.cnf" -e "FLUSH PRIVILEGES;" || {
             Echo_Red "Error: failed to reload MySQL privilege tables."
             exit 1
         }
         echo "FlUSH PRIVILEGES successfully."
-        rm -f ~/.emptymy.cnf
+        rm -f "${HOME}/.emptymy.cnf"
     fi
     systemctl restart mysql || {
         Echo_Red "Error: failed to restart MySQL service after password setup."
@@ -139,7 +134,7 @@ EOF
     }
 
     Make_TempMycnf "${DB_Root_Password}"
-    MySQL_Do_Query "SELECT 1;" || {
+    Mysql_Do_Query "SELECT 1;" || {
          Echo_Red "Error: MySQL root password verification failed after setup."
          exit 1
     }
@@ -147,32 +142,32 @@ EOF
 
     # 4. Remove anonymous users, disallow root login remotely, remove test database, and reload privilege tables
     echo "Removing anonymous users..."
-    MySQL_Do_Query "DELETE FROM mysql.user WHERE User='';" || {
+    Mysql_Do_Query "DELETE FROM mysql.user WHERE User='';" || {
         Echo_Red "Error: failed to remove anonymous MySQL users."
         exit 1
     }
-    MySQL_Do_Query "DROP USER IF EXISTS ''@'%';" || {
+    Mysql_Do_Query "DROP USER IF EXISTS ''@'%';" || {
         Echo_Red "Error: failed to drop anonymous MySQL users."
         exit 1
     }
     echo " ... Success."
 
     echo "Disallowing root login remotely..."
-    MySQL_Do_Query "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');" || {
+    Mysql_Do_Query "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');" || {
         Echo_Red "Error: failed to disallow remote MySQL root login."
         exit 1
     }
     echo " ... Success."
 
     echo "Removing test database..."
-    MySQL_Do_Query "DROP DATABASE IF EXISTS test;" || {
+    Mysql_Do_Query "DROP DATABASE IF EXISTS test;" || {
         Echo_Red "Error: failed to remove MySQL test database."
         exit 1
     }
     echo " ... Success."
 
     echo "Reloading privilege tables..."
-    MySQL_Do_Query "FLUSH PRIVILEGES;" || {
+    Mysql_Do_Query "FLUSH PRIVILEGES;" || {
         Echo_Red "Error: failed to reload MySQL privilege tables."
         exit 1
     }
@@ -216,6 +211,9 @@ MySQL_Opt()
     elif [[ ${MemTotal} -ge 32768 ]]; then
         key_buffer="1024M"; table_open="4096"; sort_buffer="16M"; read_buffer="16M"; myisam_sort="256M"
         thread_cache="512"; query_cache="512M"; tmp_table="512M"; innodb_buffer="4096M"; innodb_log="1024M"; innodb_redo="4096M"; performance_tables="10000"
+    elif [ "${MemTotal}" -le 1024 ]; then
+        Echo_Yellow "Detected <1GB RAM; using minimal MySQL optimization."
+        return 0
     else
         return 0
     fi
@@ -240,25 +238,26 @@ MySQL_Opt()
     fi
 }
 
+# if "${MySQL_Data_Dir} exists, backup it and continue as a fresh installation by default
 Check_MySQL_Data_Dir()
 {
     if [ -d "${MySQL_Data_Dir}" ]; then
-        datetime=$(date +"%Y%m%d%H%M%S")
-        backup_dir="/root/mysql-data-dir-backup${datetime}"
-        echo "Move existing MySQL data directory to ${backup_dir}..."
-        mv "${MySQL_Data_Dir}" "${backup_dir}" || {
-            Echo_Red "Error: failed to backup existing MySQL data directory."
-            exit 1
-        }
+            datetime=$(date +"%Y%m%d%H%M%S")
+            backup_dir="/root/mysql-data-dir-backup${datetime}"
+            echo "Move existing MySQL data directory to ${backup_dir}..."
+            mv "${MySQL_Data_Dir}" "${backup_dir}" || {
+                Echo_Red "Error: failed to backup existing MySQL data directory."
+                exit 1
+            }
         mkdir -p "${MySQL_Data_Dir}" || {
             Echo_Red "Error: failed to create MySQL data directory."
             exit 1
         }
     else
-        mkdir -p "${MySQL_Data_Dir}" || {
-            Echo_Red "Error: failed to create MySQL data directory."
-            exit 1
-        }
+    mkdir -p "${MySQL_Data_Dir}" || {
+        Echo_Red "Error: failed to create MySQL data directory."
+        exit 1
+    }
     fi
     chown -R mysql:mysql /usr/local/mysql || {
         Echo_Red "Error: failed to set MySQL ownership."
@@ -270,12 +269,36 @@ Check_MySQL_Data_Dir()
     }
 }
 
+# [mysqld_safe] malloc-lib in my.cnf is inert on 5.7/8.0/8.4 (systemd launches mysqld
+# directly); apply the selected allocator via LD_PRELOAD instead.
+MySQL_Set_Malloc_Preload()
+{
+    case "${SelectMalloc}" in
+    2) MallocLib='/usr/lib/libjemalloc.so' ;;
+    3) MallocLib='/usr/lib/libtcmalloc.so' ;;
+    *) MallocLib='' ;;
+    esac
+    [ -e "${MallocLib}" ] || MallocLib=''
+
+    if [ -n "${MallocLib}" ]; then
+        mkdir -p /etc/sysconfig
+        echo "LD_PRELOAD=${MallocLib}" > /etc/sysconfig/mysql
+    else
+        rm -f /etc/sysconfig/mysql
+    fi
+}
+
+# Allocator is unsupported for mysql 5.6
 Install_MySQL_56()
 {
     if [ "${Bin}" = "y" ]; then
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Generic Binaries..."
         Tar_Cd ${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}.tar.gz
-        mkdir /usr/local/mysql
+        if [ -x /usr/local/mysql/bin/mysqld ]; then
+            Echo_Red "MySQL is already installed at /usr/local/mysql. Aborting."
+            exit 1
+        fi
+        mkdir -p /usr/local/mysql
         mv ${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}/* /usr/local/mysql/
     else
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Source code..."
@@ -286,17 +309,15 @@ Install_MySQL_56()
             MySQL_WITH_SSL='yes'
         fi
         Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
-        if  g++ -dM -E -x c++ /dev/null | grep -F __cplusplus | cut -d' ' -f3 | grep -Eqi "^(2017|202[0-9])"; then
-            sed -i '1s/^/set(CMAKE_CXX_STANDARD 11)\n/' CMakeLists.txt
-        fi
-        if echo "${Rocky_Version}" | grep -Eqi "^9"; then
+        sed -i '1s/^/set(CMAKE_CXX_STANDARD 11)\n/' CMakeLists.txt
+        if echo "${Rocky_Version}${Alma_Version}" | grep -Eqi "^9"; then
             sed -i 's@^INCLUDE(cmake/abi_check.cmake)@#INCLUDE(cmake/abi_check.cmake)@' CMakeLists.txt
         fi
         cmake -DCMAKE_INSTALL_PREFIX=/usr/local/mysql -DSYSCONFDIR=/etc -DWITH_MYISAM_STORAGE_ENGINE=1 -DWITH_INNOBASE_STORAGE_ENGINE=1 -DWITH_PARTITION_STORAGE_ENGINE=1 -DWITH_FEDERATED_STORAGE_ENGINE=1 -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 ${MySQL_WITH_SSL} || {
             Echo_Red "Error: failed to configure MySQL."
             exit 1
         }
-        MySQL_Make_Install
+        MySQL_Make_Install || exit 1
     fi
 
     MySQL_Add_UG
@@ -417,12 +438,9 @@ EOF
     chmod 755 /etc/init.d/mysql
 
     cat > /etc/ld.so.conf.d/mysql.conf<<EOF
-    /usr/local/mysql/lib
-    /usr/local/lib
+/usr/local/mysql/lib
 EOF
     ldconfig
-    ln -sf /usr/local/mysql/lib/mysql /usr/lib/mysql
-    ln -sf /usr/local/mysql/include/mysql /usr/include/mysql
 
     MySQL_Sec_Setting
 }
@@ -437,7 +455,11 @@ Install_MySQL_57()
     if [ "${Bin}" = "y" ]; then
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Generic Binaries..."
         Tar_Cd ${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}.tar.gz
-        mkdir /usr/local/mysql
+        if [ -x /usr/local/mysql/bin/mysqld ]; then
+            Echo_Red "MySQL is already installed at /usr/local/mysql. Aborting."
+            exit 1
+        fi
+        mkdir -p /usr/local/mysql
         mv ${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}/* /usr/local/mysql/
     else
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Source code..."
@@ -450,7 +472,7 @@ Install_MySQL_57()
         fi
         Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
         #Install_Boost
-        if echo "${Rocky_Version}" | grep -Eqi "^9"; then
+        if echo "${Rocky_Version}${Alma_Version}" | grep -Eqi "^9"; then
             sed -i 's@^INCLUDE(cmake/abi_check.cmake)@#INCLUDE(cmake/abi_check.cmake)@' CMakeLists.txt
         fi
         mkdir -p mysql-build && cd mysql-build
@@ -468,12 +490,12 @@ Install_MySQL_57()
             -DENABLED_LOCAL_INFILE=1 \
             -DWITH_SYSTEMD=1 \
             -DDOWNLOAD_BOOST=ON \
-			-DWITH_BOOST=/usr/local/mysql57_boost \
+            -DWITH_BOOST=/usr/local/mysql57_boost \
             ${MySQL_WITH_SSL} || {
             Echo_Red "Error: failed to configure MySQL."
             exit 1
         }
-        MySQL_Make_Install
+        MySQL_Make_Install || exit 1
     fi
     
     MySQL_Add_UG
@@ -562,15 +584,13 @@ EOF
     if [ -s /usr/local/mysql/bin/mysqld_pre_systemd ]; then
         sed -i 's/^#ExecStartPre=/ExecStartPre=/g' /etc/systemd/system/mysql.service
     fi
+    MySQL_Set_Malloc_Preload
     systemctl daemon-reload
  
     cat > /etc/ld.so.conf.d/mysql.conf<<EOF
-    /usr/local/mysql/lib
-    /usr/local/lib
+/usr/local/mysql/lib
 EOF
     ldconfig
-    ln -sf /usr/local/mysql/lib/mysql /usr/lib/mysql
-    ln -sf /usr/local/mysql/include/mysql /usr/include/mysql
 
     MySQL_Sec_Setting
 }
@@ -581,11 +601,19 @@ Install_MySQL_80()
     if [ "${Bin}" = "y" ]; then
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Generic Binaries..."
         Tar_Cd ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
-        mkdir /usr/local/mysql
+        if [ -x /usr/local/mysql/bin/mysqld ]; then
+            Echo_Red "MySQL is already installed at /usr/local/mysql. Aborting."
+            exit 1
+        fi
+        mkdir -p /usr/local/mysql
         mv ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}/* /usr/local/mysql/
     else
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Source code..."
         Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
+        if [ "${isOpenSSL10}" = "y" ]; then
+            Echo_Red "MySQL 8.0 requires OpenSSL 1.1.1 or 3.x; system OpenSSL is older. Aborting."
+            exit 1
+        fi
         #Install_Boost
         mkdir -p mysql-build && cd mysql-build
         cmake .. \
@@ -599,11 +627,11 @@ Install_MySQL_80()
             -DENABLED_LOCAL_INFILE=1 \
             -DWITH_SYSTEMD=1 \
             -DDOWNLOAD_BOOST=ON \
-			-DWITH_BOOST=/usr/local/mysql80_boost || {
+            -DWITH_BOOST=/usr/local/mysql80_boost || {
             Echo_Red "Error: failed to configure MySQL."
             exit 1
         }
-        MySQL_Make_Install
+        MySQL_Make_Install || exit 1
     fi
 
     MySQL_Add_UG
@@ -705,15 +733,13 @@ EOF
         \cp ${cur_dir}/init.d/mysql.service8.0 /etc/systemd/system/mysql.service
     fi
     ln -sf /etc/systemd/system/mysql.service /etc/systemd/system/mysqld.service
+    MySQL_Set_Malloc_Preload
     systemctl daemon-reload
 
     cat > /etc/ld.so.conf.d/mysql.conf<<EOF
-    /usr/local/mysql/lib
-    /usr/local/lib
+/usr/local/mysql/lib
 EOF
     ldconfig
-    ln -sf /usr/local/mysql/lib/mysql /usr/lib/mysql
-    ln -sf /usr/local/mysql/include/mysql /usr/include/mysql
 
     MySQL_Sec_Setting
 }
@@ -726,11 +752,19 @@ Install_MySQL_84()
     if [ "${Bin}" = "y" ]; then
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Generic Binaries..."
         Tar_Cd ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
-        mkdir /usr/local/mysql
+        if [ -x /usr/local/mysql/bin/mysqld ]; then
+            Echo_Red "MySQL is already installed at /usr/local/mysql. Aborting."
+            exit 1
+        fi
+        mkdir -p /usr/local/mysql
         mv ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}/* /usr/local/mysql/
     else
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Source code..."
         Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
+        if [ "${isOpenSSL10}" = "y" ]; then
+            Echo_Red "MySQL 8.4 requires OpenSSL 1.1.1 or 3.x; system OpenSSL is older. Aborting."
+            exit 1
+        fi
         mkdir -p mysql-build && cd mysql-build
         cmake .. \
         -DCMAKE_INSTALL_PREFIX=/usr/local/mysql \
@@ -746,7 +780,7 @@ Install_MySQL_84()
             exit 1
         }
         
-        MySQL_Make_Install
+        MySQL_Make_Install || exit 1
     fi
 
     MySQL_Add_UG
@@ -849,14 +883,13 @@ EOF
         \cp ${cur_dir}/init.d/mysql.service8.4 /etc/systemd/system/mysql.service
     fi
     ln -sf /etc/systemd/system/mysql.service /etc/systemd/system/mysqld.service
+    MySQL_Set_Malloc_Preload
     systemctl daemon-reload
 
     cat > /etc/ld.so.conf.d/mysql.conf<<EOF
-    /usr/local/mysql/lib
+/usr/local/mysql/lib
 EOF
     ldconfig
-    ln -sf /usr/local/mysql/lib/mysql /usr/lib/mysql
-    ln -sf /usr/local/mysql/include/mysql /usr/include/mysql
 
     MySQL_Sec_Setting
 }

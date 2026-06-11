@@ -30,9 +30,6 @@ Documentation=http://dev.mysql.com/doc/refman/en/using-systemd.html
 After=network.target
 After=syslog.target
 
-[Install]
-WantedBy=multi-user.target
-
 [Service]
 User=mysql
 Group=mysql
@@ -56,10 +53,13 @@ ExecStart=/usr/local/mysql/bin/mysqld --daemonize $MYSQLD_OPTS
 EnvironmentFile=-/etc/sysconfig/mysql
 
 # Sets open_files_limit
-LimitNOFILE = 5000
+LimitNOFILE=5000
 
 Restart=on-failure
 
 RestartPreventExitStatus=1
 
 PrivateTmp=false
+
+[Install]
+WantedBy=multi-user.target

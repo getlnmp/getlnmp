@@ -16,7 +16,8 @@ echo "|For more information please visit https://www.getlnmp.com |"
 echo "+----------------------------------------------------------+"
 echo "|Usage: ./pureftpd.sh                                      |"
 echo "+----------------------------------------------------------+"
-cur_dir=$(pwd)
+cur_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${cur_dir}" || exit 1
 action=$1
 
 . lnmp.conf
@@ -24,7 +25,6 @@ action=$1
 . include/init.sh
 . include/downloadlink.sh
 
-Get_Dist_Name
 
 Open_FTP_Ports() {
     local opened=0
@@ -34,7 +34,7 @@ Open_FTP_Ports() {
             Echo_Green "Opening FTP ports 20 and 21 using ufw..."
             ufw allow 20/tcp
             ufw allow 21/tcp
-            #ufw allow 20000:30000/tcp
+            ufw allow 20000:30000/tcp
             opened=1
         fi
     fi
@@ -44,7 +44,7 @@ Open_FTP_Ports() {
             Echo_Green "Opening FTP ports 20 and 21 using firewall-cmd..."
             firewall-cmd --add-port=20/tcp --permanent
             firewall-cmd --add-port=21/tcp --permanent
-            #firewall-cmd --add-port=20000:30000/tcp --permanent
+            firewall-cmd --add-port=20000:30000/tcp --permanent
             firewall-cmd --reload
             opened=1
         fi
@@ -63,6 +63,7 @@ Remove_FTP_Ports() {
             Echo_Green "Removing FTP ports 20 and 21 from ufw..."
             ufw delete allow 20/tcp
             ufw delete allow 21/tcp
+            ufw delete allow 20000:30000/tcp
             removed=1
         fi
     fi
@@ -72,6 +73,7 @@ Remove_FTP_Ports() {
             Echo_Green "Removing FTP ports 20 and 21 from firewall-cmd..."
             firewall-cmd --remove-port=20/tcp --permanent
             firewall-cmd --remove-port=21/tcp --permanent
+            firewall-cmd --remove-port=20000:30000/tcp --permanent
             firewall-cmd --reload
             removed=1
         fi
@@ -83,7 +85,7 @@ Remove_FTP_Ports() {
 }
 
 Remove_LNMP_Command_If_Pureftpd_Only() {
-    if [ ! -s /bin/lnmp ]; then
+    if [ ! -s /bin/lnmp ] && [ ! -s /bin/lamp ] && [ ! -s /bin/lnmpa ]; then
         return
     fi
 
@@ -92,16 +94,44 @@ Remove_LNMP_Command_If_Pureftpd_Only() {
         return
     fi
 
-    if cmp -s /bin/lnmp "${cur_dir}/conf/lnmp"; then
-        echo "Remove standalone /bin/lnmp command..."
-        rm -f /bin/lnmp
-    else
-        Echo_Yellow "/bin/lnmp differs from ${cur_dir}/conf/lnmp. Keep it."
+    if [[ -s /bin/lnmp ]]; then 
+        if cmp -s /bin/lnmp "${cur_dir}/conf/lnmp"; then
+            echo "Remove standalone /bin/lnmp command..."
+            rm -f /bin/lnmp
+        else
+            Echo_Yellow "/bin/lnmp differs from ${cur_dir}/conf/lnmp. Keep it."
+        fi
     fi
+
+    if [[ -s /bin/lamp ]]; then 
+        if cmp -s /bin/lamp "${cur_dir}/conf/lamp"; then
+            echo "Remove standalone /bin/lamp command..."
+            rm -f /bin/lamp
+        else
+            Echo_Yellow "/bin/lamp differs from ${cur_dir}/conf/lamp. Keep it."
+        fi
+    fi
+
+    if [[ -s /bin/lnmpa ]]; then 
+        if cmp -s /bin/lnmpa "${cur_dir}/conf/lnmpa"; then
+            echo "Remove standalone /bin/lnmpa command..."
+            rm -f /bin/lnmpa
+        else
+            Echo_Yellow "/bin/lnmpa differs from ${cur_dir}/conf/lnmpa. Keep it."
+        fi
+    fi
+  
+
+}
+
+LNMP_Command_Has_FTP() {
+    [ -s /bin/lnmp ] && grep -q "/usr/local/pureftpd/bin/pure-pw" /bin/lnmp
 }
 
 Install_Pureftpd()
 {
+    Get_Dist_Name
+    Block_Dist_Name
     Press_Install
 
     Echo_Blue "Installing dependent packages..."
@@ -109,18 +139,21 @@ Install_Pureftpd()
         for packages in make gcc gcc-c++ openssl openssl-devel bzip2;
         do yum -y install $packages; done
     elif [ "$PM" = "apt" ]; then
-        apt-get update -y
-        [[ $? -ne 0 ]] && apt-get update --allow-releaseinfo-change -y
+        apt-get update -y || apt-get update --allow-releaseinfo-change -y || {
+            Echo_Red "apt-get update failed"
+            exit 1
+        }
         for packages in build-essential gcc g++ make openssl libssl-dev bzip2;
         do apt-get --no-install-recommends install -y $packages; done
+    else
+        Echo_Red "Unsupported package manager: ${PM:-unknown}. Install build deps manually."
+        exit 1
     fi
     Echo_Blue "Download files..."
     cd ${cur_dir}/src
     Download_Files ${Pureftpd_DL} ${Pureftpd_Ver}.tar.bz2
-    if [ $? -eq 0 ]; then
-        echo "Download ${Pureftpd_Ver}.tar.bz2 successfully!"
-    else
-        Download_Files https://download.pureftpd.org/pub/pure-ftpd/releases/obsolete/${Pureftpd_Ver}.tar.bz2 ${Pureftpd_Ver}.tar.bz2
+    if [ ! -s "${Pureftpd_Ver}.tar.bz2" ]; then
+        Download_Files_Exit https://download.pureftpd.org/pub/pure-ftpd/releases/obsolete/${Pureftpd_Ver}.tar.bz2 ${Pureftpd_Ver}.tar.bz2
     fi
 
     Echo_Blue "Installing pure-ftpd..."
@@ -138,32 +171,35 @@ Install_Pureftpd()
     \cp ${cur_dir}/init.d/pureftpd.service /etc/systemd/system/pureftpd.service
     touch /usr/local/pureftpd/etc/pureftpd.passwd
     touch /usr/local/pureftpd/etc/pureftpd.pdb
-    
-    systemctl daemon-reload
-    systemctl enable --now pureftpd
 
-    cd ..
+    cd ${cur_dir}
     rm -rf ${cur_dir}/src/${Pureftpd_Ver}
 
     # Open FTP ports 20, 21 and 20000-30000 for passive mode if firewalld or ufw is active
     Open_FTP_Ports
 
-    if [ ! -s /bin/lnmp ]; then
-        \cp "${cur_dir}"/conf/lnmp /bin/lnmp
-        chmod +x /bin/lnmp
-    fi
-    id -u www
-    if [ $? -ne 0 ]; then
-        groupadd www
-        useradd -s /sbin/nologin -g www www
-    fi
+
 
     if [[ -s /usr/local/pureftpd/sbin/pure-ftpd && -s /usr/local/pureftpd/etc/pure-ftpd.conf && -s /etc/systemd/system/pureftpd.service ]]; then
-        Echo_Blue "Starting pureftpd..."
-        systemctl start pureftpd
+        if ! id -u www >/dev/null 2>&1; then
+            echo "Creating www user and group for pureftpd..."
+            groupadd www
+            useradd -s /sbin/nologin -g www www
+        fi
+        if [ ! -s /bin/lnmp ]; then
+            \cp "${cur_dir}"/conf/lnmp /bin/lnmp
+            chmod +x /bin/lnmp
+        fi
+        systemctl daemon-reload
+        systemctl enable --now pureftpd
         Echo_Green "+----------------------------------------------------------------------+"
         Echo_Green "| Install Pure-FTPd completed,enjoy it!"
-        Echo_Green "| =>use command: lnmp ftp {add|list|del|show} to manage FTP users."
+        if LNMP_Command_Has_FTP; then
+            Echo_Green "| =>use command: lnmp ftp {add|list|del|show} to manage FTP users."
+        else
+            Echo_Yellow "| /bin/lnmp exists but does not appear to support FTP user management."
+            Echo_Yellow "| Use /usr/local/pureftpd/bin/pure-pw to manage FTP users."
+        fi
         Echo_Green "+----------------------------------------------------------------------+"
         Echo_Green "| For more information please visit https://getlnmp.com"
         Echo_Green "+----------------------------------------------------------------------+"
@@ -182,18 +218,30 @@ Uninstall_Pureftpd()
     systemctl stop pureftpd
     echo "Remove service..."
     systemctl disable pureftpd
-    rm -rf /etc/systemd/system/pureftpd.service
+    rm -f /etc/systemd/system/pureftpd.service
     systemctl daemon-reload
     echo "Remove firewall rules..."
     Remove_FTP_Ports
     Remove_LNMP_Command_If_Pureftpd_Only
     echo "Delete files..."
+    # Backup pureftpd user database before uninstalling
+    local ts
+    ts="$(date +%Y%m%d%H%M%S)"
+    if [ -s /usr/local/pureftpd/etc/pureftpd.passwd ] || [ -s /usr/local/pureftpd/etc/pureftpd.pdb ]; then
+        mkdir -p "/root/pureftpd_backup_${ts}"
+        \cp -a /usr/local/pureftpd/etc/pureftpd.passwd "/root/pureftpd_backup_${ts}/" 2>/dev/null
+        \cp -a /usr/local/pureftpd/etc/pureftpd.pdb    "/root/pureftpd_backup_${ts}/" 2>/dev/null
+        Echo_Yellow "FTP user database backed up to /root/pureftpd_backup_${ts}"
+    fi
     rm -rf /usr/local/pureftpd
     echo "Pureftpd uninstall completed."
 }
 
-if [ "${action}" = "uninstall" ]; then
-    Uninstall_Pureftpd
-else
-    Install_Pureftpd 2>&1 | tee /root/pureftpd-install.log
-fi
+case "${action}" in
+    ""|install) Install_Pureftpd 2>&1 | tee /root/pureftpd-install.log ;;
+    uninstall)  Uninstall_Pureftpd ;;
+    *)
+        echo "Usage: ./pureftpd.sh {install|uninstall}"
+        exit 1
+        ;;
+esac

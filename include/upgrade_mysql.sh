@@ -10,7 +10,10 @@ Backup_MySQL()
         Echo_Red "mysqldump not found, please check if MySQL is installed correctly."
         exit 1
     fi
-    if /usr/local/mysql/bin/mysqldump --defaults-file=~/.my.cnf --all-databases --routines --triggers --events --single-transaction > "${dump_file}"; then
+    # we use --single-transaction option to avoid locking tables during backup, but it only works for InnoDB tables
+    # if there are MyISAM tables in your databases, you may want to use --lock-tables option instead, but it will lock tables during backup, so it's not recommended.
+    # most of the time --single-transaction option is enough for backup, and it's much faster than --lock-tables option, so we use it by default.
+    if /usr/local/mysql/bin/mysqldump --defaults-file="${HOME}/.my.cnf" --all-databases --routines --triggers --events --single-transaction > "${dump_file}"; then
         if [ -s "${dump_file}" ]; then
             echo "MySQL databases backup successfully."
         else
@@ -30,6 +33,20 @@ Backup_MySQL()
     if echo "${mysql_version}" | grep -Eqi '^5\.5\.' &&  echo "${cur_mysql_version}" | grep -Eqi '^5\.6\.';then
         sed -i 's/STATS_PERSISTENT=0//g' "${dump_file}"
     fi
+}
+
+Restore_old_mysql() {
+    Echo_Red "Upgrade failed; restoring previous MySQL installation."
+    rm -rf /usr/local/mysql
+    mv "/usr/local/oldmysql${Upgrade_Date}" /usr/local/mysql 2>/dev/null
+    if [ -d "${MySQL_Data_Dir}${Upgrade_Date}" ]; then
+        rm -rf "${MySQL_Data_Dir}"
+        mv "${MySQL_Data_Dir}${Upgrade_Date}" "${MySQL_Data_Dir}"
+    fi
+    mv "/usr/local/mysql/my.cnf.bak.${Upgrade_Date}" /etc/my.cnf 2>/dev/null
+    systemctl daemon-reload
+    systemctl start mysql
+    exit 1
 }
 
 Upgrade_MySQL57()
@@ -80,7 +97,7 @@ Upgrade_MySQL57()
                 Echo_Red "Error: MySQL cmake configuration failed."
                 exit 1
             }
-        MYSQL_Make_Install
+        MySQL_Make_Install || Restore_old_mysql
     fi
 
 
@@ -165,11 +182,11 @@ EOF
         mkdir -p "${MySQL_Data_Dir}"
     fi
     chown -R mysql:mysql /usr/local/mysql/
-    /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir="${MySQL_Data_Dir}" --user=mysql
+    /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir="${MySQL_Data_Dir}" --user=mysql || Restore_old_mysql
     chown -R mysql:mysql "${MySQL_Data_Dir}"
 
-    rm -rf /etc/systemd/system/mysql.service
-    rm -rf /etc/systemd/system/mysqld.service
+    rm -f /etc/systemd/system/mysql.service
+    rm -f /etc/systemd/system/mysqld.service
     \cp ${cur_dir}/init.d/mysql.service5.7 /etc/systemd/system/mysql.service
     ln -sf /etc/systemd/system/mysql.service /etc/systemd/system/mysqld.service
     if [ -s /usr/local/mysql/bin/mysqld_pre_systemd ]; then
@@ -182,8 +199,6 @@ EOF
 EOF
 
     ldconfig
-    ln -sf /usr/local/mysql/lib/mysql /usr/lib/mysql
-    ln -sf /usr/local/mysql/include/mysql /usr/include/mysql
 }
 
 Upgrade_MySQL80()
@@ -195,8 +210,8 @@ Upgrade_MySQL80()
             rm -rf ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}
         fi
         Tar_Cd ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
-        mkdir /usr/local/mysql
-        mv ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}/* /usr/local/mysql/
+        mkdir -p /usr/local/mysql || Restore_old_mysql
+        mv ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}/* /usr/local/mysql/ || Restore_old_mysql
     else
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Source code..."
         if [ -d ${Mysql_Ver} ]; then
@@ -218,9 +233,9 @@ Upgrade_MySQL80()
             -DDOWNLOAD_BOOST=ON \
 			-DWITH_BOOST=/usr/local/mysql80_boost || {
                 Echo_Red "Error: MySQL cmake configuration failed."
-                exit 1
+                Restore_old_mysql
             }
-        MYSQL_Make_Install
+        MySQL_Make_Install || Restore_old_mysql
     fi
 
 cat > /etc/my.cnf<<EOF
@@ -262,6 +277,8 @@ thread_cache_size      = 32
 # Binary logging
 log_bin                    = mysql-bin
 server-id                  = 1
+# binlog_format deprecated since mysql 8.0.34 and fully removed in mysql 8.4
+# ROW has been the default since MySQL 8.0.11
 #binlog_format              = ROW
 binlog_expire_logs_seconds = 864000
 
@@ -313,11 +330,11 @@ EOF
         mkdir -p "${MySQL_Data_Dir}"
     fi
     chown -R mysql:mysql /usr/local/mysql/
-    /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir="${MySQL_Data_Dir}" --user=mysql
+    /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir="${MySQL_Data_Dir}" --user=mysql || Restore_old_mysql
     chown -R mysql:mysql "${MySQL_Data_Dir}"
 
-    rm -rf /etc/systemd/system/mysql.service
-    rm -rf /etc/systemd/system/mysqld.service
+    rm -f /etc/systemd/system/mysql.service
+    rm -f /etc/systemd/system/mysqld.service
     # compiled mysql provides systemd service file
     # binary package only provides mysql.server init script, therefore we copy our own service file
     if [ -s /usr/local/mysql/lib/systemd/system/mysqld.service ]; then
@@ -328,15 +345,14 @@ EOF
         \cp ${cur_dir}/init.d/mysql.service8.0 /etc/systemd/system/mysql.service
     fi
     ln -sf /etc/systemd/system/mysql.service /etc/systemd/system/mysqld.service
+    MySQL_Set_Malloc_Preload
     systemctl daemon-reload
-    
+
     cat > /etc/ld.so.conf.d/mysql.conf<<EOF
 /usr/local/mysql/lib
 EOF
 
     ldconfig
-    ln -sf /usr/local/mysql/lib/mysql /usr/lib/mysql
-    ln -sf /usr/local/mysql/include/mysql /usr/include/mysql
 }
 
 Upgrade_MySQL84()
@@ -348,8 +364,8 @@ Upgrade_MySQL84()
             rm -rf ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}
         fi
         Tar_Cd ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
-        mkdir /usr/local/mysql
-        mv ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}/* /usr/local/mysql/
+        mkdir -p /usr/local/mysql || Restore_old_mysql
+        mv ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}/* /usr/local/mysql/ || Restore_old_mysql
     else
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Source code..."
         if [ -d ${Mysql_Ver} ]; then
@@ -368,10 +384,10 @@ Upgrade_MySQL84()
         -DENABLED_LOCAL_INFILE=1 \
         -DWITH_SYSTEMD=1 || {
             Echo_Red "Error: MySQL cmake configuration failed."
-            exit 1
+            Restore_old_mysql
         }
         
-        MYSQL_Make_Install
+        MySQL_Make_Install || Restore_old_mysql
     fi
 
 cat > /etc/my.cnf<<EOF
@@ -466,11 +482,11 @@ EOF
     fi
     chown -R mysql:mysql /usr/local/mysql/
     echo "Initializing MySQL data directory..."
-    /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir="${MySQL_Data_Dir}" --user=mysql
+    /usr/local/mysql/bin/mysqld --initialize-insecure --basedir=/usr/local/mysql --datadir="${MySQL_Data_Dir}" --user=mysql || Restore_old_mysql
     chown -R mysql:mysql "${MySQL_Data_Dir}"
 
-    rm -rf /etc/systemd/system/mysql.service
-    rm -rf /etc/systemd/system/mysqld.service
+    rm -f /etc/systemd/system/mysql.service
+    rm -f /etc/systemd/system/mysqld.service
     # compiled mysql provides systemd service file
     # binary package only provides mysql.server init script, therefore we copy our own service file
     echo "Setting up MySQL systemd service..."
@@ -482,6 +498,7 @@ EOF
         \cp ${cur_dir}/init.d/mysql.service8.4 /etc/systemd/system/mysql.service
     fi
     ln -sf /etc/systemd/system/mysql.service /etc/systemd/system/mysqld.service
+    MySQL_Set_Malloc_Preload
     systemctl daemon-reload
 
     cat > /etc/ld.so.conf.d/mysql.conf<<EOF
@@ -489,17 +506,15 @@ EOF
 EOF
 
     ldconfig
-    ln -sf /usr/local/mysql/lib/mysql /usr/lib/mysql
-    ln -sf /usr/local/mysql/include/mysql /usr/include/mysql
 }
 
 Restore_Start_MySQL()
 {
     backup_sql="/root/mysql_all_backup${Upgrade_Date}.sql"
 
-    chgrp -R mysql /usr/local/mysql/. || {
+    chgrp -R mysql /usr/local/mysql/ || {
         Echo_Red "Error: failed to set MySQL group ownership."
-        exit 1
+        Restore_old_mysql
     }
     ldconfig
     MySQL_Sec_Setting
@@ -507,16 +522,19 @@ Restore_Start_MySQL()
     echo "Restore backup databases..."
     if [ ! -s "${backup_sql}" ]; then
         Echo_Red "Error: MySQL backup file ${backup_sql} was not found or is empty."
-        exit 1
+        Restore_old_mysql
     fi
     echo "Starting MySQL..."
     systemctl start mysql
     echo "Starting importing..."
-    /usr/local/mysql/bin/mysql --defaults-file=~/.my.cnf < "${backup_sql}" || {
-        Echo_Red "Error: failed to import MySQL backup."
+    import_log="/root/mysql_import${Upgrade_Date}.log"
+    /usr/local/mysql/bin/mysql --defaults-file="${HOME}/.my.cnf" < "${backup_sql}" 2>"${import_log}"
+    if [ $? -ne 0 ] || grep -qi '^ERROR' "${import_log}"; then
+        Echo_Red "Error: failed to import MySQL backup, see ${import_log} for details."
+        cat "${import_log}"
         systemctl stop mysql
-        exit 1
-    }
+        Restore_old_mysql
+    fi
     echo "Repair databases..."
     MySQL_Ver_Com=$(${cur_dir}/include/version_compare 8.0.16 ${mysql_version})
     if [ "${MySQL_Ver_Com}" != "1" ]; then
@@ -524,41 +542,60 @@ Restore_Start_MySQL()
         echo "Upgrading MySQL..."
         /usr/local/mysql/bin/mysqld --user=mysql --upgrade=FORCE &
         mysql_upgrade_pid=$!
-        echo "Waiting for upgrade to start..."
-        sleep 180
-        if ! kill -0 "${mysql_upgrade_pid}" >/dev/null 2>&1; then
-            Echo_Red "Error: MySQL upgrade process exited unexpectedly."
-            wait "${mysql_upgrade_pid}"
-            exit 1
+        echo "Waiting for upgrade to finish..."
+        upgrade_done=0
+        for _ in $(seq 1 600); do
+            if ! kill -0 "${mysql_upgrade_pid}" >/dev/null 2>&1; then
+                Echo_Red "Error: MySQL upgrade process exited unexpectedly."
+                wait "${mysql_upgrade_pid}"
+                Restore_old_mysql
+            fi
+            if /usr/local/mysql/bin/mysqladmin --defaults-file="${HOME}/.my.cnf" ping >/dev/null 2>&1; then
+                if ! grep -q "Upgrade is in progress" "${MySQL_Data_Dir}/mysqld.err" 2>/dev/null; then
+                    upgrade_done=1
+                    break
+                fi
+            fi
+            sleep 6
+        done
+        if [ "${upgrade_done}" -eq 0 ]; then
+            Echo_Red "Error: MySQL upgrade timed out after 60 minutes."
+            kill "${mysql_upgrade_pid}" 2>/dev/null
+            Restore_old_mysql
         fi
-        /usr/local/mysql/bin/mysqladmin --defaults-file=~/.my.cnf shutdown || {
+        /usr/local/mysql/bin/mysqladmin --defaults-file="${HOME}/.my.cnf" shutdown || {
             Echo_Red "Error: failed to shut down MySQL after upgrade repair."
-            exit 1
+            kill "${mysql_upgrade_pid}" 2>/dev/null
+            Restore_old_mysql
         }
         wait "${mysql_upgrade_pid}" || {
             Echo_Red "Error: MySQL upgrade repair failed."
-            exit 1
+            Restore_old_mysql
         }
     else
-        /usr/local/mysql/bin/mysql_upgrade --defaults-file=~/.my.cnf || {
+        /usr/local/mysql/bin/mysql_upgrade --defaults-file="${HOME}/.my.cnf" || {
             Echo_Red "Error: mysql_upgrade failed."
             systemctl stop mysql
-            exit 1
+            Restore_old_mysql
         }
     fi
 
     systemctl stop mysql
     TempMycnf_Clean
-    cd ${cur_dir} && rm -rf ${cur_dir}/src/mysql-${mysql_version}
+    cd ${cur_dir}/src && rm -rf ${cur_dir}/src/mysql-${mysql_version} ${cur_dir}/src/mysql-${mysql_version}-linux-*
 
-    lnmp start
-    if [[ -s /usr/local/mysql/bin/mysql && -s /etc/my.cnf ]]; then
+    lnmp start || {
+        Echo_Yellow "lnmp start failed; you may need to restart the stack manually."
+    }
+    new_mysql_version=$(/usr/local/mysql/bin/mysql_config --version)
+    if [ "${new_mysql_version}" = "${mysql_version}" ]; then
         Echo_Green "======== upgrade MySQL completed ======"
     else
         Echo_Red "======== upgrade MySQL failed ======"
-        Echo_Red "upgrade MySQL log: /root/upgrade_mysq${Upgrade_Date}.log"
-        echo "You upload upgrade_mysq${Upgrade_Date}.log to LNMP Forum for help."
-        exit 1
+        Echo_Red "upgrade MySQL log: /root/upgrade_mysql${Upgrade_Date}.log"
+        echo "You upload upgrade_mysql${Upgrade_Date}.log to LNMP Forum for help."
+        lnmp stop 2>/dev/null
+        Restore_old_mysql
     fi
 }
 
@@ -580,12 +617,17 @@ Upgrade_MySQL()
     Echo_Yellow "Please input MySQL Version you want."
     read -r -p "(example: 8.4.7 ): " mysql_version
     if [ "${mysql_version}" = "" ]; then
-        echo "Error: You must input MySQL Version!!"
+        Echo_Red "Error: You must input MySQL Version!!"
         exit 1
     fi
 
     if [ "${mysql_version}" == "${cur_mysql_version}" ]; then
-        echo "Error: The upgrade MYSQL Version is the same as the old Version!!"
+        Echo_Red "Error: The upgrade MYSQL Version is the same as the old Version!!"
+        exit 1
+    fi
+
+    if [ "$(${cur_dir}/include/version_compare ${cur_mysql_version} ${mysql_version})" = "1" ]; then
+        Echo_Red "Refusing downgrade from ${cur_mysql_version} to ${mysql_version}."
         exit 1
     fi
 
@@ -665,21 +707,20 @@ Upgrade_MySQL()
     echo "You will upgrade MySQL Version to ${mysql_version}"
     echo "=================================================="
 
-    if [ -s /usr/local/include/jemalloc/jemalloc.h ] && lsof -n|grep "libjemalloc.so"|grep -q "mysqld"; then
-        MySQL51MAOpt='--with-mysqld-ldflags=-ljemalloc'
-        MySQL55MAOpt="-DCMAKE_EXE_LINKER_FLAGS='-ljemalloc' -DWITH_SAFEMALLOC=OFF"
-    elif [ -s /usr/local/include/gperftools/tcmalloc.h ] && lsof -n|grep "libtcmalloc.so"|grep -q "mysqld"; then
-        MySQL51MAOpt='--with-mysqld-ldflags=-ltcmalloc'
-        MySQL55MAOpt="-DCMAKE_EXE_LINKER_FLAGS='-ltcmalloc' -DWITH_SAFEMALLOC=OFF"
+    if [ "${SelectMalloc}" = "2" ]; then
+        MySQLMAOpt='[mysqld_safe]
+malloc-lib=/usr/lib/libjemalloc.so'
+    elif [ "${SelectMalloc}" = "3" ]; then
+        MySQLMAOpt='[mysqld_safe]
+malloc-lib=/usr/lib/libtcmalloc.so'
     else
-        MySQL51MAOpt=''
-        MySQL55MAOpt=''
+        MySQLMAOpt=''
     fi
 
     Press_Start
 
     echo "============================check files=================================="
-    cd ${cur_dir}/src
+    cd "${cur_dir}/src" || { Echo_Red "Error: cannot enter ${cur_dir}/src"; exit 1; }
     if [[ "${Bin}" = "y" && "${mysql_short_version}" = "8.0" ]]; then
         mysql_src="mysql-${mysql_version}-linux-glibc2.28-${DB_ARCH}.tar.xz"
     elif [[ "${Bin}" = "y" && "${mysql_short_version}" = "8.4" ]]; then
@@ -689,21 +730,11 @@ Upgrade_MySQL()
     else
             mysql_src="mysql-${mysql_version}.tar.gz"
     fi
-    if [ -s "${mysql_src}" ]; then
-        echo "${mysql_src} [found]"
-    else
-        Download_Files https://cdn.mysql.com/Downloads/MySQL-${mysql_short_version}/${mysql_src} ${mysql_src}
-        if [ $? -eq 0 ]; then
-            echo "Download ${mysql_src} successfully!"
-        else
-            Download_Files https://cdn.mysql.com/archives/mysql-${mysql_short_version}/${mysql_src} ${mysql_src}
-            if [ $? -ne 0 ]; then
-                echo "You enter MySQL Version was: ${mysql_version}"
-                Echo_Red "Error! You entered a wrong version number, please check!"
-                sleep 5
-                exit 1
-            fi
-        fi
+    if [ ! -s "${mysql_src}" ]; then
+        Download_Files "https://cdn.mysql.com/Downloads/MySQL-${mysql_short_version}/${mysql_src}" "${mysql_src}"
+    fi
+    if [ ! -s "${mysql_src}" ]; then
+        Download_Files_Exit "https://cdn.mysql.com/archives/mysql-${mysql_short_version}/${mysql_src}" "${mysql_src}"
     fi
     Check_Openssl
     DB_BIN_Opt
