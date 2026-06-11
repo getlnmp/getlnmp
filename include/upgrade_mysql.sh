@@ -170,8 +170,6 @@ key_buffer_size = 20M
 sort_buffer_size = 20M
 read_buffer_size = 2M
 write_buffer_size = 2M
-
-${MySQLMAOpt}
 EOF
 
     MySQL_Opt
@@ -317,9 +315,6 @@ key_buffer_size = 20M
 sort_buffer_size = 20M
 read_buffer_size = 2M
 write_buffer_size = 2M
-
-
-${MySQLMAOpt}
 EOF
 
     MySQL_Opt
@@ -468,9 +463,6 @@ key_buffer_size = 8M
 sort_buffer_size = 8M
 read_buffer_size = 1M
 write_buffer_size = 1M
-
-
-${MySQLMAOpt}
 EOF
 
     MySQL_Opt
@@ -706,16 +698,6 @@ Upgrade_MySQL()
     echo "=================================================="
     echo "You will upgrade MySQL Version to ${mysql_version}"
     echo "=================================================="
-
-    if [ "${SelectMalloc}" = "2" ]; then
-        MySQLMAOpt='[mysqld_safe]
-malloc-lib=/usr/lib/libjemalloc.so'
-    elif [ "${SelectMalloc}" = "3" ]; then
-        MySQLMAOpt='[mysqld_safe]
-malloc-lib=/usr/lib/libtcmalloc.so'
-    else
-        MySQLMAOpt=''
-    fi
 
     Press_Start
 

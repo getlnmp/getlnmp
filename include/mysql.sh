@@ -412,8 +412,6 @@ write_buffer = 2M
 
 [mysqlhotcopy]
 interactive-timeout
-
-${MySQLMAOpt}
 EOF
 
     if [ "${InstallInnodb}" = "y" ]; then
@@ -571,8 +569,6 @@ key_buffer_size = 20M
 sort_buffer_size = 20M
 read_buffer_size = 2M
 write_buffer_size = 2M
-
-${MySQLMAOpt}
 EOF
 
     MySQL_Opt
@@ -715,9 +711,6 @@ key_buffer_size = 20M
 sort_buffer_size = 20M
 read_buffer_size = 2M
 write_buffer_size = 2M
-
-
-${MySQLMAOpt}
 EOF
 
     MySQL_Opt
@@ -865,9 +858,6 @@ key_buffer_size = 8M
 sort_buffer_size = 8M
 read_buffer_size = 1M
 write_buffer_size = 1M
-
-
-${MySQLMAOpt}
 EOF
 
     MySQL_Opt

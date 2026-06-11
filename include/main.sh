@@ -544,20 +544,16 @@ MemoryAllocator_Selection() {
     esac
 
     if [ "${SelectMalloc}" = "1" ]; then
-        MySQL51MAOpt=''
-        MySQLMAOpt=''
         NginxMAOpt=''
     elif [ "${SelectMalloc}" = "2" ]; then
-        MySQL51MAOpt='--with-mysqld-ldflags=-ljemalloc'
-        MySQLMAOpt='[mysqld_safe]
-malloc-lib=/usr/lib/libjemalloc.so'
         NginxMAOpt="--with-ld-opt='-ljemalloc'"
     elif [ "${SelectMalloc}" = "3" ]; then
-        MySQL51MAOpt='--with-mysqld-ldflags=-ltcmalloc'
-        MySQLMAOpt='[mysqld_safe]
-malloc-lib=/usr/lib/libtcmalloc.so'
         NginxMAOpt='--with-google_perftools_module'
     fi
+
+    # Persist the choice so MySQL/MariaDB upgrades (which source lnmp.conf
+    # directly, without re-running this prompt) keep using the same malloc-lib.
+    sed -i "s/^SelectMalloc=.*/SelectMalloc='${SelectMalloc}'/" "${cur_dir}/lnmp.conf"
 }
 
 Display_Selection() {
