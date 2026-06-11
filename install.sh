@@ -62,7 +62,7 @@ echo "|      GetLNMP V${GetLNMP_Ver} for ${DISTRO} Linux Server By GetLNMP     |
 echo "+------------------------------------------------------------------------+"
 echo "|        A tool to auto-compile & install LNMP/LNMPA/LAMP on Linux       |"
 echo "+------------------------------------------------------------------------+"
-echo "|        For more information please visit https://www.getlnmp.com       |"
+echo "|        For more information please visit https://getlnmp.com       |"
 echo "+------------------------------------------------------------------------+"
 
 Init_Install()
