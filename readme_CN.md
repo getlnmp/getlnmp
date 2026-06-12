@@ -221,6 +221,8 @@ MariaDB 11.8 | 12 | PHP 8.5 | 16 | |
 * PHP：/usr/local/php/
 * 多PHP目录：/usr/local/php5.6/ 版本号随安装版本不同而不同
 * PHP扩展插件配置文件目录：/usr/local/php/conf.d/
+* Jemalloc（仅当选择 Jemalloc 内存分配器时）：/usr/local/jemalloc/
+* TCMalloc（仅当选择 TCMalloc 内存分配器时）：/usr/local/tcmalloc/
 * PHPMyAdmin：/home/wwwroot/default/phpmyadmin/
 * 默认虚拟主机网站目录：/home/wwwroot/default/
 * Nginx日志目录：/home/wwwlogs/

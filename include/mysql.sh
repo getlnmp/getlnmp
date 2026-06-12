@@ -274,8 +274,8 @@ Check_MySQL_Data_Dir()
 MySQL_Set_Malloc_Preload()
 {
     case "${SelectMalloc}" in
-    2) MallocLib='/usr/lib/libjemalloc.so' ;;
-    3) MallocLib='/usr/lib/libtcmalloc.so' ;;
+    2) MallocLib='/usr/local/jemalloc/lib/libjemalloc.so.2' ;;
+    3) MallocLib='/usr/local/tcmalloc/lib/libtcmalloc.so.4' ;;
     *) MallocLib='' ;;
     esac
     [ -e "${MallocLib}" ] || MallocLib=''

@@ -4,9 +4,9 @@ Upgrade_Nginx()
 {
     Cur_Nginx_Version=$(/usr/local/nginx/sbin/nginx -v 2>&1 | cut -d '/' -f 2)
 
-    if [ -s /usr/local/include/jemalloc/jemalloc.h ] && /usr/local/nginx/sbin/nginx -V 2>&1|grep -Eqi 'ljemalloc'; then
+    if [ -s /usr/local/jemalloc/include/jemalloc/jemalloc.h ] && /usr/local/nginx/sbin/nginx -V 2>&1|grep -Eqi 'ljemalloc'; then
         NginxMAOpt="--with-ld-opt='-ljemalloc'"
-    elif [ -s /usr/local/include/gperftools/tcmalloc.h ] && grep -Eqi "google_perftools_profiles" /usr/local/nginx/conf/nginx.conf; then
+    elif [ -s /usr/local/tcmalloc/include/gperftools/tcmalloc.h ] && grep -Eqi "google_perftools_profiles" /usr/local/nginx/conf/nginx.conf; then
         NginxMAOpt='--with-google_perftools_module'
     else
         NginxMAOpt=""
@@ -65,8 +65,11 @@ Upgrade_Nginx()
     fi
     case "${NginxMAOpt}" in
         *ljemalloc*)
-            NGINX_LD_OPT="${NGINX_LD_OPT} -ljemalloc"
+            NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/jemalloc/lib -ljemalloc"
             NginxMAOpt=""
+            ;;
+        *google_perftools*)
+            NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/tcmalloc/lib"
             ;;
     esac
     echo "Starting configure nginx..."

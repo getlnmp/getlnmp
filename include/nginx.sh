@@ -182,8 +182,11 @@ Install_Nginx() {
     fi
     case "${NginxMAOpt}" in
         *ljemalloc*)
-            NGINX_LD_OPT="${NGINX_LD_OPT} -ljemalloc"
+            NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/jemalloc/lib -ljemalloc"
             NginxMAOpt=""
+            ;;
+        *google_perftools*)
+            NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/tcmalloc/lib"
             ;;
     esac
     echo "Starting configure nginx..."

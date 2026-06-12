@@ -511,12 +511,6 @@ Deb_Dependent() {
 Check_Download() {
     Echo_Blue "[+] Downloading files..."
     cd ${cur_dir}/src
-    if [ "${SelectMalloc}" = "2" ]; then
-        Download_Files ${Jemalloc_DL} ${Jemalloc_Ver}.tar.bz2
-    elif [ "${SelectMalloc}" = "3" ]; then
-        Download_Files ${TCMalloc_DL} ${TCMalloc_Ver}.tar.gz
-        Download_Files ${Libunwind_DL} ${Libunwind_Ver}.tar.gz
-    fi
     if [ "${Stack}" != "lamp" ]; then
         Download_Files ${Nginx_DL} ${Nginx_Ver}.tar.gz
     fi
@@ -881,40 +875,43 @@ Install_Pcre() {
     fi
 }
 
-# by default, prefix is /usr/local, jemalloc installs to /usr/local/lib
+# by default, prefix is /usr/local/jemalloc, jemalloc installs to /usr/local/jemalloc/lib
 Install_Jemalloc() {
-    Echo_Blue "[+] Installing ${Jemalloc_Ver}"
-    cd ${cur_dir}/src
-    Tar_Cd ${Jemalloc_Ver}.tar.bz2 ${Jemalloc_Ver}
-    ./configure
-    Make_Install
+    if [ -d /usr/local/jemalloc ]; then
+        echo "Jemalloc has already been installed!"
+    else
+        Echo_Blue "[+] Installing ${Jemalloc_Ver}"
+        cd ${cur_dir}/src
+        Download_Files ${Jemalloc_DL} ${Jemalloc_Ver}.tar.bz2
+        Tar_Cd ${Jemalloc_Ver}.tar.bz2 ${Jemalloc_Ver}
+        ./configure --prefix=/usr/local/jemalloc
+        Make_Install
+        cd ${cur_dir}/src/
+        rm -rf ${cur_dir}/src/${Jemalloc_Ver}
+    fi
+
+    echo "/usr/local/jemalloc/lib" > /etc/ld.so.conf.d/jemalloc.conf
     ldconfig
-    cd ${cur_dir}/src/
-    rm -rf ${cur_dir}/src/${Jemalloc_Ver}
-    ln -sf /usr/local/lib/libjemalloc* /usr/lib/
 }
 
-# We only support 64 bit OS.
+# by default, prefix is /usr/local/tcmalloc, tcmalloc installs to /usr/local/tcmalloc/lib
 Install_TCMalloc() {
-    Echo_Blue "[+] Installing ${TCMalloc_Ver}"
-    if [ "${Is_64bit}" = "y" ]; then
-        Tar_Cd ${Libunwind_Ver}.tar.gz ${Libunwind_Ver}
-        CFLAGS=-fPIC ./configure
-        make CFLAGS=-fPIC
-        make CFLAGS=-fPIC install
-        rm -rf ${cur_dir}/src/${Libunwind_Ver}
-    fi
-    Tar_Cd ${TCMalloc_Ver}.tar.gz ${TCMalloc_Ver}
-    if [ "${Is_64bit}" = "y" ]; then
-        ./configure
+    if [ -d /usr/local/tcmalloc ]; then
+        echo "Tcmalloc has already been installed!"
     else
-        ./configure --enable-frame-pointers
+        Echo_Blue "[+] Installing ${TCMalloc_Ver}"
+        cd ${cur_dir}/src
+        Download_Files ${TCMalloc_DL} ${TCMalloc_Ver}.tar.gz
+        Tar_Cd ${TCMalloc_Ver}.tar.gz ${TCMalloc_Ver}
+        ./configure --prefix=/usr/local/tcmalloc
+        Make_Install
+        cd ${cur_dir}/src/
+        rm -rf ${cur_dir}/src/${TCMalloc_Ver}
     fi
-    Make_Install
+
+    echo "/usr/local/tcmalloc/lib" > /etc/ld.so.conf.d/tcmalloc.conf
     ldconfig
-    cd ${cur_dir}/src/
-    rm -rf ${cur_dir}/src/${TCMalloc_Ver}
-    ln -sf /usr/local/lib/libtcmalloc* /usr/lib/
+
 }
 
 Install_Icu4c() {

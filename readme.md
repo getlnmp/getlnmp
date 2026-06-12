@@ -254,6 +254,8 @@ If required parameters are missing, prompts will still appear for the missing op
 * PHP: `/usr/local/php/`
 * Multiple PHP directory: `/usr/local/php5.6/`. The version number changes depending on the installed version.
 * PHP extension plugin configuration directory: `/usr/local/php/conf.d/`
+* Jemalloc (only when the Jemalloc allocator is selected): `/usr/local/jemalloc/`
+* TCMalloc (only when the TCMalloc allocator is selected): `/usr/local/tcmalloc/`
 * phpMyAdmin: `/home/wwwroot/default/phpmyadmin/`
 * Default virtual host website directory: `/home/wwwroot/default/`
 * Nginx log directory: `/home/wwwlogs/`
