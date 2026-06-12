@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# set your PHP timezone in lnmp.conf, UTC by default
+# set your OS timezone in lnmp.conf, UTC by default
 Set_Timezone() {
-    local tz="${LNMP_Timezone:-}"
+    local tz="${OS_Timezone:-}"
     if [ -z "${tz}" ]; then
         tz=$(timedatectl show -p Timezone --value 2>/dev/null \
              || cat /etc/timezone 2>/dev/null \

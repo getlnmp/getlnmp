@@ -154,7 +154,9 @@ Add_LNMP_Startup()
     echo "Add Startup and Starting LNMP..."
     [ -s /bin/lnmp ] && cp -a /bin/lnmp "/bin/lnmp.bak.$(date +%Y%m%d%H%M%S)"
     \cp ${cur_dir}/conf/lnmp /bin/lnmp
+    \cp ${cur_dir}/conf/lnmp-fw /bin/lnmp-fw
     chmod +x /bin/lnmp
+    chmod +x /bin/lnmp-fw
     LNMP_Created_Bin_Lnmp="y"
     systemctl enable nginx
     systemctl start nginx

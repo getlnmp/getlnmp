@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GetLNMP Welcome</title>
+  <meta name="author" content="GetLNMP">
+  <meta name="keywords" content="GetLNMP,LNMP,LNMPA,LAMP,Nginx,MySQL,MariaDB,PHP">
+  <meta name="description" content="GetLNMP environment is ready.">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7f8;
+      --panel: #ffffff;
+      --text: #16202c;
+      --muted: #66728199;
+      --muted-solid: #667281;
+      --line: #e6eaef;
+      --brand: #126b5d;
+      --brand-dark: #0c4f45;
+      --brand-soft: #e7f2ef;
+      --ok: #1f9d6b;
+      --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 12px 32px rgba(16, 24, 40, 0.06);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { color: var(--brand-dark); }
+
+    .dashboard {
+      width: min(960px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Header panel */
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px 20px;
+      padding: 22px 24px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .brand-icon {
+      display: grid;
+      width: 40px;
+      height: 40px;
+      place-items: center;
+      border-radius: 11px;
+      background: linear-gradient(160deg, var(--brand), var(--brand-dark));
+      color: #fff;
+      font-size: 20px;
+      font-weight: 800;
+      box-shadow: 0 6px 14px rgba(18, 107, 93, 0.28);
+    }
+
+    .brand-name { font-size: 17px; }
+    .brand-sub { display: block; font-size: 12px; font-weight: 500; color: var(--muted-solid); letter-spacing: 0.04em; text-transform: uppercase; }
+
+    .status {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: var(--brand-soft);
+      color: var(--brand-dark);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ok);
+      box-shadow: 0 0 0 0 rgba(31, 157, 107, 0.5);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(31, 157, 107, 0.45); }
+      70% { box-shadow: 0 0 0 7px rgba(31, 157, 107, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(31, 157, 107, 0); }
+    }
+
+    /* Hero panel */
+    .hero {
+      padding: 30px 24px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(24px, 3.4vw, 34px);
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+    }
+
+    .hero p {
+      margin: 12px 0 0;
+      max-width: 640px;
+      color: var(--muted-solid);
+      font-size: 15.5px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 18px;
+      border: 1px solid var(--brand);
+      border-radius: 10px;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 600;
+      font-size: 14.5px;
+      transition: transform .08s ease, background .15s ease;
+    }
+
+    .button:hover { background: var(--brand-dark); color: #fff; }
+    .button:active { transform: translateY(1px); }
+
+    .button.secondary {
+      background: #fff;
+      color: var(--brand-dark);
+      border-color: var(--line);
+    }
+
+    .button.secondary:hover { background: var(--brand-soft); border-color: var(--brand); }
+
+    /* Cards grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .card {
+      padding: 20px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .card .tag {
+      display: inline-block;
+      margin-bottom: 12px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: var(--brand-soft);
+      color: var(--brand-dark);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .card h2 { margin: 0 0 6px; font-size: 16px; }
+    .card p { margin: 0; color: var(--muted-solid); font-size: 14px; }
+
+    /* Resources */
+    .resources {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 24px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .resources .label { font-weight: 600; font-size: 14px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .chips a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13.5px;
+    }
+
+    .chips a:hover { border-color: var(--brand); color: var(--brand-dark); }
+
+    .notice {
+      padding: 14px 18px;
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--brand);
+      border-radius: 10px;
+      background: #fbfdfc;
+      color: var(--muted-solid);
+      font-size: 13px;
+    }
+
+    .footer { color: var(--muted-solid); font-size: 13px; text-align: center; padding: 4px 0 0; }
+
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+      .status { margin-left: 0; }
+      .button { flex: 1 1 auto; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <main class="dashboard">
+    <header class="topbar">
+      <span class="brand">
+        <span class="brand-icon">G</span>
+        <span>
+          <span class="brand-name">GetLNMP</span>
+          <span class="brand-sub">Server Status</span>
+        </span>
+      </span>
+      <span class="status"><span class="dot"></span> Running</span>
+    </header>
+
+    <section class="hero" aria-labelledby="welcome-title">
+      <h1 id="welcome-title">Your web stack is ready.</h1>
+      <p>
+        GetLNMP has prepared this server for LNMP, LNMPA, or LAMP workloads.
+        Replace this page with your own site files when you are ready to publish.
+      </p>
+      <div class="actions" aria-label="Common local tools">
+        <a class="button" href="/phpinfo.php">phpinfo</a>
+        <a class="button secondary" href="/p.php">PHP probe</a>
+        <a class="button secondary" href="/phpmyadmin/">phpMyAdmin</a>
+      </div>
+    </section>
+
+    <section class="grid" aria-label="Server information">
+      <article class="card">
+        <span class="tag">Web Service</span>
+        <h2>Nginx / Apache</h2>
+        <p>Serving the default GetLNMP site from the configured web root.</p>
+      </article>
+      <article class="card">
+        <span class="tag">PHP Runtime</span>
+        <h2>Diagnostics</h2>
+        <p>Use the local pages to confirm PHP modules, limits, and loaded configuration.</p>
+      </article>
+      <article class="card">
+        <span class="tag">Next Steps</span>
+        <h2>Go live</h2>
+        <p>Upload your app, configure virtual hosts, add SSL, and remove public diagnostic files.</p>
+      </article>
+    </section>
+
+    <section class="resources" aria-label="Resources">
+      <span class="label">Resources</span>
+      <div class="chips">
+        <a href="https://getlnmp.com" target="_blank" rel="noopener">Official</a>
+        <a href="https://getlnmp.com/faq" target="_blank" rel="noopener">FAQ</a>
+        <a href="https://github.com/getlnmp/getlnmp" target="_blank" rel="noopener">Github</a>
+      </div>
+    </section>
+
+    <p class="notice">
+      This page only indicates that the current domain is hosted on a GetLNMP-managed environment.
+      It does not imply any relationship between this domain and the GetLNMP project.
+    </p>
+
+    <footer class="footer">Powered by GetLNMP</footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GetLNMP Welcome</title>
+  <meta name="author" content="GetLNMP">
+  <meta name="keywords" content="GetLNMP,LNMP,LNMPA,LAMP,Nginx,MySQL,MariaDB,PHP">
+  <meta name="description" content="GetLNMP environment is ready.">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7f8;
+      --panel: #ffffff;
+      --text: #16202c;
+      --muted: #667281;
+      --line: #e6eaef;
+      --brand: #126b5d;
+      --brand-dark: #0c4f45;
+      --brand-soft: #e7f2ef;
+      --accent: #b7791f;
+      --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 16px 40px rgba(16, 24, 40, 0.07);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(70% 45% at 50% -5%, rgba(18, 107, 93, 0.10), rgba(245, 247, 248, 0) 65%),
+        var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { color: var(--brand-dark); }
+
+    .page {
+      width: min(1000px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 56px 0 40px;
+    }
+
+    .hero {
+      padding: 44px 40px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .mark-icon {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      border-radius: 12px;
+      background: linear-gradient(160deg, var(--brand), var(--brand-dark));
+      color: #fff;
+      font-size: 21px;
+      font-weight: 800;
+      box-shadow: 0 8px 18px rgba(18, 107, 93, 0.28);
+    }
+
+    .mark-name { font-size: 16px; }
+
+    h1 {
+      margin: 0;
+      max-width: 760px;
+      font-size: clamp(30px, 4.6vw, 50px);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .lead {
+      max-width: 660px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 20px;
+      border: 1px solid var(--brand);
+      border-radius: 12px;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 600;
+      font-size: 15px;
+      transition: transform .08s ease, background .15s ease;
+    }
+
+    .button:hover { background: var(--brand-dark); color: #fff; }
+    .button:active { transform: translateY(1px); }
+
+    .button.secondary {
+      background: #fff;
+      color: var(--brand-dark);
+      border-color: var(--line);
+    }
+
+    .button.secondary:hover { background: var(--brand-soft); border-color: var(--brand); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .card {
+      padding: 24px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 22px 50px rgba(16, 24, 40, 0.10);
+    }
+
+    .card h2 { margin: 0 0 8px; font-size: 17px; }
+    .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+    .resources {
+      margin-top: 16px;
+      padding: 24px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .resources h2 { margin: 0 0 4px; font-size: 17px; }
+    .resources p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+    .quick-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .quick-links a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .quick-links a:hover { border-color: var(--brand); color: var(--brand-dark); }
+
+    .notice {
+      margin-top: 16px;
+      padding: 16px 20px;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      border-radius: 12px;
+      background: #fffaf0;
+      color: #5f4518;
+      font-size: 13.5px;
+    }
+
+    .footer {
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 13.5px;
+      text-align: center;
+    }
+
+    @media (max-width: 760px) {
+      .page { padding: 28px 0; }
+      .hero { padding: 30px 24px; }
+      .grid { grid-template-columns: 1fr; }
+      .actions { flex-direction: column; }
+      .button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-labelledby="welcome-title">
+      <div class="mark">
+        <span class="mark-icon">G</span>
+        <span class="mark-name">GetLNMP</span>
+      </div>
+      <h1 id="welcome-title">Welcome, your web stack is ready.</h1>
+      <p class="lead">
+        GetLNMP has prepared this server for LNMP, LNMPA, or LAMP workloads.
+        Replace this page with your own site files when you are ready to publish.
+      </p>
+      <div class="actions" aria-label="Common local tools">
+        <a class="button" href="/phpinfo.php">phpinfo</a>
+        <a class="button secondary" href="/p.php">PHP probe</a>
+        <a class="button secondary" href="/phpmyadmin/">phpMyAdmin</a>
+      </div>
+    </section>
+
+    <section class="grid" aria-label="Server information">
+      <article class="card">
+        <h2>Web Service</h2>
+        <p>Nginx or Apache is serving the default GetLNMP site from the configured web root.</p>
+      </article>
+      <article class="card">
+        <h2>PHP Runtime</h2>
+        <p>Use the local diagnostic pages to confirm PHP modules, limits, and loaded configuration.</p>
+      </article>
+      <article class="card">
+        <h2>Next Steps</h2>
+        <p>Upload your application, configure virtual hosts, add SSL, and remove public diagnostic files.</p>
+      </article>
+    </section>
+
+    <section class="resources" aria-labelledby="resources-title">
+      <h2 id="resources-title">Resources</h2>
+      <p>Project documentation and community links are available from the official sites.</p>
+      <div class="quick-links">
+        <a href="https://getlnmp.com" target="_blank" rel="noopener">Official</a>
+        <a href="https://getlnmp.com/faq" target="_blank" rel="noopener">FAQ</a>
+        <a href="https://github.com/getlnmp/getlnmp" target="_blank" rel="noopener">Github</a>
+      </div>
+    </section>
+
+    <div class="notice">
+      This page only indicates that the current domain is hosted on a GetLNMP-managed environment.
+      It does not imply any relationship between this domain and the GetLNMP project.
+    </div>
+
+    <footer class="footer">Powered by GetLNMP</footer>
+  </main>
+</body>
+</html>

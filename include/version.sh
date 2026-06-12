@@ -31,6 +31,10 @@ LuaRestyLrucache='lua-resty-lrucache-0.15'
 NgxDevelKit='ngx_devel_kit-0.3.3'
 Nginx_Ver='nginx-1.30.1'
 NgxFancyIndex_Ver='ngx-fancyindex-0.5.2'
+# DBSelect/PHPSelect are empty when this file is sourced in interactive mode
+# (they are set later by Display_Selection), so wrap the selection-dependent
+# versions in a function and (re)call it after the selections are known.
+Set_Selected_Versions() {
 if [ "${DBSelect}" = "1" ]; then
     Mysql_Ver='mysql-5.5.62'
 elif [ "${DBSelect}" = "2" ]; then
@@ -96,6 +100,8 @@ elif [[ "${PHPSelect}" =~ ^[456]$ ]]; then
 else
     PhpMyAdmin_Ver='phpMyAdmin-5.2.3-all-languages'
 fi
+}
+Set_Selected_Versions
 APR_Ver='apr-1.7.6'
 APR_Util_Ver='apr-util-1.6.3'
 Apache_Ver='httpd-2.4.67'

@@ -1010,9 +1010,9 @@ Check_LNMPConf() {
     fi
     local canonical_dir
     for canonical_dir in \
-        "$(readlink -f "${MySQL_Data_Dir}" 2>/dev/null)" \
-        "$(readlink -f "${MariaDB_Data_Dir}" 2>/dev/null)" \
-        "$(readlink -f "${Default_Website_Dir}" 2>/dev/null)"; do
+        "$(readlink -m "${MySQL_Data_Dir}" 2>/dev/null)" \
+        "$(readlink -m "${MariaDB_Data_Dir}" 2>/dev/null)" \
+        "$(readlink -m "${Default_Website_Dir}" 2>/dev/null)"; do
         if [ -z "${canonical_dir}" ] || [ "${canonical_dir}" = "/" ]; then
             Echo_Red "Can't set MySQL/MariaDB/Website Directory to / !"
             exit 1
@@ -1021,6 +1021,8 @@ Check_LNMPConf() {
 }
 
 Print_APP_Ver() {
+    # Re-derive versions now that DBSelect/PHPSelect are known (set by Display_Selection).
+    Set_Selected_Versions
     echo "You will install ${Stack} stack."
     if [ "${Stack}" != "lamp" ]; then
         echo "${Nginx_Ver}"
@@ -1045,7 +1047,11 @@ Print_APP_Ver() {
     elif [ "${SelectMalloc}" = "3" ]; then
         echo "${TCMalloc_Ver}"
     fi
-    echo "Enable InnoDB: ${InstallInnodb}"
+    # InnoDB is only selectable when compiling MySQL/MariaDB from source, so
+    # the status is meaningless for binary (Bin=y) or DB-less (DBSelect=0) installs.
+    if [ "${DBSelect}" != "0" ] && [ "${Bin}" != "y" ]; then
+        echo "Enable InnoDB: ${InstallInnodb}"
+    fi
     echo "Print lnmp.conf infomation..."
     echo "Download Mirror: ${Download_Mirror}"
     echo "Nginx Additional Modules: ${Nginx_Modules_Options}"

@@ -146,6 +146,7 @@ Uninstall_LNMP()
     rm -f /etc/systemd/system/nginx.service
     rm -f /etc/systemd/system/php-fpm.service
     rm -f /bin/lnmp
+    rm -f /bin/lnmp-fw
     systemctl daemon-reload
     echo "LNMP Uninstall completed."
     Print_Preserved_Summary
