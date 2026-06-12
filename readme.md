@@ -37,15 +37,15 @@ In other words:
 
 ## Software Versions
 
-* PHP currently supports PHP 7.3-7.4 and PHP 8.0-8.5.
+* PHP currently supports PHP 7.2-7.4 and PHP 8.0-8.5.
 * MySQL supports 5.7, 8.0, and 8.4. RHEL 10 series supports only MySQL 8.4.
-* MariaDB supports 10.5, 10.6, 10.11, 11.4, and 11.8.
+* MariaDB supports 10.4, 10.5, 10.6, 10.11, 11.4, and 11.8.
 * Nginx installs the latest stable version by default.
 * Apache currently supports only 2.4.
 
 ## What Features Does GetLNMP Provide?
 
-GetLNMP supports custom Nginx and PHP compile options, custom website and database directories, Let's Encrypt/ZeroSSL free SSL certificate generation, unattended installation, multiple PHP versions in LNMP mode, standalone Nginx/MySQL/MariaDB/PureFTPd installation, and many utility scripts. These include virtual host management, firewall management, FTP user management, Nginx/MySQL/MariaDB/PHP upgrades, one-click installation of common PHP modules such as exif, fileinfo, ldap, bz2, sodium, imap, and swoole, cache components such as Redis/Xcache, MySQL root password reset, automatic restart on 502 errors, log rotation, SSH protection with Fail2Ban, backups, and more.
+GetLNMP supports custom Nginx and PHP compile options, custom website and database directories, Let's Encrypt/ZeroSSL free SSL certificate generation, unattended installation, multiple PHP versions in LNMP mode, standalone Nginx/MySQL/MariaDB/PureFTPd installation, and many utility scripts. These include virtual host management, firewall management, FTP user management, Nginx/MySQL/MariaDB/PHP upgrades, one-click installation of common PHP modules such as exif, fileinfo, ldap, bz2, sodium, imap, and swoole, cache components such as Redis, Memcached, OPcache, and APCu, MySQL root password reset, automatic restart on 502 errors, log rotation, SSH protection with Fail2Ban, backups, and more.
 
 * LNMP official site: <https://getlnmp.com>
 * Author: getlnmp <admin@getlnmp.com>
@@ -105,7 +105,7 @@ Note: when running `deny` or `delete-allow` against an SSH port, interactive con
 
 Run `./upgrade.sh` and follow the prompts, or pass an argument directly:
 
-`./upgrade.sh {nginx|mysql|mariadb|php|phpa|m2m|phpmyadmin}`
+`./upgrade.sh {nginx|mysql|mariadb|php|phpa|mphp|m2m|phpmyadmin}`
 
 * `nginx`: upgrade to any Nginx version.
 * `mysql`: upgrade MySQL to any version. MySQL upgrades are risky; although data is backed up automatically, you should still make your own backup.
@@ -150,7 +150,6 @@ Add-on installation notes:
 
 * Install IonCube with `./addons.sh {install|uninstall} ionCube`.
 * Install/uninstall the Sodium encryption library extension with `./addons.sh {install|uninstall} sodium`. It is commonly required for services such as WeChat Pay. PHP versions below 7.2 do not support enabling it through `lnmp.conf`.
-* Install/uninstall the SourceGuardian Loader with `./addons.sh {install|uninstall} sg`. This component is required to decode PHP files encrypted with SourceGuardian.
 
 #### Other Common Scripts
 
@@ -179,38 +178,37 @@ DB_Root_Password | Database root password. It cannot be empty. Not required if n
 InstallInnodb | Whether to install the InnoDB engine, `y` or `n`. Not required if no database is installed
 PHPSelect | PHP version number
 SelectMalloc | Memory allocator version number
-ApacheSelect | Apache version number. Required only for LNMPA and LAMP modes
 ServerAdmin | Administrator email. Required only for LNMPA and LAMP modes
 RHELRepo | Optional. Set to `local` to use local repositories on RHEL. If unset, the 163 CentOS mirror is used
 CheckMirror | Optional. Skip download mirror checks during installation, useful for offline installation
-Bin | Optional. Use binary installation for MySQL 5.7-8.0/MariaDB, `y` or `n`. Binary mode is used by default; offline mode defaults to source compilation
+Bin | Optional. Use binary installation for MySQL 5.7/8.0/8.4 and MariaDB, `y` or `n`. Binary mode is used by default; offline mode defaults to source compilation
+
+Apache is always installed as version 2.4 from source, so no Apache version variable is required.
 
 Program version numbers:
 
-MySQL Version | Number | PHP Version | Number | Memory Allocator | Number | Apache Version | Number
-:------: | :------: | :------: | :------: | :------: | :--------: | :--------: | :--------:
-MySQL 5.1 | 1 | PHP 5.2 | 1 | None | 1 | Apache 2.2 | 1
-MySQL 5.5 | 2 | PHP 5.3 | 2 | Jemalloc | 2 | Apache 2.4 | 2
-MySQL 5.6 | 3 | PHP 5.4 | 3 | TCMalloc | 3 | |
-MySQL 5.7 | 4 | PHP 5.5 | 4 | | | |
-MySQL 8.0 | 5 | PHP 5.6 | 5 | | | |
-MariaDB 5.5 | 6 | PHP 7.0 | 6 | | | |
-MariaDB 10.4 | 7 | PHP 7.1 | 7 | | | |
-MariaDB 10.5 | 8 | PHP 7.2 | 8 | | | |
-MariaDB 10.6 | 9 | PHP 7.3 | 9 | | | |
-MariaDB 10.11 | 10 | PHP 7.4 | 10 | | | |
-MySQL 8.4 | 11 | PHP 8.0 | 11 | | | |
-No database | 0 | PHP 8.1 | 12 | | | |
-| | | PHP 8.2 | 13 | | | |
-| | | PHP 8.3 | 14 | | | |
+Database (`DBSelect`) | Number | PHP (`PHPSelect`) | Number | Memory Allocator (`SelectMalloc`) | Number
+:------: | :------: | :------: | :------: | :------: | :--------:
+MySQL 5.7 | 3 | PHP 7.2 | 8 | None (default) | 1
+MySQL 8.0 | 4 | PHP 7.3 | 9 | Jemalloc | 2
+MySQL 8.4 | 5 | PHP 7.4 | 10 | TCMalloc | 3
+MariaDB 10.4 | 7 | PHP 8.0 | 11 | |
+MariaDB 10.5 | 8 | PHP 8.1 | 12 | |
+MariaDB 10.6 | 9 | PHP 8.2 | 13 | |
+MariaDB 10.11 | 10 | PHP 8.3 | 14 | |
+MariaDB 11.4 (default) | 11 | PHP 8.4 | 15 | |
+MariaDB 11.8 | 12 | PHP 8.5 | 16 | |
+No database | 0 | | | |
 
-Example: in LNMP mode, install the default MySQL 5.5 option, set the MySQL root password to `lnmp.org`, enable InnoDB, install PHP 5.6, and use no memory allocator. First run screen if needed, then download and extract the LNMP package:
+The interactive installer defaults to MariaDB 11.4 (`DBSelect=11`) and PHP 8.3 (`PHPSelect=14`).
 
-`wget http://soft.lnmp.com/lnmp/lnmp2.0.tar.gz -cO lnmp2.0.tar.gz && tar zxf lnmp2.0.tar.gz && cd lnmp2.0`
+Example: in LNMP mode, install MariaDB 11.4, set the database root password to `getlnmp.com`, enable InnoDB, install PHP 8.3, and use no memory allocator. First run screen if needed, then download and extract the LNMP package:
+
+`wget http://soft.getlnmp.com/lnmp/lnmp2.1.tar.gz -cO lnmp2.1.tar.gz && tar zxf lnmp2.1.tar.gz && cd lnmp2.1`
 
 Then set unattended parameters and install:
 
-`LNMP_Auto="y" DBSelect="2" DB_Root_Password="lnmp.org" InstallInnodb="y" PHPSelect="5" SelectMalloc="1" ./install.sh lnmp`
+`LNMP_Auto="y" DBSelect="11" DB_Root_Password="getlnmp.com" InstallInnodb="y" PHPSelect="14" SelectMalloc="1" ./install.sh lnmp`
 
 If required parameters are missing, prompts will still appear for the missing options.
 
@@ -243,7 +241,6 @@ If required parameters are missing, prompts will still appear for the missing op
 * phpMyAdmin: `http://yourIP/phpmyadmin/`
 * phpinfo: `http://yourIP/phpinfo.php`
 * PHP probe: `http://yourIP/p.php`
-* Xcache management: `http://yourIP/xcache/`
 * Zend Opcache management: `http://yourIP/ocp.php`
 * APCu management: `http://yourIP/apc.php`
 
@@ -272,24 +269,28 @@ If required parameters are missing, prompts will still appear for the missing op
 
 ### `lnmp.conf` Configuration Parameters
 
-| Parameter | Description | Example |
+| Parameter | Description | Example / Default |
 | :-------: | :---------: | :--------: |
-| Download_Mirror | Download mirror | Usually keep the default. Change it if downloads are abnormal |
+| Download_Mirror | Download mirror, used when `Use_Official=n` | Default: `https://lax.getlnmp.com`. Change it if downloads are abnormal |
+| Use_Official | Download files from their official upstream sites | Default: `y`; set to `n` to use `Download_Mirror` instead |
+| country | Server country code, used to pick a closer download mirror | e.g. `US` |
 | Nginx_Modules_Options | Add Nginx modules or other compile parameters | `--add-module=/path/to/third-party-module-source` |
 | PHP_Modules_Options | Add PHP modules or compile parameters | `--enable-exif`; some modules require dependencies to be installed first |
-| MySQL_Data_Dir | MySQL database directory | Default: `/usr/local/mysql/var` |
-| MariaDB_Data_Dir | MariaDB database directory | Default: `/usr/local/mariadb/var` |
+| OS_Timezone | System timezone | Default: `Etc/UTC` |
+| PHP_Timezone | PHP timezone | Default: `UTC` |
+| Open_DB_Port | Whether to open port 3306 in the firewall for remote database access | Default: `n` |
+| MySQL_Data_Dir | MySQL database directory | Default: `/usr/local/mysql/data` |
+| MariaDB_Data_Dir | MariaDB database directory | Default: `/usr/local/mariadb/data` |
 | Default_Website_Dir | Default virtual host website directory | Default: `/home/wwwroot/default` |
-| Enable_Nginx_Openssl | Whether Nginx uses a newer OpenSSL | Default: `y`; recommended not to change. `y` enables it and enables HTTP/2 support |
-| Enable_PHP_Fileinfo | Whether to install and enable the PHP fileinfo module | Default: `n`; set to `y` if needed |
 | Enable_Nginx_Lua | Whether to install Lua support for Nginx | Default: `n`; Lua support can be used by some Lua-based WAF website firewalls |
 | Enable_Ngx_FancyIndex | Whether to install the fancyIndex module | Default: `n`; fancyIndex is a third-party directory index module |
 | Enable_Swap | Whether to add swap | Default: `y`; improves compile/install success rate when memory is low |
 | Enable_PHP_Exif | Whether to add the PHP exif module | Default: `n`; set to `y` to install |
-| Enable_PHP_Fileinfo | Whether to add the PHP fileinfo module | Default: `n`; set to `y` to install, requires more than 1 GB RAM |
+| Enable_PHP_Fileinfo | Whether to add the PHP fileinfo module | Default: `y`; requires more than 1 GB RAM |
 | Enable_PHP_Ldap | Whether to add the PHP ldap module | Default: `n`; set to `y` to install |
 | Enable_PHP_Bz2 | Whether to add the PHP bz2 module | Default: `n`; set to `y` to install |
-| Enable_PHP_Sodium | Whether to add the PHP sodium module. PHP versions below 7.2 do not support enabling it through `lnmp.conf` | Default: `n`; set to `y` to install |
+| Enable_PHP_Sodium | Whether to add the PHP sodium module. PHP versions below 7.2 do not support enabling it through `lnmp.conf` | Default: `y` |
 | Enable_PHP_Imap | Whether to add the PHP imap module | Default: `n`; set to `y` to install |
+| SelectMalloc | Memory allocator to keep using on MySQL/MariaDB upgrades (`1` none, `2` Jemalloc, `3` TCMalloc) | Set to match the value chosen at install time |
 
 ## Technical Support
