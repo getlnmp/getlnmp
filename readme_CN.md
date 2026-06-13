@@ -208,7 +208,6 @@ MariaDB 11.8 | 12 | PHP 8.5 | 16 | |
 ## 相关图形界面
 * PHPMyAdmin：http://yourIP/phpmyadmin/
 * phpinfo：http://yourIP/phpinfo.php
-* PHP探针：http://yourIP/p.php
 * Zend Opcache管理界面：http://yourIP/ocp.php
 * apcu管理界面：http://yourIP/apc.php
 

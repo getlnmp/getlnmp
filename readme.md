@@ -240,7 +240,6 @@ If required parameters are missing, prompts will still appear for the missing op
 
 * phpMyAdmin: `http://yourIP/phpmyadmin/`
 * phpinfo: `http://yourIP/phpinfo.php`
-* PHP probe: `http://yourIP/p.php`
 * Zend Opcache management: `http://yourIP/ocp.php`
 * APCu management: `http://yourIP/apc.php`
 

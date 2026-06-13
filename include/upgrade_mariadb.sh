@@ -2,27 +2,33 @@
 
 # Since Mariadb 10.4+, it supports hybrid authentication, which means you can use unix socket authentication(default mode) to login as root user without password or use password to login at the same time
 # and we can backup databases with root user without password. This is more secure and more convenient.
-Backup_MariaDB()
-{
+Backup_MariaDB() {
     dump_file="/root/mariadb_all_backup${Upgrade_Date}.sql"
     echo "Starting backup all databases..."
     echo "If the database is large, the backup time will be longer."
     # we use --single-transaction option to avoid locking tables during backup, but it only works for InnoDB tables
     # if there are MyISAM tables in your databases, you may want to use --lock-tables option instead, but it will lock tables during backup, so it's not recommended.
     # most of the time --single-transaction option is enough for backup, and it's much faster than --lock-tables option, so we use it by default.
+    # mariadb-dump exists on Mariadb 10.4 and newer. For mariadb 10.3 and older, please use mysqldump
     if [ -x /usr/local/mariadb/bin/mariadb-dump ]; then
-        /usr/local/mariadb/bin/mariadb-dump --defaults-file="${HOME}/.my.cnf" --all-databases --routines --triggers --events --single-transaction > "${dump_file}"
+        /usr/local/mariadb/bin/mariadb-dump --defaults-file="${HOME}/.my.cnf" --all-databases --ignore-database=mysql --ignore-database=sys --routines --triggers --events --single-transaction >"${dump_file}"
+        dump_rc=$?
     else
-        /usr/local/mariadb/bin/mysqldump --defaults-file="${HOME}/.my.cnf" --all-databases --routines --triggers --events --single-transaction > "${dump_file}"
+        /usr/local/mariadb/bin/mysqldump --defaults-file="${HOME}/.my.cnf" --all-databases --ignore-database=mysql --ignore-database=sys --routines --triggers --events --single-transaction >"${dump_file}"
+        dump_rc=$?
     fi
-    if [ -s "${dump_file}" ]; then
-        echo "MariaDB databases backup successfully.";
+    # Require BOTH a zero exit status and a non-empty file: a dump that fails partway
+    # still leaves a non-empty (truncated) file, and proceeding on that would tear down
+    # the live install based on an incomplete backup.
+    if [ "${dump_rc}" -eq 0 ] && [ -s "${dump_file}" ]; then
+        echo "MariaDB databases backup successfully."
     else
         echo "MariaDB databases backup failed,Please backup databases manually!"
         exit 1
     fi
+
     lnmp stop
-    
+
     if [[ ! "${MariaDB_Data_Dir}" =~ ^/usr/local/mariadb/.+ ]]; then
         mv "${MariaDB_Data_Dir}" "${MariaDB_Data_Dir}""${Upgrade_Date}"
     fi
@@ -53,14 +59,12 @@ Restore_old_mariadb() {
     exit 1
 }
 
-Upgrade_MariaDB()
-{
+Upgrade_MariaDB() {
     Check_DB
     if [ "${Is_MySQL}" = "y" ]; then
         Echo_Red "Current database was MySQL, Can't run MariaDB upgrade script."
         exit 1
     fi
-
     Verify_DB_Password
     if [ -x /usr/local/mariadb/bin/mariadb-config ]; then
         cur_mariadb_version=$(/usr/local/mariadb/bin/mariadb-config --version)
@@ -74,7 +78,7 @@ Upgrade_MariaDB()
     Echo_Yellow "Please enter MariaDB Version you want."
     read -r -p "(example: 11.8.5 ): " mariadb_version
 
-    if echo "${mariadb_version}" | grep -Eqi '^(10\.6\.|10\.11\.|11\.4\.|11\.8\.)';then
+    if echo "${mariadb_version}" | grep -Eqi '^(10\.6\.|10\.11\.|11\.4\.|11\.8\.)'; then
         echo "You will upgrade MariaDB to version:${mariadb_version}"
     else
         Echo_Red "Error: You input MariaDB Version was:${mariadb_version}"
@@ -97,15 +101,15 @@ Upgrade_MariaDB()
         exit 1
     fi
 
-    if echo "${mariadb_version}" | grep -Eqi '^10\.6\.';then
+    if echo "${mariadb_version}" | grep -Eqi '^10\.6\.'; then
         if [[ "${DB_ARCH}" = "x86_64" ]]; then
             read -r -p "Using Generic Binaries [y/n]: " Bin
             case "${Bin}" in
-            [yY][eE][sS]|[yY])
+            [yY][eE][sS] | [yY])
                 echo "You will install mariadb-${mariadb_version} Using Generic Binaries."
                 Bin="y"
                 ;;
-            [nN][oO]|[nN])
+            [nN][oO] | [nN])
                 echo "You will install mariadb-${mariadb_version} from Source."
                 Bin="n"
                 ;;
@@ -121,11 +125,11 @@ Upgrade_MariaDB()
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
             read -r -p "Using Generic Binaries [y/n]: " Bin
             case "${Bin}" in
-            [yY][eE][sS]|[yY])
+            [yY][eE][sS] | [yY])
                 echo "You will install mariadb-${mariadb_version} Using Generic Binaries."
                 Bin="y"
                 ;;
-            [nN][oO]|[nN])
+            [nN][oO] | [nN])
                 echo "You will install mariadb-${mariadb_version} from Source."
                 Bin="n"
                 ;;
@@ -138,7 +142,7 @@ Upgrade_MariaDB()
             Bin="n"
         fi
     fi
-    if [ "${Bin}" != "y" ] ; then
+    if [ "${Bin}" != "y" ]; then
         #do you want to install the InnoDB Storage Engine?
         echo "==========================="
 
@@ -147,17 +151,18 @@ Upgrade_MariaDB()
         read -r -p "(Default yes, if you want please enter: y , if not please enter: n): " InstallInnodb
 
         case "${InstallInnodb}" in
-        [yY][eE][sS]|[yY])
+        [yY][eE][sS] | [yY])
             echo "You will install the InnoDB Storage Engine"
             InstallInnodb="y"
             ;;
-        [nN][oO]|[nN])
+        [nN][oO] | [nN])
             echo "You will NOT install the InnoDB Storage Engine!"
             InstallInnodb="n"
             ;;
         *)
             echo "No input, The InnoDB Storage Engine will enable."
             InstallInnodb="y"
+            ;;
         esac
     fi
     echo "====================================================================="
@@ -167,7 +172,10 @@ Upgrade_MariaDB()
     Press_Start
 
     echo "============================check files=================================="
-    cd "${cur_dir}/src" || { Echo_Red "Error: cannot enter ${cur_dir}/src"; exit 1; }
+    cd "${cur_dir}/src" || {
+        Echo_Red "Error: cannot enter ${cur_dir}/src"
+        exit 1
+    }
     if [ "${Bin}" = "y" ]; then
         MariaDB_FileName="mariadb-${mariadb_version}-linux-systemd-${DB_ARCH}"
     else
@@ -181,19 +189,19 @@ Upgrade_MariaDB()
         if [ $? -eq 0 ]; then
             echo "Download ${MariaDB_FileName}.tar.gz successfully!"
         else
-			if [ "${Bin}" = "y" ]; then
-		        Download_Files https://archive.mariadb.org/mariadb-${mariadb_version}/bintar-linux-systemd-${DB_ARCH}/${MariaDB_FileName}.tar.gz "${MariaDB_FileName}.tar.gz"
-			else
-		        Download_Files https://archive.mariadb.org/mariadb-${mariadb_version}/source/${MariaDB_FileName}.tar.gz "${MariaDB_FileName}.tar.gz"
-			fi
-			if [ $? -eq 0 ]; then
-			    echo "Download ${MariaDB_FileName}.tar.gz successfully!"
-			else
+            if [ "${Bin}" = "y" ]; then
+                Download_Files https://archive.mariadb.org/mariadb-${mariadb_version}/bintar-linux-systemd-${DB_ARCH}/${MariaDB_FileName}.tar.gz "${MariaDB_FileName}.tar.gz"
+            else
+                Download_Files https://archive.mariadb.org/mariadb-${mariadb_version}/source/${MariaDB_FileName}.tar.gz "${MariaDB_FileName}.tar.gz"
+            fi
+            if [ $? -eq 0 ]; then
+                echo "Download ${MariaDB_FileName}.tar.gz successfully!"
+            else
                 echo "You enter MariaDB Version was: ${mariadb_version}"
                 Echo_Red "Error! You entered a wrong version number or can't download from mariadb mirror, please check!"
                 sleep 5
                 exit 1
-			fi
+            fi
         fi
     fi
     echo "============================check files=================================="
@@ -226,19 +234,17 @@ Upgrade_MariaDB()
             -DWITH_EMBEDDED_SERVER=1 \
             -DENABLED_LOCAL_INFILE=1 \
             -DWITHOUT_TOKUDB=1 || {
-                Echo_Red "Error: MariaDB cmake configuration failed."
-                Restore_old_mariadb
-            }
+            Echo_Red "Error: MariaDB cmake configuration failed."
+            Restore_old_mariadb
+        }
         MariaDB_Make_Install || Restore_old_mariadb
     fi
     MariaDB_Check_Config
-
     #MariaDB_Add_UG
     MariaDB_My_Cnf
     MariaDB_Enable_Innodb
     MySQL_Opt
     Check_MariaDB_Data_Dir
-
     MariaDB_Initialize_DB
     MariaDB_Set_Startup
     MariaDB_Sec_Setting
@@ -246,7 +252,7 @@ Upgrade_MariaDB()
 
     echo "Restore backup databases..."
     import_log="/root/mariadb_import${Upgrade_Date}.log"
-    /usr/local/mariadb/bin/mariadb --defaults-file="${HOME}/.my.cnf" < /root/mariadb_all_backup${Upgrade_Date}.sql 2>"${import_log}"
+    /usr/local/mariadb/bin/mariadb --defaults-file="${HOME}/.my.cnf" </root/mariadb_all_backup${Upgrade_Date}.sql 2>"${import_log}"
     if [ $? -ne 0 ] || grep -qi '^ERROR' "${import_log}"; then
         Echo_Red "Error: MariaDB databases import failed, see ${import_log} for details. Old data remains in the backup location."
         cat "${import_log}"
@@ -254,6 +260,7 @@ Upgrade_MariaDB()
         TempMycnf_Clean
         Restore_old_mariadb
     fi
+
     echo "Repair databases..."
     # mariadb-upgrade will check and repair tables if necessary, and also upgrade the system tables in the mysql database to be compatible with the new version.
     # it's required for major version upgrade, and also recommended for minor version upgrade.
@@ -276,6 +283,17 @@ Upgrade_MariaDB()
     fi
     if [ "${new_mariadb_version}" = "${mariadb_version}" ]; then
         Echo_Green "======== upgrade MariaDB completed ======"
+        # The mysql system schema is not dumped/restored (it conflicts across major
+        # versions and is rebuilt by mariadb-upgrade), so user accounts and their
+        # privileges were NOT carried over. Only the root account is available now.
+        Echo_Yellow "=============================== IMPORTANT ==============================="
+        Echo_Yellow "Database user accounts and privileges were NOT migrated."
+        Echo_Yellow "Only the root account is available. You need to re-create your database"
+        Echo_Yellow "users and re-grant their privileges, e.g.:"
+        Echo_Yellow "  CREATE USER 'youruser'@'localhost' IDENTIFIED BY 'yourpassword';"
+        Echo_Yellow "  GRANT ALL PRIVILEGES ON yourdb.* TO 'youruser'@'localhost';"
+        Echo_Yellow "  FLUSH PRIVILEGES;"
+        Echo_Yellow "========================================================================"
     else
         Echo_Red "======== upgrade MariaDB failed ======"
         Echo_Red "upgrade MariaDB log: /root/upgrade_mariadb${Upgrade_Date}.log"

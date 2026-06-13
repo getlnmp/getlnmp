@@ -147,7 +147,7 @@ PHP_Openssl_Export() {
 }
 
 PHP_with_fileinfo() {
-    echo "Checking fileinfo..."
+    echo "Checking Fileinfo..."
     if [ "${Enable_PHP_Fileinfo}" = "n" ]; then
         if [[ $(awk '/MemTotal/ {printf( "%d\n", $2 / 1024 )}' /proc/meminfo) -lt 1024 ]]; then
             with_fileinfo='--disable-fileinfo'
@@ -627,6 +627,12 @@ Install_Composer_Official() {
 }
 
 Install_Composer() {
+    # Skip if a working Composer is already installed (e.g. on PHP upgrades or re-runs)
+    if [ -x /usr/local/bin/composer ] && /usr/local/bin/composer --version >/dev/null 2>&1; then
+        Echo_Green "Composer is already installed, skip."
+        return
+    fi
+
     echo "Downloading Composer..."
 
     # CheckMirror=n means offline/local-source mode — use the official path directly
@@ -1308,12 +1314,10 @@ phpinfo();
 ?>
 eof
 
-    echo "Copy PHP Prober..."
+    #echo "Copy PHP Prober..."
     cd ${cur_dir}/src
-    #    tar zxf p.tar.gz
-    \cp prober.php ${Default_Website_Dir}/prober.php
-
-    \cp ${cur_dir}/conf/index.html ${Default_Website_Dir}/index.html
+    #\cp ${cur_dir}/conf/prober.php ${Default_Website_Dir}/p.php
+    \cp ${cur_dir}/conf/index2.html ${Default_Website_Dir}/index.html
     \cp ${cur_dir}/conf/lnmp.gif ${Default_Website_Dir}/lnmp.gif
 
     if [ ${PHPSelect} -ge 4 ]; then

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-Backup_MySQL()
-{
+Backup_MySQL() {
     dump_file="/root/mysql_all_backup${Upgrade_Date}.sql"
 
     echo "Starting backup all databases..."
@@ -13,24 +12,39 @@ Backup_MySQL()
     # we use --single-transaction option to avoid locking tables during backup, but it only works for InnoDB tables
     # if there are MyISAM tables in your databases, you may want to use --lock-tables option instead, but it will lock tables during backup, so it's not recommended.
     # most of the time --single-transaction option is enough for backup, and it's much faster than --lock-tables option, so we use it by default.
-    if /usr/local/mysql/bin/mysqldump --defaults-file="${HOME}/.my.cnf" --all-databases --routines --triggers --events --single-transaction > "${dump_file}"; then
-        if [ -s "${dump_file}" ]; then
-            echo "MySQL databases backup successfully."
-        else
-            Echo_Red "MySQL databases backup failed, dump file is empty."
-            exit 1
-        fi
+    /usr/local/mysql/bin/mysql --defaults-file="${HOME}/.my.cnf" -N -B -e "
+SELECT schema_name
+FROM information_schema.schemata
+WHERE schema_name NOT IN (
+  'mysql',
+  'information_schema',
+  'performance_schema',
+  'sys'
+)
+ORDER BY schema_name;
+" | xargs -r /usr/local/mysql/bin/mysqldump --defaults-file="${HOME}/.my.cnf" \
+        --databases \
+        --routines \
+        --triggers \
+        --events \
+        --single-transaction \
+        --quick \
+        >"${dump_file}"
+
+    if [ -s "${dump_file}" ]; then
+        echo "MySQL databases backup successfully."
     else
-        Echo_Red "MySQL databases backup failed, please backup databases manually!"
+        Echo_Red "MySQL databases backup failed, dump file is empty."
         exit 1
     fi
+
     lnmp stop
     if [[ ! "${MySQL_Data_Dir}" =~ ^/usr/local/mysql/ ]]; then
         mv "${MySQL_Data_Dir}" "${MySQL_Data_Dir}${Upgrade_Date}"
     fi
     mv /usr/local/mysql /usr/local/oldmysql${Upgrade_Date}
     mv /etc/my.cnf /usr/local/oldmysql${Upgrade_Date}/my.cnf.bak.${Upgrade_Date}
-    if echo "${mysql_version}" | grep -Eqi '^5\.5\.' &&  echo "${cur_mysql_version}" | grep -Eqi '^5\.6\.';then
+    if echo "${mysql_version}" | grep -Eqi '^5\.5\.' && echo "${cur_mysql_version}" | grep -Eqi '^5\.6\.'; then
         sed -i 's/STATS_PERSISTENT=0//g' "${dump_file}"
     fi
 }
@@ -49,8 +63,7 @@ Restore_old_mysql() {
     exit 1
 }
 
-Upgrade_MySQL57()
-{   
+Upgrade_MySQL57() {
     Ncurses5_Compat_Check
     rm -rf /etc/my.cnf
     if [ "${Bin}" = "y" ]; then
@@ -92,16 +105,15 @@ Upgrade_MySQL57()
             -DENABLED_LOCAL_INFILE=1 \
             -DWITH_SYSTEMD=1 \
             -DDOWNLOAD_BOOST=ON \
-			-DWITH_BOOST=/usr/local/mysql57_boost \
+            -DWITH_BOOST=/usr/local/mysql57_boost \
             ${MySQL_WITH_SSL} || {
-                Echo_Red "Error: MySQL cmake configuration failed."
-                exit 1
-            }
+            Echo_Red "Error: MySQL cmake configuration failed."
+            exit 1
+        }
         MySQL_Make_Install || Restore_old_mysql
     fi
 
-
-cat > /etc/my.cnf<<EOF
+    cat >/etc/my.cnf <<EOF
 [client]
 #password   = your_password
 port        = 3306
@@ -192,15 +204,14 @@ EOF
     fi
     systemctl daemon-reload
 
-    cat > /etc/ld.so.conf.d/mysql.conf<<EOF
+    cat >/etc/ld.so.conf.d/mysql.conf <<EOF
 /usr/local/mysql/lib
 EOF
 
     ldconfig
 }
 
-Upgrade_MySQL80()
-{
+Upgrade_MySQL80() {
     rm -f /etc/my.cnf
     if [ "${Bin}" = "y" ]; then
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Generic Binaries..."
@@ -229,14 +240,14 @@ Upgrade_MySQL80()
             -DENABLED_LOCAL_INFILE=1 \
             -DWITH_SYSTEMD=1 \
             -DDOWNLOAD_BOOST=ON \
-			-DWITH_BOOST=/usr/local/mysql80_boost || {
-                Echo_Red "Error: MySQL cmake configuration failed."
-                Restore_old_mysql
-            }
+            -DWITH_BOOST=/usr/local/mysql80_boost || {
+            Echo_Red "Error: MySQL cmake configuration failed."
+            Restore_old_mysql
+        }
         MySQL_Make_Install || Restore_old_mysql
     fi
 
-cat > /etc/my.cnf<<EOF
+    cat >/etc/my.cnf <<EOF
 [client]
 #password   = your_password
 port        = 3306
@@ -343,15 +354,14 @@ EOF
     MySQL_Set_Malloc_Preload
     systemctl daemon-reload
 
-    cat > /etc/ld.so.conf.d/mysql.conf<<EOF
+    cat >/etc/ld.so.conf.d/mysql.conf <<EOF
 /usr/local/mysql/lib
 EOF
 
     ldconfig
 }
 
-Upgrade_MySQL84()
-{
+Upgrade_MySQL84() {
     rm -f /etc/my.cnf
     if [ "${Bin}" = "y" ]; then
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Generic Binaries..."
@@ -369,23 +379,23 @@ Upgrade_MySQL84()
         Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
         mkdir -p mysql-build && cd mysql-build
         cmake .. \
-        -DCMAKE_INSTALL_PREFIX=/usr/local/mysql \
-        -DSYSCONFDIR=/etc \
-        -DWITH_MYISAM_STORAGE_ENGINE=1 \
-        -DWITH_INNOBASE_STORAGE_ENGINE=1 \
-        -DWITH_FEDERATED_STORAGE_ENGINE=1 \
-        -DDEFAULT_CHARSET=utf8mb4 \
-        -DDEFAULT_COLLATION=utf8mb4_general_ci \
-        -DENABLED_LOCAL_INFILE=1 \
-        -DWITH_SYSTEMD=1 || {
+            -DCMAKE_INSTALL_PREFIX=/usr/local/mysql \
+            -DSYSCONFDIR=/etc \
+            -DWITH_MYISAM_STORAGE_ENGINE=1 \
+            -DWITH_INNOBASE_STORAGE_ENGINE=1 \
+            -DWITH_FEDERATED_STORAGE_ENGINE=1 \
+            -DDEFAULT_CHARSET=utf8mb4 \
+            -DDEFAULT_COLLATION=utf8mb4_general_ci \
+            -DENABLED_LOCAL_INFILE=1 \
+            -DWITH_SYSTEMD=1 || {
             Echo_Red "Error: MySQL cmake configuration failed."
             Restore_old_mysql
         }
-        
+
         MySQL_Make_Install || Restore_old_mysql
     fi
 
-cat > /etc/my.cnf<<EOF
+    cat >/etc/my.cnf <<EOF
 [client]
 #password   = your_password
 port        = 3306
@@ -493,15 +503,14 @@ EOF
     MySQL_Set_Malloc_Preload
     systemctl daemon-reload
 
-    cat > /etc/ld.so.conf.d/mysql.conf<<EOF
+    cat >/etc/ld.so.conf.d/mysql.conf <<EOF
 /usr/local/mysql/lib
 EOF
 
     ldconfig
 }
 
-Restore_Start_MySQL()
-{
+Restore_Start_MySQL() {
     backup_sql="/root/mysql_all_backup${Upgrade_Date}.sql"
 
     chgrp -R mysql /usr/local/mysql/ || {
@@ -510,7 +519,6 @@ Restore_Start_MySQL()
     }
     ldconfig
     MySQL_Sec_Setting
-
     echo "Restore backup databases..."
     if [ ! -s "${backup_sql}" ]; then
         Echo_Red "Error: MySQL backup file ${backup_sql} was not found or is empty."
@@ -520,13 +528,14 @@ Restore_Start_MySQL()
     systemctl start mysql
     echo "Starting importing..."
     import_log="/root/mysql_import${Upgrade_Date}.log"
-    /usr/local/mysql/bin/mysql --defaults-file="${HOME}/.my.cnf" < "${backup_sql}" 2>"${import_log}"
+    /usr/local/mysql/bin/mysql --defaults-file="${HOME}/.my.cnf" <"${backup_sql}" 2>"${import_log}"
     if [ $? -ne 0 ] || grep -qi '^ERROR' "${import_log}"; then
         Echo_Red "Error: failed to import MySQL backup, see ${import_log} for details."
         cat "${import_log}"
         systemctl stop mysql
         Restore_old_mysql
     fi
+
     echo "Repair databases..."
     MySQL_Ver_Com=$(${cur_dir}/include/version_compare 8.0.16 ${mysql_version})
     if [ "${MySQL_Ver_Com}" != "1" ]; then
@@ -582,6 +591,17 @@ Restore_Start_MySQL()
     new_mysql_version=$(/usr/local/mysql/bin/mysql_config --version)
     if [ "${new_mysql_version}" = "${mysql_version}" ]; then
         Echo_Green "======== upgrade MySQL completed ======"
+        # The mysql system schema is not dumped/restored (it conflicts across major
+        # versions), so user accounts and their privileges were NOT carried over.
+        # Only the root account is available now.
+        Echo_Yellow "=============================== IMPORTANT ==============================="
+        Echo_Yellow "Database user accounts and privileges were NOT migrated."
+        Echo_Yellow "Only the root account is available. You need to re-create your database"
+        Echo_Yellow "users and re-grant their privileges, e.g.:"
+        Echo_Yellow "  CREATE USER 'youruser'@'localhost' IDENTIFIED BY 'yourpassword';"
+        Echo_Yellow "  GRANT ALL PRIVILEGES ON yourdb.* TO 'youruser'@'localhost';"
+        Echo_Yellow "  FLUSH PRIVILEGES;"
+        Echo_Yellow "========================================================================"
     else
         Echo_Red "======== upgrade MySQL failed ======"
         Echo_Red "upgrade MySQL log: /root/upgrade_mysql${Upgrade_Date}.log"
@@ -591,8 +611,7 @@ Restore_Start_MySQL()
     fi
 }
 
-Upgrade_MySQL()
-{
+Upgrade_MySQL() {
     Check_DB
     if [ "${Is_MySQL}" = "n" ]; then
         Echo_Red "Current database was MariaDB, Can't run MySQL upgrade script."
@@ -623,7 +642,7 @@ Upgrade_MySQL()
         exit 1
     fi
 
-    if echo "${mysql_version}" | grep -Eqi '^(8\.0\.|8\.4\.)';then
+    if echo "${mysql_version}" | grep -Eqi '^(8\.0\.|8\.4\.)'; then
         echo "You will upgrade MySQL to version:$mysql_version"
     else
         Echo_Red "Error: You input MySQL Version was:${mysql_version}"
@@ -631,14 +650,14 @@ Upgrade_MySQL()
         exit 1
     fi
 
-    if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]] && echo "${mysql_version}" | grep -Eqi '^5\.[5-7].';then
+    if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]] && echo "${mysql_version}" | grep -Eqi '^5\.[5-7].'; then
         read -r -p "Using Generic Binaries [y/n]: " Bin
         case "${Bin}" in
-        [yY][eE][sS]|[yY])
+        [yY][eE][sS] | [yY])
             echo "You will install MySQL ${mysql_version} Using Generic Binaries."
             Bin="y"
             ;;
-        [nN][oO]|[nN])
+        [nN][oO] | [nN])
             echo "You will install MySQL ${mysql_version} Source code."
             Bin="n"
             ;;
@@ -647,14 +666,14 @@ Upgrade_MySQL()
             Bin="y"
             ;;
         esac
-    elif [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" || "${DB_ARCH}" = "aarch64" ]] && echo "${mysql_version}" | grep -Eqi '^8\.';then
+    elif [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" || "${DB_ARCH}" = "aarch64" ]] && echo "${mysql_version}" | grep -Eqi '^8\.'; then
         read -r -p "Using Generic Binaries [y/n]: " Bin
         case "${Bin}" in
-        [yY][eE][sS]|[yY])
+        [yY][eE][sS] | [yY])
             echo "You will install MySQL ${mysql_version} Using Generic Binaries."
             Bin="y"
             ;;
-        [nN][oO]|[nN])
+        [nN][oO] | [nN])
             echo "You will install MySQL ${mysql_version} Source code."
             Bin="n"
             ;;
@@ -666,7 +685,7 @@ Upgrade_MySQL()
     else
         Bin="n"
     fi
-    if [ "${Bin}" != "y" ] ; then
+    if [ "${Bin}" != "y" ]; then
         #do you want to install the InnoDB Storage Engine?
         echo "==========================="
 
@@ -675,18 +694,18 @@ Upgrade_MySQL()
         read -r -p "(Default yes,if you want please enter: y , if not please enter: n): " InstallInnodb
 
         case "${InstallInnodb}" in
-        [yY][eE][sS]|[yY])
+        [yY][eE][sS] | [yY])
             echo "You will install the InnoDB Storage Engine"
             InstallInnodb="y"
-           ;;
-        [nN][oO]|[nN])
+            ;;
+        [nN][oO] | [nN])
             echo "You will NOT install the InnoDB Storage Engine!"
-           InstallInnodb="n"
-           ;;
+            InstallInnodb="n"
+            ;;
         *)
             echo "No input, The InnoDB Storage Engine will enable."
-           InstallInnodb="y"
-           ;;
+            InstallInnodb="y"
+            ;;
         esac
     fi
 
@@ -702,7 +721,10 @@ Upgrade_MySQL()
     Press_Start
 
     echo "============================check files=================================="
-    cd "${cur_dir}/src" || { Echo_Red "Error: cannot enter ${cur_dir}/src"; exit 1; }
+    cd "${cur_dir}/src" || {
+        Echo_Red "Error: cannot enter ${cur_dir}/src"
+        exit 1
+    }
     if [[ "${Bin}" = "y" && "${mysql_short_version}" = "8.0" ]]; then
         mysql_src="mysql-${mysql_version}-linux-glibc2.28-${DB_ARCH}.tar.xz"
     elif [[ "${Bin}" = "y" && "${mysql_short_version}" = "8.4" ]]; then
@@ -710,7 +732,7 @@ Upgrade_MySQL()
     elif [[ "${Bin}" = "y" && "${mysql_short_version}" =~ ^5\.[5-7]$ ]]; then
         mysql_src="mysql-${mysql_version}-linux-glibc2.12-${DB_ARCH}.tar.gz"
     else
-            mysql_src="mysql-${mysql_version}.tar.gz"
+        mysql_src="mysql-${mysql_version}.tar.gz"
     fi
     if [ ! -s "${mysql_src}" ]; then
         Download_Files "https://cdn.mysql.com/Downloads/MySQL-${mysql_short_version}/${mysql_src}" "${mysql_src}"

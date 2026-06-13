@@ -225,7 +225,7 @@ Add_VHost_Config() {
     cat >"/usr/local/apache/conf/vhost/${domain}.conf"<<EOF
 <VirtualHost *:80>
 ServerAdmin ${email}
-php_admin_value open_basedir "${vhostdir}:/tmp/:/var/tmp/:/proc/"
+php_admin_value open_basedir "${vhostdir}:/tmp/:/var/tmp/"
 DocumentRoot "${vhostdir}"
 ServerName ${domain}
 ErrorLog "/home/wwwlogs/${al_name}-error_log"
@@ -979,7 +979,7 @@ Create_SSL_Config() {
 
 <VirtualHost *:443>
 ServerAdmin ${email}
-php_admin_value open_basedir "${vhostdir}:/tmp/:/var/tmp/:/proc/"
+php_admin_value open_basedir "${vhostdir}:/tmp/:/var/tmp/"
 DocumentRoot ${vhostdir}
 ServerName ${domain}
 SSLEngine on

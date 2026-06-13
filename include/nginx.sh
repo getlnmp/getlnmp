@@ -13,14 +13,14 @@ Install_Nginx_Openssl() {
             Custom_Openssl_Ver=${Openssl_3_Ver}
             Custom_Openssl_DL=${Openssl_3_DL}
         fi  
-        echo "System OpenSSL version is 1.1.1, compile nginx with custom OpenSSL version: ${Custom_Openssl_Ver}"
+        echo "System uses OpenSSL 1.1.1, compile nginx with custom OpenSSL version: ${Custom_Openssl_Ver}"
         cd ${cur_dir}/src
         Download_Files_Exit ${Custom_Openssl_DL} ${Custom_Openssl_Ver}.tar.gz
         rm -rf ${Custom_Openssl_Ver}
         tar zxf ${Custom_Openssl_Ver}.tar.gz
         Nginx_With_Openssl="--with-openssl=${cur_dir}/src/${Custom_Openssl_Ver}"
     else
-        echo "Current system OpenSSL version is not 1.1.1, using system OpenSSL."
+        echo "System uses OpenSSL 3.*, compile nginx with system OpenSSL."
         Nginx_With_Openssl=""
     fi
 }
@@ -50,7 +50,7 @@ Install_Nginx_Openssl() {
 # for 1.21.4 and older: Only support PCRE
 Install_Nginx_Pcre2() {
     if command -v pcre2-config >/dev/null 2>&1; then
-        echo "OS is using PCRE2, use system PCRE2"
+        echo "OS has PCRE2, use system PCRE2"
         Nginx_With_Pcre="--with-pcre-jit"
     else
         echo "OS has no PCRE2 installed, compile nginx with custom PCRE2"

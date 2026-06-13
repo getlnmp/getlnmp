@@ -323,7 +323,7 @@ EOF
     cat >"/usr/local/apache/conf/vhost/${domain}.conf"<<EOF
 <VirtualHost *:88>
 ServerAdmin ${email}
-php_admin_value open_basedir "${vhostdir}:/tmp/:/var/tmp/:/proc/"
+php_admin_value open_basedir "${vhostdir}:/tmp/:/var/tmp/"
 DocumentRoot "${vhostdir}"
 ServerName ${domain}
 ErrorLog "/home/wwwlogs/${al_name}-error_log"

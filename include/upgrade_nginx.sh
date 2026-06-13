@@ -122,13 +122,22 @@ Upgrade_Nginx()
         exit 1
     fi
     
-    # back up the old binary before replacing it, in case the upgrade fails
+    # Move the old binary aside before installing the new one.
+    # A running executable cannot be overwritten in place: the kernel returns ETXTBSY
+    # ("Text file busy"), so an in-place "cp objs/nginx ..." silently fails and the old
+    # binary stays on disk. Renaming it (the inode is kept alive by the running master)
+    # frees the path for a fresh inode and doubles as the rollback backup. The later
+    # USR2 live upgrade re-execs the new binary from this same path.
     old_nginx="/usr/local/nginx/sbin/nginx"
     backup_nginx="/usr/local/nginx/sbin/nginx.${Upgrade_Date}"
-    \cp "${old_nginx}" "${backup_nginx}"
+    mv "${old_nginx}" "${backup_nginx}" || { Echo_Red "Error: failed to move aside the old nginx binary."; exit 1; }
 
     # install the new binary and test it before upgrading
-    \cp objs/nginx /usr/local/nginx/sbin/nginx
+    \cp objs/nginx "${old_nginx}" || {
+        Echo_Red "Error: failed to install new nginx binary, restoring backup."
+        \cp "${backup_nginx}" "${old_nginx}"
+        exit 1
+    }
     echo "Test nginx configure file..."
     /usr/local/nginx/sbin/nginx -t || {
         Echo_Red "Error: New nginx binary failed to start, restoring backup."

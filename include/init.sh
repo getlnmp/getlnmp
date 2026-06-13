@@ -564,7 +564,6 @@ Check_Download() {
         Download_Files https://museum.php.net/php${Php_Major_Ver}/${Php_Ver}.tar.bz2 ${Php_Ver}.tar.bz2
     fi
     Download_Files https://files.phpmyadmin.net/phpMyAdmin/${PhpMyAdmin_Ver_Short}/${PhpMyAdmin_Ver}.tar.xz ${PhpMyAdmin_Ver}.tar.xz
-    Download_Files https://github.com/kmvan/x-prober/releases/download/8.20/prober.php prober.php
     if [ "${Stack}" != "lnmp" ]; then
         Download_Files ${Apache_DL} ${Apache_Ver}.tar.bz2
         Download_Files ${APR_DL} ${APR_Ver}.tar.bz2
