@@ -949,8 +949,7 @@ Install_Check_Acme.sh() {
     else
         rm -rf /tmp/acme.sh
         git clone --depth 1 https://github.com/acmesh-official/acme.sh.git /tmp/acme.sh
-        cd /tmp/acme.sh || exit 1
-        ./acme.sh --install ${acme_sh_sudo} --log --home /usr/local/acme.sh -m ${email_address}
+        (cd /tmp/acme.sh && ./acme.sh --install ${acme_sh_sudo} --log --home /usr/local/acme.sh -m ${email_address}) || exit 1
         rm -rf /tmp/acme.sh
     fi
     # set deaulft CA Server to letsencrypt
