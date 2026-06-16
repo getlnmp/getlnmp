@@ -59,6 +59,13 @@ ORDER BY schema_name;
     fi
     mv /usr/local/mysql /usr/local/oldmysql${Upgrade_Date}
     mv /etc/my.cnf /usr/local/oldmysql${Upgrade_Date}/my.cnf.bak.${Upgrade_Date}
+    # Preserve the original systemd unit alongside the old install. A failed upgrade
+    # replaces this unit with the new version's (e.g. 8.0 Type=notify). Restore_old_mysql
+    # must put the original back, otherwise starting the restored old mysqld under the
+    # wrong unit (Type=notify + TimeoutSec=0) hangs in "activating" forever.
+    if [ -f /etc/systemd/system/mysql.service ]; then
+        cp -a /etc/systemd/system/mysql.service "/usr/local/oldmysql${Upgrade_Date}/mysql.service.bak.${Upgrade_Date}"
+    fi
     if echo "${mysql_version}" | grep -Eqi '^5\.5\.' && echo "${cur_mysql_version}" | grep -Eqi '^5\.6\.'; then
         sed -i 's/STATS_PERSISTENT=0//g' "${dump_file}"
     fi
@@ -73,6 +80,14 @@ Restore_old_mysql() {
         mv "${MySQL_Data_Dir}${Upgrade_Date}" "${MySQL_Data_Dir}"
     fi
     mv "/usr/local/mysql/my.cnf.bak.${Upgrade_Date}" /etc/my.cnf 2>/dev/null
+    # Restore the original systemd unit captured by Backup_MySQL so the rolled-back
+    # old mysqld starts under its own unit. The failed upgrade left the new version's
+    # unit (e.g. 8.0 Type=notify) in place, which makes the old mysqld hang in
+    # "activating" because it never sends the expected systemd readiness notification.
+    if [ -f "/usr/local/mysql/mysql.service.bak.${Upgrade_Date}" ]; then
+        cp -a "/usr/local/mysql/mysql.service.bak.${Upgrade_Date}" /etc/systemd/system/mysql.service
+        ln -sf /etc/systemd/system/mysql.service /etc/systemd/system/mysqld.service
+    fi
     systemctl daemon-reload
     systemctl start mysql
     exit 1
