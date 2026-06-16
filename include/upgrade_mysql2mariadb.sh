@@ -282,14 +282,29 @@ Upgrade_MySQL2MariaDB() {
     systemctl start mariadb
 
     echo "Restore backup databases..."
-    import_log="/root/mysql2mariadb_import${Upgrade_Date}.log"
-    /usr/local/mariadb/bin/mysql --defaults-file="${HOME}/.my.cnf" </root/mysql_all_backup${Upgrade_Date}.sql 2>"${import_log}"
-    if [ $? -ne 0 ] || grep -qi '^ERROR' "${import_log}"; then
-        Echo_Red "Error: MariaDB databases import failed, see ${import_log} for details. Old data remains in the backup location."
-        cat "${import_log}"
+    backup_sql="/root/mysql_all_backup${Upgrade_Date}.sql"
+    # Backup_MySQL2 creates a zero-byte dump file when there are no user databases
+    # (and already aborts if a real backup produced an empty file), so an empty
+    # file here legitimately means "nothing to restore". Only a missing file is
+    # an error.
+    if [ ! -f "${backup_sql}" ]; then
+        Echo_Red "Error: MySQL backup file ${backup_sql} was not found. Old data remains in the backup location."
         systemctl stop mariadb
         TempMycnf_Clean
         Restore_old_mysql2mariadb
+    fi
+    import_log="/root/mysql2mariadb_import${Upgrade_Date}.log"
+    if [ -s "${backup_sql}" ]; then
+        /usr/local/mariadb/bin/mysql --defaults-file="${HOME}/.my.cnf" <"${backup_sql}" 2>"${import_log}"
+        if [ $? -ne 0 ] || grep -qi '^ERROR' "${import_log}"; then
+            Echo_Red "Error: MariaDB databases import failed, see ${import_log} for details. Old data remains in the backup location."
+            cat "${import_log}"
+            systemctl stop mariadb
+            TempMycnf_Clean
+            Restore_old_mysql2mariadb
+        fi
+    else
+        echo "Backup file is empty (no user databases), skip importing."
     fi
 
     echo "Repair databases..."

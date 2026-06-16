@@ -535,20 +535,28 @@ Restore_Start_MySQL() {
     ldconfig
     MySQL_Sec_Setting
     echo "Restore backup databases..."
-    if [ ! -s "${backup_sql}" ]; then
-        Echo_Red "Error: MySQL backup file ${backup_sql} was not found or is empty."
+    # Backup_MySQL creates a zero-byte dump file when there are no user databases
+    # (and already aborts if a real backup produced an empty file), so an empty
+    # file here legitimately means "nothing to restore". Only a missing file is
+    # an error.
+    if [ ! -f "${backup_sql}" ]; then
+        Echo_Red "Error: MySQL backup file ${backup_sql} was not found."
         Restore_old_mysql
     fi
     echo "Starting MySQL..."
     systemctl start mysql
-    echo "Starting importing..."
-    import_log="/root/mysql_import${Upgrade_Date}.log"
-    /usr/local/mysql/bin/mysql --defaults-file="${HOME}/.my.cnf" <"${backup_sql}" 2>"${import_log}"
-    if [ $? -ne 0 ] || grep -qi '^ERROR' "${import_log}"; then
-        Echo_Red "Error: failed to import MySQL backup, see ${import_log} for details."
-        cat "${import_log}"
-        systemctl stop mysql
-        Restore_old_mysql
+    if [ -s "${backup_sql}" ]; then
+        echo "Starting importing..."
+        import_log="/root/mysql_import${Upgrade_Date}.log"
+        /usr/local/mysql/bin/mysql --defaults-file="${HOME}/.my.cnf" <"${backup_sql}" 2>"${import_log}"
+        if [ $? -ne 0 ] || grep -qi '^ERROR' "${import_log}"; then
+            Echo_Red "Error: failed to import MySQL backup, see ${import_log} for details."
+            cat "${import_log}"
+            systemctl stop mysql
+            Restore_old_mysql
+        fi
+    else
+        echo "Backup file is empty (no user databases), skip importing."
     fi
 
     echo "Repair databases..."
