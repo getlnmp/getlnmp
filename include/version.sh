@@ -35,71 +35,71 @@ NgxFancyIndex_Ver='ngx-fancyindex-0.5.2'
 # (they are set later by Display_Selection), so wrap the selection-dependent
 # versions in a function and (re)call it after the selections are known.
 Set_Selected_Versions() {
-if [ "${DBSelect}" = "1" ]; then
-    Mysql_Ver='mysql-5.5.62'
-elif [ "${DBSelect}" = "2" ]; then
-    Mysql_Ver='mysql-5.6.51'
-elif [ "${DBSelect}" = "3" ]; then
-    Mysql_Ver='mysql-5.7.44'
-elif [ "${DBSelect}" = "4" ]; then
-    Mysql_Ver='mysql-8.0.37'
-elif [ "${DBSelect}" = "5" ]; then
-    Mysql_Ver='mysql-8.4.7'
-elif [ "${DBSelect}" = "6" ]; then
-    Mariadb_Ver='mariadb-5.5.68'
-elif [ "${DBSelect}" = "7" ]; then
-    Mariadb_Ver='mariadb-10.4.34'
-elif [ "${DBSelect}" = "8" ]; then
-    Mariadb_Ver='mariadb-10.5.29'
-elif [ "${DBSelect}" = "9" ]; then
-    Mariadb_Ver='mariadb-10.6.27'
-elif [ "${DBSelect}" = "10" ]; then
-    Mariadb_Ver='mariadb-10.11.18'
-elif [ "${DBSelect}" = "11" ]; then
-    Mariadb_Ver='mariadb-11.4.12'
-elif [ "${DBSelect}" = "12" ]; then
-    Mariadb_Ver='mariadb-11.8.8'
-fi
-if [ "${PHPSelect}" = "1" ]; then
-    Php_Ver='php-5.2.17'
-elif [ "${PHPSelect}" = "2" ]; then
-    Php_Ver='php-5.3.29'
-elif [ "${PHPSelect}" = "3" ]; then
-    Php_Ver='php-5.4.45'
-elif [ "${PHPSelect}" = "4" ]; then
-    Php_Ver='php-5.5.38'
-elif [ "${PHPSelect}" = "5" ]; then
-    Php_Ver='php-5.6.40'
-elif [ "${PHPSelect}" = "6" ]; then
-    Php_Ver='php-7.0.33'
-elif [ "${PHPSelect}" = "7" ]; then
-    Php_Ver='php-7.1.33'
-elif [ "${PHPSelect}" = "8" ]; then
-    Php_Ver='php-7.2.34'
-elif [ "${PHPSelect}" = "9" ]; then
-    Php_Ver='php-7.3.33'
-elif [ "${PHPSelect}" = "10" ]; then
-    Php_Ver='php-7.4.33'
-elif [ "${PHPSelect}" = "11" ]; then
-    Php_Ver='php-8.0.30'
-elif [ "${PHPSelect}" = "12" ]; then
-    Php_Ver='php-8.1.34'
-elif [ "${PHPSelect}" = "13" ]; then
-    Php_Ver='php-8.2.31'
-elif [ "${PHPSelect}" = "14" ]; then
-    Php_Ver='php-8.3.31'
-elif [ "${PHPSelect}" = "15" ]; then
-    Php_Ver='php-8.4.22'
-elif [ "${PHPSelect}" = "16" ]; then
-    Php_Ver='php-8.5.7'
-fi
-if [[ "${PHPSelect}" =~ ^[123]$ ]]; then
-    PhpMyAdmin_Ver='phpMyAdmin-4.0.10.20-all-languages'
-elif [[ "${PHPSelect}" =~ ^[456]$ ]]; then
-    PhpMyAdmin_Ver='phpMyAdmin-4.9.11-all-languages'
-else
-    PhpMyAdmin_Ver='phpMyAdmin-5.2.3-all-languages'
-fi
+    if [ "${DBSelect}" = "1" ]; then
+        Mysql_Ver='mysql-5.5.62'
+    elif [ "${DBSelect}" = "2" ]; then
+        Mysql_Ver='mysql-5.6.51'
+    elif [ "${DBSelect}" = "3" ]; then
+        Mysql_Ver='mysql-5.7.44'
+    elif [ "${DBSelect}" = "4" ]; then
+        Mysql_Ver='mysql-8.0.46'
+    elif [ "${DBSelect}" = "5" ]; then
+        Mysql_Ver='mysql-8.4.9'
+    elif [ "${DBSelect}" = "6" ]; then
+        Mariadb_Ver='mariadb-5.5.68'
+    elif [ "${DBSelect}" = "7" ]; then
+        Mariadb_Ver='mariadb-10.4.34'
+    elif [ "${DBSelect}" = "8" ]; then
+        Mariadb_Ver='mariadb-10.5.29'
+    elif [ "${DBSelect}" = "9" ]; then
+        Mariadb_Ver='mariadb-10.6.27'
+    elif [ "${DBSelect}" = "10" ]; then
+        Mariadb_Ver='mariadb-10.11.18'
+    elif [ "${DBSelect}" = "11" ]; then
+        Mariadb_Ver='mariadb-11.4.12'
+    elif [ "${DBSelect}" = "12" ]; then
+        Mariadb_Ver='mariadb-11.8.8'
+    fi
+    if [ "${PHPSelect}" = "1" ]; then
+        Php_Ver='php-5.2.17'
+    elif [ "${PHPSelect}" = "2" ]; then
+        Php_Ver='php-5.3.29'
+    elif [ "${PHPSelect}" = "3" ]; then
+        Php_Ver='php-5.4.45'
+    elif [ "${PHPSelect}" = "4" ]; then
+        Php_Ver='php-5.5.38'
+    elif [ "${PHPSelect}" = "5" ]; then
+        Php_Ver='php-5.6.40'
+    elif [ "${PHPSelect}" = "6" ]; then
+        Php_Ver='php-7.0.33'
+    elif [ "${PHPSelect}" = "7" ]; then
+        Php_Ver='php-7.1.33'
+    elif [ "${PHPSelect}" = "8" ]; then
+        Php_Ver='php-7.2.34'
+    elif [ "${PHPSelect}" = "9" ]; then
+        Php_Ver='php-7.3.33'
+    elif [ "${PHPSelect}" = "10" ]; then
+        Php_Ver='php-7.4.33'
+    elif [ "${PHPSelect}" = "11" ]; then
+        Php_Ver='php-8.0.30'
+    elif [ "${PHPSelect}" = "12" ]; then
+        Php_Ver='php-8.1.34'
+    elif [ "${PHPSelect}" = "13" ]; then
+        Php_Ver='php-8.2.31'
+    elif [ "${PHPSelect}" = "14" ]; then
+        Php_Ver='php-8.3.31'
+    elif [ "${PHPSelect}" = "15" ]; then
+        Php_Ver='php-8.4.22'
+    elif [ "${PHPSelect}" = "16" ]; then
+        Php_Ver='php-8.5.7'
+    fi
+    if [[ "${PHPSelect}" =~ ^[123]$ ]]; then
+        PhpMyAdmin_Ver='phpMyAdmin-4.0.10.20-all-languages'
+    elif [[ "${PHPSelect}" =~ ^[456]$ ]]; then
+        PhpMyAdmin_Ver='phpMyAdmin-4.9.11-all-languages'
+    else
+        PhpMyAdmin_Ver='phpMyAdmin-5.2.3-all-languages'
+    fi
 }
 Set_Selected_Versions
 APR_Ver='apr-1.7.6'
@@ -137,4 +137,3 @@ LuaRestyLrucache_Short="${LuaRestyLrucache##*-}"
 NgxDevelKit_Short="${NgxDevelKit##*-}"
 Libxml2_Ver_Short="${Libxml2_Ver##*-}"
 Jemalloc_Ver_Short="${Jemalloc_Ver#*-}"
-

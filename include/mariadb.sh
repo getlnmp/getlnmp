@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# When MariaDB Server is compiled with TLS and cryptography support, it is usually either statically linked with 
-# MariaDB's bundled TLS and cryptography library or dynamically linked with the system's OpenSSL library. 
+# When MariaDB Server is compiled with TLS and cryptography support, it is usually either statically linked with
+# MariaDB's bundled TLS and cryptography library or dynamically linked with the system's OpenSSL library.
 # MariaDB's bundled TLS library is either wolfSSL or yaSSL, depending on the server version.
 
 # MariaDB Server on Linux
@@ -41,8 +41,8 @@ MariaDB_WITHSSL() {
 
 # when you compile very old databases(using ld.bfd) on modern linux( GCC 10+ with very new toolchain(ld.lld or gold)), you should always add this option
 # Otherwise you will error message in configuration like:
-# "our current linker does not support VERSION command in linker scripts like a GNU ld or any compatible linker should. 
-# Perhaps you're using gold? Either switch to GNU ld compatible linker or 
+# "our current linker does not support VERSION command in linker scripts like a GNU ld or any compatible linker should.
+# Perhaps you're using gold? Either switch to GNU ld compatible linker or
 # run cmake with -DDISABLE_LIBMYSQLCLIENT_SYMBOL_VERSIONING=TRUE to be able to complete the build"
 # The failure comes from the linker provided by a package called binutils whose version is 2.35 or newer that is shipped from GCC 10+
 # so adding this option when compiling MySQL 5.5, 5.6, 5.7, MariaDB 5.5, 10.0, 10.2, 10.3 on Debian 11/12/13, Ubuntu 20+, RHEL9/10.
@@ -70,7 +70,7 @@ MariaDB_Enable_Innodb() {
 
 MariaDB_Disable_Explicit_Timestamp() {
     sed -i 's/^explicit_defaults_for_timestamp/#explicit_defaults_for_timestamp/g' /etc/my.cnf
-}   
+}
 
 MariaDB_Set_UG() {
     sed -i 's/^User=mysql/User=mariadb/g' /etc/systemd/system/mariadb.service
@@ -81,8 +81,7 @@ MariaDB_Set_UG() {
 # init.d/mariadb.service fallback) launches mariadbd directly, so [mysqld_safe]
 # malloc-lib in my.cnf is inert; apply the selected allocator via a systemd
 # drop-in Environment=LD_PRELOAD instead, mirroring MySQL_Set_Malloc_Preload.
-MariaDB_Set_Malloc_Preload()
-{
+MariaDB_Set_Malloc_Preload() {
     case "${SelectMalloc}" in
     2) MallocLib='/usr/local/jemalloc/lib/libjemalloc.so.2' ;;
     3) MallocLib='/usr/local/tcmalloc/lib/libtcmalloc.so.4' ;;
@@ -92,7 +91,7 @@ MariaDB_Set_Malloc_Preload()
 
     if [ -n "${MallocLib}" ]; then
         mkdir -p /etc/systemd/system/mariadb.service.d
-        cat > /etc/systemd/system/mariadb.service.d/lnmp-malloc.conf <<EOF
+        cat >/etc/systemd/system/mariadb.service.d/lnmp-malloc.conf <<EOF
 [Service]
 Environment=LD_PRELOAD=${MallocLib}
 EOF
@@ -128,8 +127,8 @@ MariaDB_Set_Startup() {
 }
 
 # mariadb-install-db is used for mariadb 10.4 and later versions, mysql_install_db is used for mariadb 5.5 - 10.3
-# mariadb-install-db initializes the MariaDB data directory and creates the necessary system tables. 
-# --defaults-file option specifies the path to the my.cnf configuration file, which is used to set various options 
+# mariadb-install-db initializes the MariaDB data directory and creates the necessary system tables.
+# --defaults-file option specifies the path to the my.cnf configuration file, which is used to set various options
 # for the initialization process and must be given as the first option
 MariaDB_Initialize_DB() {
     local init_status
@@ -143,7 +142,7 @@ MariaDB_Initialize_DB() {
         /usr/local/mariadb/scripts/mysql_install_db --defaults-file=/etc/my.cnf --user=mariadb
         init_status=$?
     fi
-#    /usr/local/mariadb/scripts/mariadb-install-db --defaults-file=/etc/my.cnf
+    #    /usr/local/mariadb/scripts/mariadb-install-db --defaults-file=/etc/my.cnf
     if [ ${init_status} -ne 0 ]; then
         Echo_Red "Error: failed to initialize MariaDB database."
         exit 1
@@ -172,8 +171,7 @@ MariaDB_Add_UG() {
     fi
 }
 
-MariaDB_SQL_Escape()
-{
+MariaDB_SQL_Escape() {
     local value=$1
     local sq="'"
 
@@ -271,7 +269,7 @@ EOF
 MariaDB_Sec_Setting() {
 
     # 1. system set up
-    echo "/usr/local/mariadb/lib" > /etc/ld.so.conf.d/mariadb.conf
+    echo "/usr/local/mariadb/lib" >/etc/ld.so.conf.d/mariadb.conf
     ldconfig
     if [ -d "/proc/vz" ]; then
         ulimit -s unlimited
@@ -287,13 +285,13 @@ MariaDB_Sec_Setting() {
 
     local bin_dir="/usr/local/mariadb/bin"
     local bins=("mariadb" "mariadb-dump" "mariadbd-safe" "mariadb-check" "mysql" "mysqldump" "mysqld_safe" "mysqlcheck" "myisamchk")
-    
+
     for bin in "${bins[@]}"; do
         if [ -f "$bin_dir/$bin" ] && { [ ! -e "/usr/bin/$bin" ] || [ -L "/usr/bin/$bin" ]; }; then
             ln -sf "$bin_dir/$bin" "/usr/bin/$bin"
         fi
     done
-    
+
     echo "Waiting for MariaDB to re-start..."
     systemctl restart mariadb
     sleep 2
@@ -305,13 +303,18 @@ MariaDB_Sec_Setting() {
     # ~/my.cnf must be set to 600
     # /etc/my.cnf (Global) is loaded first and applies to all users, while ~/.my.cnf (User-Specific) is loaded afterward and can override settings for that user.
     # add default my.cnf file for mysqladmin to prevent high priority of ~/.my.cnf
+    if [ -x /usr/local/mariadb/bin/mariadb-admin ]; then
+        local Mariadb_admin_BIN="/usr/local/mariadb/bin/mariadb-admin"
+    else
+        local Mariadb_admin_BIN="/usr/local/mariadb/bin/mysqladmin"
+    fi
     if [ -s ~/.my.cnf ]; then
-        /usr/local/mariadb/bin/mysqladmin --defaults-file=/etc/my.cnf -u root password "${DB_Root_Password}" || {
+        "${Mariadb_admin_BIN}" --defaults-file=/etc/my.cnf -u root password "${DB_Root_Password}" || {
             Echo_Red "Error: failed to set MariaDB root password using mysqladmin."
             exit 1
         }
     else
-        /usr/local/mariadb/bin/mysqladmin -u root password "${DB_Root_Password}" || {
+        "${Mariadb_admin_BIN}" -u root password "${DB_Root_Password}" || {
             Echo_Red "Error: failed to set MariaDB root password using mysqladmin."
             exit 1
         }
@@ -439,8 +442,8 @@ MariaDB_Set_SSL_Cert() {
 ssl-ca=/usr/local/mariadb/ssl/ca-cert.pem\
 ssl-cert=/usr/local/mariadb/ssl/server-cert.pem\
 ssl-key=/usr/local/mariadb/ssl/server-key.pem' /etc/my.cnf
-        
-    }
+
+}
 
 Install_MariaDB_104() {
     if [ "${Bin}" = "y" ]; then
@@ -511,7 +514,7 @@ Install_MariaDB_105() {
             -DWITHOUT_TOKUDB=1 || {
             Echo_Red "Error: failed to configure MariaDB."
             exit 1
-        }   
+        }
         MariaDB_Make_Install || exit 1
     fi
 

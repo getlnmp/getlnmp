@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #DB_Info=('MySQL 5.1.73' 'MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.37' 'MariaDB 5.5.68' 'MariaDB 10.4.33' 'MariaDB 10.5.24' 'MariaDB 10.6.17' 'MariaDB 10.11.7' 'MySQL 8.4.0')
-DB_Info=('MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.37' 'MySQL 8.4.7' 'MariaDB 5.5.68' 'MariaDB 10.4.34' 'MariaDB 10.5.29' 'MariaDB 10.6.27' 'MariaDB 10.11.18' 'MariaDB 11.4.12' 'MariaDB 11.8.8')
+DB_Info=('MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.46' 'MySQL 8.4.9' 'MariaDB 5.5.68' 'MariaDB 10.4.34' 'MariaDB 10.5.29' 'MariaDB 10.6.27' 'MariaDB 10.11.18' 'MariaDB 11.4.12' 'MariaDB 11.8.8')
 PHP_Info=('PHP 5.2.17' 'PHP 5.3.29' 'PHP 5.4.45' 'PHP 5.5.38' 'PHP 5.6.40' 'PHP 7.0.33' 'PHP 7.1.33' 'PHP 7.2.34' 'PHP 7.3.33' 'PHP 7.4.33' 'PHP 8.0.30' 'PHP 8.1.34' 'PHP 8.2.31' 'PHP 8.3.31' 'PHP 8.4.22' 'PHP 8.5.7')
 Apache_Info=('Apache 2.2.34' 'Apache 2.4.66')
 
@@ -399,8 +399,8 @@ Database_Selection() {
             fi
         fi
         echo "MySQL root password: ${DB_Root_Password}"
-        
-        if [ "${Bin}" != "y" ] ; then
+
+        if [ "${Bin}" != "y" ]; then
             #do you want to enable or disable the InnoDB Storage Engine?
             echo "==========================="
 
@@ -634,13 +634,13 @@ Kill_PM() {
 # --- Stop background noise and wait for locks ---
 Stop_Package_Manager() {
     echo "Disabling automatic updates during installation..."
-    if [ "${PM}" = "apt" ];  then
+    if [ "${PM}" = "apt" ]; then
         # --- DEBIAN / UBUNTU STRATEGY ---
-        
+
         # 1. Stop the triggers (timers) so no NEW updates start
         systemctl stop apt-daily.timer 2>/dev/null
         systemctl stop apt-daily-upgrade.timer 2>/dev/null
-        
+
         # 2. Stop the service itself
         systemctl stop unattended-upgrades 2>/dev/null
 
@@ -649,7 +649,7 @@ Stop_Package_Manager() {
 
         # 1. Stop Metadata cache (High RAM usage / frequent locker)
         systemctl stop dnf-makecache.timer 2>/dev/null
-        
+
         # 2. Stop Auto-updates & PackageKit
         systemctl stop dnf-automatic.timer 2>/dev/null
         systemctl stop dnf5-automatic.timer 2>/dev/null # For RHEL 10 / DNF5
@@ -660,17 +660,17 @@ Stop_Package_Manager() {
     else
         echo "ERROR: No supported package manager found..."
         exit 1
-    fi   
+    fi
     # --- 3. TRAP: Ensure cleanup happens on Exit or Ctrl+C ---
     trap Restore_Package_Manager EXIT
     # wait for other process to finish
-    Wait_For_PM_Lock  
+    Wait_For_PM_Lock
 }
 
 Restore_Package_Manager() {
-    if [ ! "${LNMP_Installation_Status}" = 'y' ];then
+    if [ ! "${LNMP_Installation_Status}" = 'y' ]; then
         echo "Restoring background update services..."
-    fi    
+    fi
     if command -v apt >/dev/null 2>&1; then
         systemctl start apt-daily.timer 2>/dev/null
         systemctl start apt-daily-upgrade.timer 2>/dev/null
@@ -681,11 +681,11 @@ Restore_Package_Manager() {
         # but restarting the timer is generally safe.
         systemctl start dnf-automatic.timer 2>/dev/null
         systemctl start dnf5-automatic.timer 2>/dev/null
-    fi    
-    if [ ! "${LNMP_Installation_Status}" = 'y' ];then
+    fi
+    if [ ! "${LNMP_Installation_Status}" = 'y' ]; then
         echo "Automatic updates services restored."
     fi
-    if [ "${LNMP_Installation_Status}" = 'y' ];then
+    if [ "${LNMP_Installation_Status}" = 'y' ]; then
         Echo_Green "Enjoy!"
     fi
 }
@@ -728,7 +728,7 @@ Wait_For_PM_Lock() {
         echo " [!] Waiting for background process ($processes)..."
         sleep 5
     done
-    
+
     echo "No Running Background Process Manager"
     echo "System is ready for updates."
 
@@ -1262,13 +1262,13 @@ Check_Stack() {
 }
 
 Check_DB() {
-    if [[ -s /usr/local/mariadb/bin/mariadb && -s /usr/local/mariadb/bin/mariadbd-safe && -s /etc/my.cnf ]]; then
+    if [[ -x /usr/local/mariadb/bin/mariadb && -s /etc/my.cnf ]]; then
         MySQL_Bin="/usr/local/mariadb/bin/mariadb"
         MySQL_Config="/usr/local/mariadb/bin/mariadb_config"
         MySQL_Dir="/usr/local/mariadb"
         Is_MySQL="n"
         DB_Name="mariadb"
-    elif [[ -s /usr/local/mysql/bin/mysql && -s /usr/local/mysql/bin/mysqld_safe && -s /etc/my.cnf ]]; then
+    elif [[ -x /usr/local/mysql/bin/mysql && -s /etc/my.cnf ]]; then
         MySQL_Bin="/usr/local/mysql/bin/mysql"
         MySQL_Config="/usr/local/mysql/bin/mysql_config"
         MySQL_Dir="/usr/local/mysql"
@@ -1290,10 +1290,10 @@ Do_Query() {
 Run_Query() {
     Check_DB
     ${MySQL_Bin} --defaults-file="${HOME}/.my.cnf" -e "$1"
-        if [ $? -ne 0 ]; then
-            echo "Query Failed: $query"
-            return 1
-        fi
+    if [ $? -ne 0 ]; then
+        echo "Query Failed: $query"
+        return 1
+    fi
 }
 
 Mysql_Do_Query() {
@@ -1301,10 +1301,10 @@ Mysql_Do_Query() {
     local mysql_bin="/usr/local/mysql/bin/mysql"
 
     "$mysql_bin" --defaults-file="${HOME}/.my.cnf" -e "$query"
-        if [ $? -ne 0 ]; then
-            echo "Query Failed: $query"
-            return 1
-        fi    
+    if [ $? -ne 0 ]; then
+        echo "Query Failed: $query"
+        return 1
+    fi
 }
 
 MariaDB_Do_Query() {
@@ -1312,10 +1312,10 @@ MariaDB_Do_Query() {
     local mariadb_bin="/usr/local/mariadb/bin/mariadb"
 
     "$mariadb_bin" --defaults-file="${HOME}/.my.cnf" -e "$query"
-        if [ $? -ne 0 ]; then
-            echo "Query Failed: $query"
-            return 1
-        fi    
+    if [ $? -ne 0 ]; then
+        echo "Query Failed: $query"
+        return 1
+    fi
 }
 
 Make_TempMycnf() {
@@ -1416,7 +1416,7 @@ Check_Openssl() {
         isOpenSSL10='y'
         isOpenSSL3='n'
         isOpenSSL111='n'
-    fi  
+    fi
 }
 
 Get_ICU_Version() {
@@ -1524,8 +1524,7 @@ DB_BIN_Opt() {
 
 }
 
-Install_Ncurses5_Compat()
-{
+Install_Ncurses5_Compat() {
     Echo_Blue "[+] Installing ncurses5 compatibility library..."
     cd ${cur_dir}/src
     if [ ! -f ncurses-6.5.tar.gz ]; then
@@ -1542,16 +1541,16 @@ Install_Ncurses5_Compat()
     # --without-ada: Skips checking for or building Ada language bindings
     # --without-manpages: Skips generating documentation
     ./configure --prefix=/usr/local/ncurses5 \
-                --with-shared \
-                --with-termlib \
-                --with-abi-version=5 \
-                --without-normal \
-                --without-debug \
-                --without-profile \
-                --without-cxx-binding \
-                --without-ada \
-                --without-manpages \
-                --without-progs
+        --with-shared \
+        --with-termlib \
+        --with-abi-version=5 \
+        --without-normal \
+        --without-debug \
+        --without-profile \
+        --without-cxx-binding \
+        --without-ada \
+        --without-manpages \
+        --without-progs
     Make_Install
     if [ -f /usr/local/ncurses5/lib/libncurses.so.5 ] && [ ! -e /usr/lib/x86_64-linux-gnu/libncurses.so.5 ]; then
         ln -sf /usr/local/ncurses5/lib/libncurses.so.5 /usr/lib/x86_64-linux-gnu/libncurses.so.5
@@ -1563,8 +1562,7 @@ Install_Ncurses5_Compat()
 # mysql 5.7 and before BIN is built with libncurses.so.5, but most OS use libncurses.so.6 now.
 # mariadb 5.5 -10.3 bin package is built with libncurses.so.5, mariadb 10.4+ bin package is built with libncurses.so.6
 # So we need to install ncurses5 compatibility library for mysql 5.7 BIN package
-Ncurses5_Compat_Check()
-{   
+Ncurses5_Compat_Check() {
     if [[ $Bin = "y" ]]; then
         if [ -f /usr/lib/x86_64-linux-gnu/libncurses.so.5 ] || [ -f /usr/lib/i386-linux-gnu/libncurses.so.5 ]; then
             echo "ncurses5 compatibility library found."

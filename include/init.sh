@@ -34,7 +34,9 @@ Sync_Time() {
         apt)
             apt-get update -y || apt-get update --allow-releaseinfo-change -y
             apt-get install -y chrony
-            systemctl enable --now chronyd
+            # On Debian/Ubuntu the real unit is chrony.service; chronyd.service is only
+            # an alias, and systemctl refuses to enable an aliased/linked unit name.
+            systemctl enable --now chrony 2>/dev/null || systemctl enable --now chronyd
             ;;
         *)
             Echo_Red "Unsupported package manager (${PM}), existing chrony install."
@@ -1272,9 +1274,15 @@ Deb_Lib_Opt() {
 eof
     fi
 
-    if ! grep -q "^fs.file-max=65535" /etc/sysctl.conf; then
-        echo "fs.file-max=65535" >>/etc/sysctl.conf
+    # Debian 13 (systemd >= 256) no longer applies /etc/sysctl.conf via systemd-sysctl;
+    # only the drop-in directories are read. Use /etc/sysctl.d/, which is honored on all
+    # supported Debian releases (both at boot and via `sysctl --system`).
+    local sysctl_dropin="/etc/sysctl.d/90-lnmp.conf"
+    mkdir -p /etc/sysctl.d
+    if [ ! -f "${sysctl_dropin}" ] || ! grep -q "^fs.file-max=65535" "${sysctl_dropin}"; then
+        echo "fs.file-max=65535" >>"${sysctl_dropin}"
     fi
+    sysctl -p "${sysctl_dropin}" >/dev/null 2>&1 || sysctl --system >/dev/null 2>&1
 }
 
 Remove_Error_Libcurl() {

@@ -76,7 +76,7 @@ Upgrade_MariaDB() {
     echo "You can get version number from https://downloads.mariadb.org/"
     echo "We only support upgrading MariaDB to LTS version like 10.6.x, 10.11.x, 11.4.x and 11.8.x"
     Echo_Yellow "Please enter MariaDB Version you want."
-    read -r -p "(example: 11.8.5 ): " mariadb_version
+    read -r -p "(example: 11.8.7 ): " mariadb_version
 
     if echo "${mariadb_version}" | grep -Eqi '^(10\.6\.|10\.11\.|11\.4\.|11\.8\.)'; then
         echo "You will upgrade MariaDB to version:${mariadb_version}"

@@ -9,7 +9,7 @@ Add_Firewall_Rules() {
     else
         echo "Error: Unsupported OS. Script supports RHEL-family or Debian-family only."
         exit 1
-    fi    
+    fi
 }
 
 Get_Management_IP() {
@@ -40,7 +40,7 @@ Apply_Firewalld() {
     echo "--- Configuring Firewalld (RHEL/Rocky/Alma) ---"
 
     # Ensure firewalld is installed (just in case it's a minimal cloud image)
-    if ! command -v firewall-cmd &> /dev/null; then
+    if ! command -v firewall-cmd &>/dev/null; then
         echo "Firewalld not found. Installing..."
         dnf install -y firewalld
     fi
@@ -77,7 +77,7 @@ Apply_Firewalld() {
     # Rule 6: Drop MySQL (3306) unless the operator opted in to remote DB access via lnmp.conf
     if [ "${Open_DB_Port:-n}" != "y" ]; then
         # We remove the port first (in case it was added previously) then add a rich rule to reject it.
-        firewall-cmd --permanent --remove-port=3306/tcp &> /dev/null
+        firewall-cmd --permanent --remove-port=3306/tcp &>/dev/null
         firewall-cmd --permanent --add-rich-rule='rule family="ipv4" port port="3306" protocol="tcp" reject'
         firewall-cmd --permanent --add-rich-rule='rule family="ipv6" port port="3306" protocol="tcp" reject'
     else
@@ -85,19 +85,19 @@ Apply_Firewalld() {
     fi
 
     # Rule 7: Ensure ICMP (Ping) is allowed
-    firewall-cmd --permanent --remove-icmp-block=echo-request &> /dev/null
+    firewall-cmd --permanent --remove-icmp-block=echo-request &>/dev/null
 
     # Reload to apply changes
     echo "Reloading Firewall..."
     firewall-cmd --reload
-    echo "[SUCCESS] Firewalld configured."    
+    echo "[SUCCESS] Firewalld configured."
 }
 
 Apply_UFW() {
     echo "--- Configuring UFW (Debian/Ubuntu) ---"
 
     # Check if UFW is installed
-    if ! command -v ufw &> /dev/null; then
+    if ! command -v ufw &>/dev/null; then
         echo "UFW not found. Installing..."
         apt-get update
         apt-get install -y ufw
@@ -141,16 +141,15 @@ Apply_UFW() {
         /etc/ufw/before.rules || true
 
     # Enable Firewall (force 'yes' to confirmation prompts)
-    Echo_Red "About to enable UFW with default-deny incoming."
-    Echo_Red "Detected SSH port: ${ssh_port}. Management whitelist: ${MANAGEMENT_IPS:-NONE}."
-    Echo_Red "Make sure you can reach this host on the SSH port above before continuing."
+    Echo_Yellow "About to enable UFW with default-deny incoming."
+    Echo_Yellow "Detected SSH port: ${ssh_port}. Management whitelist: ${MANAGEMENT_IPS:-NONE}."
+    Echo_Yellow "Make sure you can reach this host on the SSH port above before continuing."
     echo "Enabling UFW..."
     ufw --force enable
-    echo "[SUCCESS] UFW configured."    
+    echo "[SUCCESS] UFW configured."
 }
 
-Add_LNMP_Startup()
-{
+Add_LNMP_Startup() {
     echo "Add Startup and Starting LNMP..."
     [ -s /bin/lnmp ] && cp -a /bin/lnmp "/bin/lnmp.bak.$(date +%Y%m%d%H%M%S)"
     \cp ${cur_dir}/conf/lnmp /bin/lnmp
@@ -163,7 +162,7 @@ Add_LNMP_Startup()
     if [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
         systemctl enable mariadb
         systemctl start mariadb
-       # sed -i 's#/etc/init.d/mysql#/etc/init.d/mariadb#' /bin/lnmp
+        # sed -i 's#/etc/init.d/mysql#/etc/init.d/mariadb#' /bin/lnmp
     elif [[ "${DBSelect}" =~ ^[1-5]$ ]]; then
         systemctl enable mysql
         systemctl start mysql
@@ -172,8 +171,7 @@ Add_LNMP_Startup()
     systemctl start php-fpm
 }
 
-Add_LNMPA_Startup()
-{
+Add_LNMPA_Startup() {
     echo "Add Startup and Starting LNMPA..."
     [ -s /bin/lnmpa ] && cp -a /bin/lnmpa "/bin/lnmpa.bak.$(date +%Y%m%d%H%M%S)"
     \cp ${cur_dir}/conf/lnmpa /bin/lnmpa
@@ -191,8 +189,7 @@ Add_LNMPA_Startup()
     systemctl start httpd
 }
 
-Add_LAMP_Startup()
-{
+Add_LAMP_Startup() {
     echo "Add Startup and Starting LAMP..."
     [ -s /bin/lamp ] && cp -a /bin/lamp "/bin/lamp.bak.$(date +%Y%m%d%H%M%S)"
     \cp ${cur_dir}/conf/lamp /bin/lamp
@@ -208,8 +205,7 @@ Add_LAMP_Startup()
     fi
 }
 
-Check_Nginx_Files()
-{
+Check_Nginx_Files() {
     isNginx=""
     echo "============================== Check install =============================="
     echo "Checking ..."
@@ -221,8 +217,7 @@ Check_Nginx_Files()
     fi
 }
 
-Check_DB_Files()
-{
+Check_DB_Files() {
     isDB=""
     if [[ "${DBSelect}" =~ ^([6789]|1[0-2])$ ]]; then
         if [[ -s /usr/local/mariadb/bin/mariadb && -s /etc/my.cnf ]]; then
@@ -244,8 +239,7 @@ Check_DB_Files()
     fi
 }
 
-Check_PHP_Files()
-{
+Check_PHP_Files() {
     isPHP=""
     if [ "${Stack}" = "lnmp" ]; then
         if [[ -s /usr/local/php/sbin/php-fpm && -s /usr/local/php/etc/php.ini && -s /usr/local/php/bin/php ]]; then
@@ -265,8 +259,7 @@ Check_PHP_Files()
     fi
 }
 
-Check_Apache_Files()
-{
+Check_Apache_Files() {
     isApache=""
     if [[ "${PHPSelect}" =~ ^([6789]|10)$ ]]; then
         if [[ -s /usr/local/apache/bin/httpd && -s /usr/local/apache/modules/libphp7.so && -s /usr/local/apache/conf/httpd.conf ]]; then
@@ -292,8 +285,7 @@ Check_Apache_Files()
     fi
 }
 
-Clean_DB_Src_Dir()
-{
+Clean_DB_Src_Dir() {
     echo "Clean database src directory..."
     if [[ "${DBSelect}" =~ ^[1-5]$ ]]; then
         [ -d "${cur_dir}/src/${Mysql_Ver}" ] && rm -rf "${cur_dir}/src/${Mysql_Ver}"
@@ -307,14 +299,12 @@ Clean_DB_Src_Dir()
     fi
 }
 
-Clean_PHP_Src_Dir()
-{
+Clean_PHP_Src_Dir() {
     echo "Clean PHP src directory..."
     [ -d "${cur_dir}/src/${Php_Ver}" ] && rm -rf "${cur_dir}/src/${Php_Ver}"
 }
 
-Clean_Web_Src_Dir()
-{
+Clean_Web_Src_Dir() {
     echo "Clean Web Server src directory..."
     if [ "${Stack}" = "lnmp" ]; then
         [ -d "${cur_dir}/src/${Nginx_Ver}" ] && rm -rf "${cur_dir}/src/${Nginx_Ver}"
@@ -332,8 +322,7 @@ Clean_Web_Src_Dir()
     [ -d "${cur_dir}/src/${NgxFancyIndex_Ver}" ] && rm -rf "${cur_dir}/src/${NgxFancyIndex_Ver}"
 }
 
-Print_Sucess_Info()
-{
+Print_Sucess_Info() {
     Clean_Web_Src_Dir
     echo "+------------------------------------------------------------------------+"
     echo "|           GetLNMP V${GetLNMP_Ver} for ${DISTRO} Linux Server           |"
@@ -360,13 +349,12 @@ Print_Sucess_Info()
         netstat -ntl
     fi
     stop_time=$(date +%s)
-    echo "Installation takes $(((stop_time-start_time)/60)) minutes."
+    echo "Installation takes $(((stop_time - start_time) / 60)) minutes."
     Echo_Green "GetLNMP V${GetLNMP_Ver} installation completed!"
     LNMP_Installation_Status="y"
 }
 
-Print_Failed_Info()
-{
+Print_Failed_Info() {
     if [ -s /bin/lnmp ] && [ -n "${LNMP_Created_Bin_Lnmp}" ]; then
         rm -f /bin/lnmp
     fi
@@ -375,8 +363,7 @@ Print_Failed_Info()
     Echo_Red "You can download /root/getlnmp-install.log from your server,and upload getlnmp-install.log to GetLNMP github."
 }
 
-Check_LNMP_Install()
-{
+Check_LNMP_Install() {
     Check_Nginx_Files
     Check_DB_Files
     Check_PHP_Files
@@ -387,21 +374,19 @@ Check_LNMP_Install()
     fi
 }
 
-Check_LNMPA_Install()
-{
+Check_LNMPA_Install() {
     Check_Nginx_Files
     Check_DB_Files
     Check_PHP_Files
     Check_Apache_Files
-    if [[ "${isNginx}" = "ok" && "${isDB}" = "ok" && "${isPHP}" = "ok"  && "${isApache}" = "ok" ]]; then
+    if [[ "${isNginx}" = "ok" && "${isDB}" = "ok" && "${isPHP}" = "ok" && "${isApache}" = "ok" ]]; then
         Print_Sucess_Info
     else
         Print_Failed_Info
     fi
 }
 
-Check_LAMP_Install()
-{
+Check_LAMP_Install() {
     Check_Apache_Files
     Check_DB_Files
     Check_PHP_Files

@@ -3,10 +3,11 @@
 Backup_MySQL2() {
     echo "Starting backup all databases..."
     echo "If the database is large, the backup time will be longer."
-    # we use --single-transaction option to avoid locking tables during backup, but it only works for InnoDB tables
-    # if there are MyISAM tables in your databases, you may want to use --lock-tables option instead, but it will lock tables during backup, so it's not recommended.
-    # most of the time --single-transaction option is enough for backup, and it's much faster than --lock-tables option, so we use it by default.
-    /usr/local/mysql/bin/mysql --defaults-file="${HOME}/.my.cnf" -N -B -e "
+    # Query the user databases first so we can tell apart three cases:
+    #   1. the query itself failed (server down / bad credentials) -> abort
+    #   2. there are no user databases, only system ones            -> nothing to dump, continue
+    #   3. there are user databases                                 -> dump and verify it is non-empty
+    if ! user_databases=$(/usr/local/mysql/bin/mysql --defaults-file="${HOME}/.my.cnf" -N -B -e "
 SELECT schema_name
 FROM information_schema.schemata
 WHERE schema_name NOT IN (
@@ -16,19 +17,34 @@ WHERE schema_name NOT IN (
   'sys'
 )
 ORDER BY schema_name;
-" | xargs -r /usr/local/mysql/bin/mysqldump --defaults-file="${HOME}/.my.cnf" \
-        --databases \
-        --routines \
-        --triggers \
-        --events \
-        --single-transaction \
-        --quick \
-        >"/root/mysql_all_backup${Upgrade_Date}.sql"
-    if [ -s "/root/mysql_all_backup${Upgrade_Date}.sql" ]; then
-        echo "MySQL databases backup successfully."
-    else
-        echo "MySQL databases backup failed,Please backup databases manually!"
+"); then
+        echo "Failed to query databases for backup, please check if MySQL is running and credentials are correct."
         exit 1
+    fi
+
+    if [ -z "${user_databases}" ]; then
+        # No user databases except system owned ones, so the dump is legitimately empty.
+        # Create an empty dump file and continue the upgrade instead of treating it as a failure.
+        : >"/root/mysql_all_backup${Upgrade_Date}.sql"
+        echo "No user databases found, skip dumping data."
+    else
+        # we use --single-transaction option to avoid locking tables during backup, but it only works for InnoDB tables
+        # if there are MyISAM tables in your databases, you may want to use --lock-tables option instead, but it will lock tables during backup, so it's not recommended.
+        # most of the time --single-transaction option is enough for backup, and it's much faster than --lock-tables option, so we use it by default.
+        echo "${user_databases}" | xargs -r /usr/local/mysql/bin/mysqldump --defaults-file="${HOME}/.my.cnf" \
+            --databases \
+            --routines \
+            --triggers \
+            --events \
+            --single-transaction \
+            --quick \
+            >"/root/mysql_all_backup${Upgrade_Date}.sql"
+        if [ -s "/root/mysql_all_backup${Upgrade_Date}.sql" ]; then
+            echo "MySQL databases backup successfully."
+        else
+            echo "MySQL databases backup failed,Please backup databases manually!"
+            exit 1
+        fi
     fi
 
     # MySQL 8.0 stamps databases/tables with utf8mb4_0900_* collations (default is
