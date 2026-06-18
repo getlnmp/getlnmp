@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-Install_ImageMagick()
-{
+Install_ImageMagick() {
     echo "====== Installing ImageMagick ======"
     Press_Start
 
@@ -23,14 +22,14 @@ Install_ImageMagick()
                 yum -y install epel-release
             fi
         fi
-  #      Get_Country
-  #     if [ "${country}" = "CN" ]; then
-  #          sed -e 's!^metalink=!#metalink=!g' \
-  #              -e 's!^#baseurl=!baseurl=!g' \
-  #              -e 's!//download\.fedoraproject\.org/pub!//mirrors.ustc.edu.cn!g' \
-  #              -e 's!//download\.example/pub!//mirrors.ustc.edu.cn!g' \
-  #              -i /etc/yum.repos.d/epel*.repo
-  #      fi
+        #      Get_Country
+        #     if [ "${country}" = "CN" ]; then
+        #          sed -e 's!^metalink=!#metalink=!g' \
+        #              -e 's!^#baseurl=!baseurl=!g' \
+        #              -e 's!//download\.fedoraproject\.org/pub!//mirrors.ustc.edu.cn!g' \
+        #              -e 's!//download\.example/pub!//mirrors.ustc.edu.cn!g' \
+        #              -i /etc/yum.repos.d/epel*.repo
+        #      fi
         yum install -y libwebp-devel libjpeg-turbo-devel libpng-devel libtiff-devel freetype-devel lcms2-devel libxml2-devel
     elif [ "$PM" = "apt" ]; then
         export DEBIAN_FRONTEND=noninteractive
@@ -40,15 +39,15 @@ Install_ImageMagick()
     ldconfig
 
     cd ${cur_dir}/src
-    if [ -s /usr/local/imagemagick/bin/convert ]; then
+    if [ -x /usr/local/imagemagick/bin/convert ]; then
         echo "ImageMagick already exists."
     else
         #if echo "${Cur_PHP_Version}" | grep -Eqi '^5\.2.';then
         #    Download_Files ${ImageMagickold_DL} ImageMagick-6.9.9-51.tar.gz
         #    Tar_Cd ImageMagick-6.9.9-51.tar.gz ImageMagick-6.9.9-51
         #else
-            Download_Files ${ImageMagick_DL} ${ImageMagick_Ver}.tar.xz
-            Tar_Cd ${ImageMagick_Ver}.tar.xz ${ImageMagick_Ver}
+        Download_Files ${ImageMagick_DL} ${ImageMagick_Ver}.tar.xz
+        Tar_Cd ${ImageMagick_Ver}.tar.xz ${ImageMagick_Ver}
         #fi
 
         ./configure --prefix=/usr/local/imagemagick \
@@ -66,8 +65,8 @@ Install_ImageMagick()
     #    Download_Files ${Imagickold_DL} imagick-3.1.2.tgz
     #    Tar_Cd imagick-3.1.2.tgz imagick-3.1.2
     #else
-        Download_Files ${Imagick_DL} ${Imagick_Ver}.tgz
-        Tar_Cd ${Imagick_Ver}.tgz ${Imagick_Ver}
+    Download_Files ${Imagick_DL} ${Imagick_Ver}.tgz
+    Tar_Cd ${Imagick_Ver}.tgz ${Imagick_Ver}
     #fi
     ${PHP_Path}/bin/phpize || {
         Echo_Red "imagick phpize failed!"
@@ -81,7 +80,7 @@ Install_ImageMagick()
     ldconfig
     cd ${cur_dir}/src
 
-    cat >${PHP_Path}/conf.d/008-imagick.ini<<EOF
+    cat >${PHP_Path}/conf.d/008-imagick.ini <<EOF
 extension = "imagick.so"
 EOF
 
@@ -95,8 +94,7 @@ EOF
     Restart_PHP
 }
 
-Uninstall_ImageMagick()
-{
+Uninstall_ImageMagick() {
     echo "You will uninstall ImageMagick..."
     Press_Start
     rm -f ${PHP_Path}/conf.d/008-imagick.ini
