@@ -675,12 +675,12 @@ Upgrade_MySQL() {
         exit 1
     fi
 
-    if [ "$(${cur_dir}/include/version_compare ${cur_mysql_version} ${mysql_version})" = "1" ]; then
-        Echo_Red "Refusing downgrade from ${cur_mysql_version} to ${mysql_version}."
-        exit 1
-    fi
+    #if [ "$(${cur_dir}/include/version_compare ${cur_mysql_version} ${mysql_version})" = "1" ]; then
+    #    Echo_Red "Refusing downgrade from ${cur_mysql_version} to ${mysql_version}."
+    #    exit 1
+    #fi
 
-    if echo "${mysql_version}" | grep -Eqi '^(8\.0\.|8\.4\.)'; then
+    if echo "${mysql_version}" | grep -Eqi '^(5\.7\.|8\.0\.|8\.4\.)'; then
         echo "You will upgrade MySQL to version:$mysql_version"
     else
         Echo_Red "Error: You input MySQL Version was:${mysql_version}"
@@ -793,6 +793,8 @@ Upgrade_MySQL() {
         Upgrade_MySQL80
     elif [ "${mysql_short_version}" = "8.4" ]; then
         Upgrade_MySQL84
+    elif [ "${mysql_short_version}" = "5.7" ]; then
+        Upgrade_MySQL57
     else
         Echo_Red "We only support to upgrade MySQL to 8.0.x and 8.4.x"
         exit 1

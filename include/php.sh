@@ -69,7 +69,7 @@ PHP_with_Libzip() {
                 Install_Libzip
                 with_libzip="--enable-zip --with-libzip=${Custom_Libzip_Path}"
                 LDFLAGS_TEMP="-Wl,-rpath=${Custom_Libzip_Path}/lib"
-            else 
+            else
                 Custom_Libzip_Path="/usr/local/${Libzip_Ver}"
                 Install_Libzip
                 #with_libzip='--enable-zip --with-libzip'
@@ -109,10 +109,10 @@ PHP_with_openssl() {
         with_openssl='--with-openssl=/usr/local/openssl'
         Custom_Openssl_Path="/usr/local/openssl"
         if [ "${PHP_Use_PKG}" = 'y' ]; then
-        # export path so that php and curl compiler can find it
+            # export path so that php and curl compiler can find it
             PKG_CONFIG_PATH_TEMP="/usr/local/openssl/lib/pkgconfig"
-#            CPPFLAGS_TEMP="-I/usr/local/openssl1.1.1/include"
-#            LDFLAGS_TEMP="-L/usr/local/openssl1.1.1/lib"
+            #            CPPFLAGS_TEMP="-I/usr/local/openssl1.1.1/include"
+            #            LDFLAGS_TEMP="-L/usr/local/openssl1.1.1/lib"
         fi
     elif [ "${UseNewOpenssl}" = "y" ]; then
         Install_Openssl_New
@@ -132,10 +132,10 @@ PHP_with_openssl() {
 PHP_Openssl_Export() {
     if [ "${UseNewOpenssl}" = "y" ]; then
         if [ "${PHP_Use_PKG}" = 'y' ]; then
-        # export path so that php and curl compiler can find it
+            # export path so that php and curl compiler can find it
             PKG_CONFIG_PATH_TEMP="/usr/local/openssl1.1.1/lib/pkgconfig"
-#            CPPFLAGS_TEMP="-I/usr/local/openssl1.1.1/include"
-#            LDFLAGS_TEMP="-L/usr/local/openssl1.1.1/lib"
+            #            CPPFLAGS_TEMP="-I/usr/local/openssl1.1.1/include"
+            #            LDFLAGS_TEMP="-L/usr/local/openssl1.1.1/lib"
         fi
     fi
     #if echo "${php_version}" | grep -Eqi '^8\.[1-4]\.*' || echo "${Php_Ver}" | grep -Eqi "php-8\.[1-4]\.*"; then
@@ -195,7 +195,7 @@ PHP_with_Bz2() {
     if [ "${Enable_PHP_Bz2}" = "n" ]; then
         with_bz2=''
     else
-#        Install_Libzip
+        #        Install_Libzip
         with_bz2='--with-bz2'
     fi
 }
@@ -209,7 +209,7 @@ PHP_with_Sodium() {
         if echo "${php_version}" | grep -Eqi '^(7\.[01]|5)\.' || echo "${Php_Ver}" | grep -Eqi "(php-7\.[0-1]\.*|php-5\.*)"; then
             Echo_Red 'Below PHP 7.2 please use " . /addons.sh install sodium " to install the PHP Sodium module.'
             with_sodium=''
-        else   
+        else
             if [ "$PM" = "yum" ]; then
                 # Ensure EPEL is present before installing libsodium-devel
                 if ! rpm -q epel-release oracle-epel-release >/dev/null 2>&1; then
@@ -223,7 +223,7 @@ PHP_with_Sodium() {
             elif [ "$PM" = "apt" ]; then
                 apt-get install -y libsodium-dev
             fi
-            with_sodium='--with-sodium' 
+            with_sodium='--with-sodium'
         fi
     fi
 }
@@ -232,8 +232,8 @@ PHP_with_Imap() {
     echo "Checking IMAP..."
 
     # PHP 8.4+ removed bundled IMAP; install via PECL instead.
-    if echo "${php_version}" | grep -Eqi '^8\.[4-9]\.' || \
-       echo "${Php_Ver}" | grep -Eqi "php-8\.[4-9]\."; then
+    if echo "${php_version}" | grep -Eqi '^8\.[4-9]\.' ||
+        echo "${Php_Ver}" | grep -Eqi "php-8\.[4-9]\."; then
         with_imap=''
         return 0
     fi
@@ -250,7 +250,10 @@ PHP_with_Imap() {
             echo "UW IMAP c-client already built at /usr/local/imap-ssl, skipping."
         else
             Echo_Blue "[+] Building UW IMAP c-client"
-            cd "${cur_dir}/src" || { Echo_Red "Failed to enter source directory for UW IMAP."; exit 1; }
+            cd "${cur_dir}/src" || {
+                Echo_Red "Failed to enter source directory for UW IMAP."
+                exit 1
+            }
             rm -rf "${cur_dir}/src/imap-2007f_upstream"
             Download_Files_Exit \
                 https://github.com/uw-imap/imap/archive/refs/tags/imap-2007f_upstream.tar.gz \
@@ -301,12 +304,12 @@ PHP_with_Imap() {
             yum -y install libc-client-devel krb5-devel uw-imap-devel
 
             # EL9/EL10: libc-client was dropped from EPEL; fall back to Remi RPMs
-            if echo "${RHEL_Version}" | grep -Eqi "^(9|10)" || \
-               echo "${Alma_Version}" | grep -Eqi "^(9|10)" || \
-               echo "${Rocky_Version}" | grep -Eqi "^(9|10)"; then
-                if echo "${RHEL_Version}" | grep -Eqi "^10" || \
-                   echo "${Alma_Version}" | grep -Eqi "^10" || \
-                   echo "${Rocky_Version}" | grep -Eqi "^10"; then
+            if echo "${RHEL_Version}" | grep -Eqi "^(9|10)" ||
+                echo "${Alma_Version}" | grep -Eqi "^(9|10)" ||
+                echo "${Rocky_Version}" | grep -Eqi "^(9|10)"; then
+                if echo "${RHEL_Version}" | grep -Eqi "^10" ||
+                    echo "${Alma_Version}" | grep -Eqi "^10" ||
+                    echo "${Rocky_Version}" | grep -Eqi "^10"; then
                     libc_client_rpm="libc-client-2007f-32.el10.remi.${ARCH}.rpm"
                     uw_imap_devel_rpm="uw-imap-devel-2007f-32.el10.remi.${ARCH}.rpm"
                     libc_client_DL="${libc_client_2007f_el10_DL}"
@@ -317,11 +320,11 @@ PHP_with_Imap() {
                     libc_client_DL="${libc_client_2007f_el9_DL}"
                     uw_imap_devel_DL="${uw_imap_devel_2007f_el9_DL}"
                 fi
-                if ! rpm -q libc-client >/dev/null 2>&1 || \
-                   ! rpm -q uw-imap-devel >/dev/null 2>&1; then
+                if ! rpm -q libc-client >/dev/null 2>&1 ||
+                    ! rpm -q uw-imap-devel >/dev/null 2>&1; then
                     if [ "${CheckMirror}" = "n" ]; then
                         rpm -Uvh "${cur_dir}/src/${libc_client_rpm}" \
-                                 "${cur_dir}/src/${uw_imap_devel_rpm}"
+                            "${cur_dir}/src/${uw_imap_devel_rpm}"
                     else
                         rpm -Uvh "${libc_client_DL}"
                         rpm -Uvh "${uw_imap_devel_DL}"
@@ -377,9 +380,9 @@ PHP_Install_Intl() {
         fi
     fi
     if echo "${php_version}" | grep -Eqi '^7\.4\.' || echo "${Php_Ver}" | grep -Eqi "php-7\.4\."; then
-    # for best performance
-    #   if [[ "${local_icu_version}" -lt 56 || "${local_icu_version}" -gt 69 ]]; then
-    # for best compatible
+        # for best performance
+        #   if [[ "${local_icu_version}" -lt 56 || "${local_icu_version}" -gt 69 ]]; then
+        # for best compatible
         if [[ "${local_icu_version}" -lt 56 ]]; then
             Install_Icu671
             php_with_custom_icu='y'
@@ -413,16 +416,16 @@ PHP_with_Intl() {
     echo "Checking ICU..."
     Get_ICU_Version
     echo "System ICU version is ${local_icu_version}, detected by ${detected_icu_method}"
-    
+
     php_with_custom_icu='n'
     #PHP_Install_ICU
 
-# ICU >= 68 introduces TRUE and FALSE macros in some of its headers, which causes compilation failure for PHP 8.1 and older that does not define these macros in its internal C++ code.
-# Official fix was introduced in PHP 7.4.13, PHP 7.3.25, and the final release of PHP 8.0.0. For older PHP versions, we need to set compiler flags to define these macros to avoid compilation failure. 
-# Usually need workaround:
-# PHP 7.2.x or older + ICU >= 68
-# PHP 7.3.0 - 7.3.24 + ICU >= 68
-# PHP 7.4.0 - 7.4.12 + ICU >= 68
+    # ICU >= 68 introduces TRUE and FALSE macros in some of its headers, which causes compilation failure for PHP 8.1 and older that does not define these macros in its internal C++ code.
+    # Official fix was introduced in PHP 7.4.13, PHP 7.3.25, and the final release of PHP 8.0.0. For older PHP versions, we need to set compiler flags to define these macros to avoid compilation failure.
+    # Usually need workaround:
+    # PHP 7.2.x or older + ICU >= 68
+    # PHP 7.3.0 - 7.3.24 + ICU >= 68
+    # PHP 7.4.0 - 7.4.12 + ICU >= 68
     if [ "${local_icu_version}" -gt 68 ]; then
         if echo "${php_version}" | grep -Eqi '^7\.2\.' && ! echo "${Php_Ver}" | grep -Eqi '^php-7\.2\.'; then
             echo "GCC Compiler flags need to be set for ICU 68+ with PHP 7.2 or older"
@@ -452,8 +455,8 @@ PHP_With_Libxml2() {
                 Tar_Cd ${Libxml2_Ver}.tar.xz ${Libxml2_Ver}
                 #PKG_CONFIG_PATH=${php_with_custom_icu_prefix}/lib/pkgconfig
                 CPPFLAGS="-I${php_with_custom_icu_prefix}/include" \
-                LDFLAGS="-L${php_with_custom_icu_prefix}/lib -Wl,-rpath,${php_with_custom_icu_prefix}/lib" \
-                ./configure \
+                    LDFLAGS="-L${php_with_custom_icu_prefix}/lib -Wl,-rpath,${php_with_custom_icu_prefix}/lib" \
+                    ./configure \
                     --prefix=/usr/local/libxml2_icu"${local_icu_version}" \
                     --with-icu \
                     --without-python
@@ -476,7 +479,7 @@ PHP_With_Libxml2() {
         with_libxml_dir=""
         echo "PHP is using system ICU. No build needed"
     fi
-    
+
 }
 
 PHP_PEAR_Reset() {
@@ -510,37 +513,35 @@ PHP_ENV_UNSET() {
         unset CC
         unset CXX
     fi
-#    PHP_GCC14_Unset
+    #    PHP_GCC14_Unset
 }
 
 PHP_ENV_SET() {
     PHP_PEAR_Reset
-        if [[ -n "${PKG_CONFIG_PATH_TEMP}" ]]; then
-            export PKG_CONFIG_PATH="${PKG_CONFIG_PATH_TEMP}"
-            #export CPPFLAGS="${CPPFLAGS_TEMP}"
-            echo "PKG_CONFIG_PATH is set to ${PKG_CONFIG_PATH}"
-            #echo "CPPFLAGS is set to ${CPPFLAGS}"
+    if [[ -n "${PKG_CONFIG_PATH_TEMP}" ]]; then
+        export PKG_CONFIG_PATH="${PKG_CONFIG_PATH_TEMP}"
+        #export CPPFLAGS="${CPPFLAGS_TEMP}"
+        echo "PKG_CONFIG_PATH is set to ${PKG_CONFIG_PATH}"
+        #echo "CPPFLAGS is set to ${CPPFLAGS}"
 
-        else
-            echo "No PKG Environment EXPORT required."
-        fi
+    else
+        echo "No PKG Environment EXPORT required."
+    fi
 
-        if [[ -n "${LDFLAGS_TEMP}" ]]; then
-            export LDFLAGS="${LDFLAGS_TEMP}"  
-            echo "LDFLAGS is set to ${LDFLAGS}"
-        else
-            echo "No LDFLAGS Environment EXPORT required."
-        fi
+    if [[ -n "${LDFLAGS_TEMP}" ]]; then
+        export LDFLAGS="${LDFLAGS_TEMP}"
+        echo "LDFLAGS is set to ${LDFLAGS}"
+    else
+        echo "No LDFLAGS Environment EXPORT required."
+    fi
 
-
-
-#    if echo "${php_version}" | grep -Eqi '^7\.[1-3]\.' && echo "${Php_Ver}" | grep -Eqi '^php-7\.[1-3]\.'; then
-#            echo "Compiler flags need to be set"
-#            export CXX="g++ -DTRUE=1 -DFALSE=0"
-#            export CC="gcc -DTRUE=1 -DFALSE=0"
-#    else
-#            echo "Compiler flags does not to be set"
-#    fi
+    #    if echo "${php_version}" | grep -Eqi '^7\.[1-3]\.' && echo "${Php_Ver}" | grep -Eqi '^php-7\.[1-3]\.'; then
+    #            echo "Compiler flags need to be set"
+    #            export CXX="g++ -DTRUE=1 -DFALSE=0"
+    #            export CC="gcc -DTRUE=1 -DFALSE=0"
+    #    else
+    #            echo "Compiler flags does not to be set"
+    #    fi
 }
 
 Check_PHP_Option() {
@@ -646,9 +647,9 @@ Install_Composer() {
     fi
 
     # For known PHP versions use the official installer (SHA-384 verified)
-    if echo "${PHPSelect}" | grep -Eqi '^(1[0-6]|[1-9])$' || \
-       echo "${php_version}" | grep -Eqi '^(7\.[0-4]\.|8\.[0-9]\.)' || \
-       echo "${Php_Ver}" | grep -Eqi "php-(7\.[0-4]\.|8\.[0-9]\.)"; then
+    if echo "${PHPSelect}" | grep -Eqi '^(1[0-6]|[1-9])$' ||
+        echo "${php_version}" | grep -Eqi '^(7\.[0-4]\.|8\.[0-9]\.)' ||
+        echo "${Php_Ver}" | grep -Eqi "php-(7\.[0-4]\.|8\.[0-9]\.)"; then
         if Install_Composer_Official; then
             echo "Composer installed successfully."
         else
@@ -659,8 +660,8 @@ Install_Composer() {
 
     # Newer/unrecognised PHP version: try the latest GitHub release, fall back to official installer
     if wget --progress=dot:giga --prefer-family=IPv4 --no-check-certificate \
-            -T 120 -t3 https://github.com/composer/composer/releases/latest/download/composer.phar \
-            -O /usr/local/bin/composer; then
+        -T 120 -t3 https://github.com/composer/composer/releases/latest/download/composer.phar \
+        -O /usr/local/bin/composer; then
         chmod +x /usr/local/bin/composer
         echo "Composer installed successfully."
     else
@@ -748,13 +749,13 @@ PHP_CPP17_Patch() {
             echo "No C++17 patch is needed for PHP ${Php_Ver}"
         fi
     elif [ "${Php_Ver_Short}" = "8.1" ] && [ "${Php_Third_Ver}" -lt 33 ] && [ "$local_icu_version" -ge 75 ]; then
-            echo "C++17 patch is required for ICU 75+"
-            echo "Apply C++17 patch to ${Php_Ver}..."
-            patch -p1 <"${cur_dir}"/src/patch/php-"${Php_Ver_Short}"-icu-74-c++17.patch || {
-                Echo_Red "Failed to apply C++17 patch to ${Php_Ver}."
-                exit 1
-            }
-            Php_Buildconf='y'
+        echo "C++17 patch is required for ICU 75+"
+        echo "Apply C++17 patch to ${Php_Ver}..."
+        patch -p1 <"${cur_dir}"/src/patch/php-"${Php_Ver_Short}"-icu-74-c++17.patch || {
+            Echo_Red "Failed to apply C++17 patch to ${Php_Ver}."
+            exit 1
+        }
+        Php_Buildconf='y'
     else
         echo "No C++17 patch is needed for ${Php_Ver}"
     fi
@@ -766,6 +767,54 @@ PHP_ICU_Patch() {
     PHP_CPP17_Patch
     PHP_ICU70_Patch
     PHP_ICU70_PKGCONFIG_Patch
+}
+
+# Function to check if version $1 is greater than or equal to $2
+version_ge() {
+    [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
+}
+
+# For php 7.3, 7.4, 8.0, 8.1 with libxml2 2.12+
+PHP_Libxml2_Patch() {
+    if [[ "${Php_Ver_Short}" =~ (7.3|7.4|8.0|8.1) ]]; then
+        echo "Checking if Libxml2 patch is needed..."
+
+        # Check for Debian 13's "really" rollback trick
+        # Debian 13 uses a faked 2.12.x version string but is actually 2.9.14 under the hood.
+        if command -v dpkg >/dev/null 2>&1; then
+            local debian_pkg_ver
+            debian_pkg_ver=$(dpkg-query -W -f='${Version}' libxml2-dev 2>/dev/null)
+            if [[ "$debian_pkg_ver" == *"really"* ]]; then
+                echo "[-] Debian rollback detected ($debian_pkg_ver). No patch needed."
+                return 1
+            fi
+        fi
+
+        # Get system libxml2 version
+        local libxml_ver
+        if command -v pkg-config >/dev/null 2>&1; then
+            libxml_ver=$(pkg-config --modversion libxml-2.0 2>/dev/null)
+        elif command -v xml2-config >/dev/null 2>&1; then
+            libxml_ver=$(xml2-config --version 2>/dev/null)
+        else
+            echo "[-] libxml2 not found on system. Assuming no patch needed."
+            return 1
+        fi
+
+        # If libxml2 version is greater than 2.12.0, apply the patch
+        if version_ge "${libxml_ver}" "2.12.0"; then
+            echo "libxml2 ${libxml_ver} is 2.12.0 or newer. Applying patch..."
+            patch -p1 <${cur_dir}/src/patch/libxml-21200-php-8.0.patch || {
+                Echo_Red "Failed to apply Freetype patch to ${Php_Ver}."
+                exit 1
+            }
+
+        else
+            echo "libxml2 ${libxml_ver} is older than 2.12.0. No Patch required."
+        fi
+
+    fi
+
 }
 
 # php 7.3 and earlier using freetype-config which does not exist on modern linux distros
@@ -829,7 +878,7 @@ PHP_Main_Phpconfig_Patch() {
             echo "No main php config patch is needed for ${Php_Ver}"
         fi
     fi
-}   
+}
 
 PHP_Dom_Iterators_Patch() {
     if [[ "${Php_Ver_Short}" =~ 7.0 ]]; then
@@ -865,8 +914,8 @@ PHP_Autoconf_Patch() {
 }
 
 # -Wno-incompatible-pointer-types solves the following error:
-# /src/php-5.6.40/Zend/zend_API.h:122:45: error: initialization of ‘void (*)(void *)’ from 
-# incompatible pointer type ‘void (*)(zend_zlib_globals *)’ {aka ‘void (*)(struct _zend_zlib_globals *)’} 
+# /src/php-5.6.40/Zend/zend_API.h:122:45: error: initialization of ‘void (*)(void *)’ from
+# incompatible pointer type ‘void (*)(zend_zlib_globals *)’ {aka ‘void (*)(struct _zend_zlib_globals *)’}
 # -Wno-implicit-int -Wno-implicit-function-declaration
 # /src/php-5.6.40/ext/fileinfo/libmagic/funcs.c:440:1: error: return type defaults to ‘int’ [-Wimplicit-int]
 # 440 | file_replace(struct magic_set *ms, const char *pat, const char *rep)
@@ -910,13 +959,14 @@ PHP_Patch() {
     ## for debug only
     echo "Checking if there's any patch needed for ${Php_Ver}..."
     PHP_ICU_Patch
+    PHP_Libxml2_Patch
     PHP_Freetype_Patch
     PHP_Readdir_r_Patch
     PHP_Cast_Patch
     PHP_Main_Phpconfig_Patch
     PHP_Dom_Iterators_Patch
     #PHP_Autoconf_Patch
-   if [ "${Php_Buildconf}" = 'y' ]; then
+    if [ "${Php_Buildconf}" = 'y' ]; then
         if [ "${Php_Ver_Short}" = "5.6" ]; then
             Check_Autoconf_Version
             if [ "${Autoconf_Second_Digit}" -gt 69 ]; then
@@ -944,7 +994,7 @@ PHP_Set_Systemd() {
         if [ "${Php_Ver_Short}" = "5.6" ]; then
             \cp ${cur_dir}/init.d/php-fpm.service5.6 /etc/systemd/system/php-fpm.service
         else
-            \cp ${cur_dir}/src/${Php_Ver}/sapi/fpm/php-fpm.service /etc/systemd/system/php-fpm.service        
+            \cp ${cur_dir}/src/${Php_Ver}/sapi/fpm/php-fpm.service /etc/systemd/system/php-fpm.service
             sed -i 's/^ProtectSystem=/#ProtectSystem=/g' /etc/systemd/system/php-fpm.service
             sed -i 's/^PrivateTmp=/#PrivateTmp=/g' /etc/systemd/system/php-fpm.service
         fi
@@ -982,7 +1032,7 @@ request_terminate_timeout = 100
 request_slowlog_timeout = 0
 slowlog = var/log/slow.log
 EOF
-    fi    
+    fi
 }
 
 PHP_CP_Ini() {
@@ -1329,7 +1379,10 @@ eof
         ts="$(date +%Y%m%d%H%M%S)"
         mv "${Default_Website_Dir}/phpmyadmin" "${Default_Website_Dir}/phpmyadmin.${ts}.bak"
     fi
-    [ -s "${PhpMyAdmin_Ver}.tar.xz" ] || { Echo_Red "phpMyAdmin tarball missing"; return 1; }
+    [ -s "${PhpMyAdmin_Ver}.tar.xz" ] || {
+        Echo_Red "phpMyAdmin tarball missing"
+        return 1
+    }
     tar Jxf "${PhpMyAdmin_Ver}.tar.xz"
     mv ${PhpMyAdmin_Ver} ${Default_Website_Dir}/phpmyadmin
     \cp ${cur_dir}/conf/config.inc.php ${Default_Website_Dir}/phpmyadmin/config.inc.php

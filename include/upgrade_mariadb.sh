@@ -96,10 +96,10 @@ Upgrade_MariaDB() {
         exit 1
     fi
 
-    if [ "$(${cur_dir}/include/version_compare ${cur_mariadb_version} ${mariadb_version})" = "1" ]; then
-        Echo_Red "Refusing downgrade from ${cur_mariadb_version} to ${mariadb_version}."
-        exit 1
-    fi
+    #if [ "$(${cur_dir}/include/version_compare ${cur_mariadb_version} ${mariadb_version})" = "1" ]; then
+    #    Echo_Red "Refusing downgrade from ${cur_mariadb_version} to ${mariadb_version}."
+    #    exit 1
+    #fi
 
     if echo "${mariadb_version}" | grep -Eqi '^10\.6\.'; then
         if [[ "${DB_ARCH}" = "x86_64" ]]; then
