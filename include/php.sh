@@ -688,7 +688,7 @@ PHP_Openssl3_Patch() {
 }
 
 PHP_ICU70_PKGCONFIG_Patch() {
-    if [[ "${Php_Ver_Short}" =~ (5.6|7.0) ]]; then
+    if [[ "${Php_Ver_Short}" =~ (5\.6|7\.0) ]]; then
         echo "checking if ICU 7x+ pkgconfig patch is needed..."
         if [ "$local_icu_version" -ge 70 ]; then
             echo "icu 7x+, apply a pkgconfig patch to ${Php_Ver}..."
@@ -718,7 +718,7 @@ PHP_ICU70_PKGCONFIG_Patch() {
 }
 
 PHP_ICU70_Patch() {
-    if [[ "${Php_Ver_Short}" =~ (7.1|7.2|7.3) ]]; then
+    if [[ "${Php_Ver_Short}" =~ (7\.1|7\.2|7\.3) ]]; then
         echo "checking if ICU 7x+ patch is needed..."
         if [ "$local_icu_version" -ge 70 ]; then
             echo "icu 7x+, apply a patch to ${Php_Ver}..."
@@ -736,7 +736,7 @@ PHP_ICU70_Patch() {
 # while PHP 8.1 and older used an older standard for its internal C++ code.
 # PHP 8.1.33 and 8.1.34 fixes this issue, so only need patch for 7.4, 8.0 and 8.1 below 8.1.33
 PHP_CPP17_Patch() {
-    if [[ "${Php_Ver_Short}" =~ (7.4|8.0) ]]; then
+    if [[ "${Php_Ver_Short}" =~ (7\.4|8\.0) ]]; then
         if [ "$local_icu_version" -ge 75 ]; then
             echo "C++17 patch is required for ICU 75+"
             echo "Apply C++17 patch to ${Php_Ver}..."
@@ -776,7 +776,7 @@ version_ge() {
 
 # For php 7.3, 7.4, 8.0 with libxml2 2.12+
 PHP_Libxml2_Patch() {
-    if [[ "${Php_Ver_Short}" =~ (7.3|7.4|8.0) ]]; then
+    if [[ "${Php_Ver_Short}" =~ (7\.3|7\.4|8\.0) ]]; then
         echo "Checking if Libxml2 patch is needed..."
 
         # Check for Debian 13's "really" rollback trick
@@ -803,11 +803,19 @@ PHP_Libxml2_Patch() {
 
         # If libxml2 version is greater than 2.12.0, apply the patch
         if version_ge "${libxml_ver}" "2.12.0"; then
-            echo "libxml2 ${libxml_ver} is 2.12.0 or newer. Applying patch..."
-            patch -p1 <${cur_dir}/src/patch/libxml-21200-php-8.0.patch || {
-                Echo_Red "Failed to apply Freetype patch to ${Php_Ver}."
-                exit 1
-            }
+            echo "libxml2 ${libxml_ver} is greater than or equal to 2.12.0. Applying patch..."
+            if [[ "${Php_Ver_Short}" =~ (7\.3|7\.4) ]]; then
+                patch -p1 <${cur_dir}/src/patch/libxml-21200-php-7.0.patch || {
+                    Echo_Red "Failed to apply Libxml2 patch to ${Php_Ver}."
+                    exit 1
+                }
+            fi
+            if [[ "${Php_Ver_Short}" =~ (8\.0) ]]; then
+                patch -p1 <${cur_dir}/src/patch/libxml-21200-php-8.0.patch || {
+                    Echo_Red "Failed to apply Libxml2 patch to ${Php_Ver}."
+                    exit 1
+                }
+            fi
 
         else
             echo "libxml2 ${libxml_ver} is older than 2.12.0. No Patch required."
@@ -820,7 +828,7 @@ PHP_Libxml2_Patch() {
 # php 7.3 and earlier using freetype-config which does not exist on modern linux distros
 # therefore we need to patch php source to use pkg-config instead
 PHP_Freetype_Patch() {
-    if [[ "${Php_Ver_Short}" =~ (5.6|7.0|7.1|7.2|7.3) ]]; then
+    if [[ "${Php_Ver_Short}" =~ (5\.6|7\.0|7\.1|7\.2|7\.3) ]]; then
         echo "checking if Freetype patch is needed..."
         if ! command -v freetype-config >/dev/null 2>&1; then
             echo "Freetype patch is required for ${Php_Ver}"
@@ -836,7 +844,7 @@ PHP_Freetype_Patch() {
 }
 
 PHP_Readdir_r_Patch() {
-    if [[ "${Php_Ver_Short}" =~ (7.0|7.1|7.2|7.3) ]]; then
+    if [[ "${Php_Ver_Short}" =~ (7\.0|7\.1|7\.2|7\.3) ]]; then
         echo "checking if readdir_r patch is needed..."
         if [ "${Main_Gcc_Ver}" -ge 14 ] && [ "${Glibc_Second_Ver}" -ge 24 ]; then
             echo "readdir_r patch is required for ${Php_Ver} with glibc ${Main_Glibc_Ver}"
@@ -851,7 +859,7 @@ PHP_Readdir_r_Patch() {
 }
 
 PHP_Cast_Patch() {
-    if [[ "${Php_Ver_Short}" =~ (7.0|7.1|7.2) ]]; then
+    if [[ "${Php_Ver_Short}" =~ (7\.0|7\.1|7\.2) ]]; then
         echo "checking if cast patch is needed..."
         if [ "${Main_Gcc_Ver}" -ge 14 ] && [ "${Glibc_Second_Ver}" -ge 24 ]; then
             echo "cast patch is required for ${Php_Ver} with gcc ${Main_Gcc_Ver}"
@@ -866,7 +874,7 @@ PHP_Cast_Patch() {
 }
 
 PHP_Main_Phpconfig_Patch() {
-    if [[ "${Php_Ver_Short}" =~ (7.0|7.1) ]]; then
+    if [[ "${Php_Ver_Short}" =~ (7\.0|7\.1) ]]; then
         echo "checking if main php config patch is needed..."
         if [ "${Main_Gcc_Ver}" -ge 14 ]; then
             echo "main php config patch is required for ${Php_Ver} with gcc ${Main_Gcc_Ver}"
@@ -881,7 +889,7 @@ PHP_Main_Phpconfig_Patch() {
 }
 
 PHP_Dom_Iterators_Patch() {
-    if [[ "${Php_Ver_Short}" =~ 7.0 ]]; then
+    if [[ "${Php_Ver_Short}" =~ (7\.0) ]]; then
         echo "checking if DOM Iterators patch is needed..."
         if [ "${Main_Gcc_Ver}" -ge 14 ] && [ "${DISTRO}" = "Debian" ] && [ "${DISTRO_Version}" -ge "13" ]; then
             echo "DOM Iterators patch is required for ${Php_Ver} with gcc ${Main_Gcc_Ver}"
@@ -898,7 +906,7 @@ PHP_Dom_Iterators_Patch() {
 
 # only for php 5.6
 PHP_Autoconf_Patch() {
-    if [[ "${Php_Ver_Short}" =~ 5.6 ]]; then
+    if [[ "${Php_Ver_Short}" =~ (5\.6) ]]; then
         echo "checking if autoconf patch is needed..."
         if [ "${Main_Gcc_Ver}" -ge 14 ]; then
             echo "autoconf patch is required for ${Php_Ver} with gcc ${Main_Gcc_Ver}"
