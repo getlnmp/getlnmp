@@ -56,8 +56,8 @@ PHP_with_Libzip() {
         if [ "${BuildOpenssl}" = "y" ]; then
             Custom_Libzip_Path="/usr/local/${Libzip_Ver}"
             Install_Libzip
-            PKG_CONFIG_PATH_TEMP="$PKG_CONFIG_PATH_TEMP:${Custom_Libzip_Path}/lib/pkgconfig"
-            LDFLAGS_TEMP="-Wl,-rpath=${Custom_Libzip_Path}/lib"
+            PKG_CONFIG_PATH_TEMP="$PKG_CONFIG_PATH_TEMP:${Custom_Libzip_Path}/${Libzip_lib}/pkgconfig"
+            LDFLAGS_TEMP="-Wl,-rpath=${Custom_Libzip_Path}/${Libzip_lib}"
             with_libzip="--with-zip=${Custom_Libzip_Path}"
         else
             with_libzip='--with-zip'
@@ -68,13 +68,13 @@ PHP_with_Libzip() {
                 Custom_Libzip_Path="/usr/local/old${Libzip_Ver}"
                 Install_Libzip
                 with_libzip="--enable-zip --with-libzip=${Custom_Libzip_Path}"
-                LDFLAGS_TEMP="-Wl,-rpath=${Custom_Libzip_Path}/lib"
+                LDFLAGS_TEMP="-Wl,-rpath=${Custom_Libzip_Path}/${Libzip_lib}"
             else
                 Custom_Libzip_Path="/usr/local/${Libzip_Ver}"
                 Install_Libzip
                 #with_libzip='--enable-zip --with-libzip'
                 with_libzip="--enable-zip --with-libzip=${Custom_Libzip_Path}"
-                LDFLAGS_TEMP="-Wl,-rpath=${Custom_Libzip_Path}/lib"
+                LDFLAGS_TEMP="-Wl,-rpath=${Custom_Libzip_Path}/${Libzip_lib}"
             fi
         else
             with_libzip='--enable-zip'
@@ -774,9 +774,9 @@ version_ge() {
     [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
 }
 
-# For php 7.3, 7.4, 8.0, 8.1 with libxml2 2.12+
+# For php 7.3, 7.4, 8.0 with libxml2 2.12+
 PHP_Libxml2_Patch() {
-    if [[ "${Php_Ver_Short}" =~ (7.3|7.4|8.0|8.1) ]]; then
+    if [[ "${Php_Ver_Short}" =~ (7.3|7.4|8.0) ]]; then
         echo "Checking if Libxml2 patch is needed..."
 
         # Check for Debian 13's "really" rollback trick

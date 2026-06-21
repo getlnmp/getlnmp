@@ -4,9 +4,9 @@
 Set_Timezone() {
     local tz="${OS_Timezone:-}"
     if [ -z "${tz}" ]; then
-        tz=$(timedatectl show -p Timezone --value 2>/dev/null \
-             || cat /etc/timezone 2>/dev/null \
-             || readlink -f /etc/localtime 2>/dev/null | sed 's@.*/zoneinfo/@@')
+        tz=$(timedatectl show -p Timezone --value 2>/dev/null ||
+            cat /etc/timezone 2>/dev/null ||
+            readlink -f /etc/localtime 2>/dev/null | sed 's@.*/zoneinfo/@@')
     fi
     [ -z "${tz}" ] && tz="UTC"
     Echo_Blue "[+] Setting timezone to ${tz}..."
@@ -346,41 +346,41 @@ Ubuntu_Deadline() {
 Enable_RHEL_CRB() {
     Get_RHEL_Version
     case "${RHEL_Ver}" in
-        8|9|10)
-            if command -v subscription-manager >/dev/null 2>&1; then
-                subscription-manager repos --enable "codeready-builder-for-rhel-${RHEL_Ver}-${DB_ARCH}-rpms" || {
-                    Echo_Yellow "Failed to enable CodeReady Builder automatically."
-                    Echo_Yellow "Please check available repo IDs with: subscription-manager repos --list | grep -i codeready"
-                }
-            fi
-            ;;
+    8 | 9 | 10)
+        if command -v subscription-manager >/dev/null 2>&1; then
+            subscription-manager repos --enable "codeready-builder-for-rhel-${RHEL_Ver}-${DB_ARCH}-rpms" || {
+                Echo_Yellow "Failed to enable CodeReady Builder automatically."
+                Echo_Yellow "Please check available repo IDs with: subscription-manager repos --list | grep -i codeready"
+            }
+        fi
+        ;;
     esac
 }
 
 Modify_Source() {
     case "${DISTRO}" in
-        RHEL)
-            if command -v subscription-manager >/dev/null 2>&1 && subscription-manager status >/dev/null 2>&1; then
-                Echo_Blue "RHEL subscription exists on the system, skip setting up third-party sources."
-                Enable_RHEL_CRB
+    RHEL)
+        if command -v subscription-manager >/dev/null 2>&1 && subscription-manager status >/dev/null 2>&1; then
+            Echo_Blue "RHEL subscription exists on the system, skip setting up third-party sources."
+            Enable_RHEL_CRB
+        else
+            if [ "${RHELRepo}" = "local" ]; then
+                Echo_Blue "RHELRepo=local, keep current RHEL repository settings."
             else
-                if [ "${RHELRepo}" = "local" ]; then
-                    Echo_Blue "RHELRepo=local, keep current RHEL repository settings."
-                else
-                    Echo_Red "RHEL subscription is not active."
-                    Echo_Red "Either register the system (subscription-manager register), configure local repos in /etc/yum.repos.d/, then set RHELRepo=local in lnmp.conf."
-                    exit 1
-                fi
+                Echo_Red "RHEL subscription is not active."
+                Echo_Red "Either register the system (subscription-manager register), configure local repos in /etc/yum.repos.d/, then set RHELRepo=local in lnmp.conf."
+                exit 1
             fi
-            ;;
+        fi
+        ;;
 
-        Ubuntu)
-            Ubuntu_Modify_Source
-            ;;
+    Ubuntu)
+        Ubuntu_Modify_Source
+        ;;
 
-        *)
-            Echo_Blue "No source modification needed for ${DISTRO}."
-            ;;
+    *)
+        Echo_Blue "No source modification needed for ${DISTRO}."
+        ;;
     esac
 }
 
@@ -388,19 +388,19 @@ Get_RHEL_Family_Major() {
     local version=""
 
     case "${DISTRO}" in
-        RHEL)
-            Get_RHEL_Version
-            version="${RHEL_Ver}"
-            ;;
-        Rocky)
-            version="${Rocky_Version:-${DISTRO_Version}}"
-            ;;
-        Alma)
-            version="${Alma_Version:-${DISTRO_Version}}"
-            ;;
-        Oracle)
-            version="${Oracle_Version:-${DISTRO_Version}}"
-            ;;
+    RHEL)
+        Get_RHEL_Version
+        version="${RHEL_Ver}"
+        ;;
+    Rocky)
+        version="${Rocky_Version:-${DISTRO_Version}}"
+        ;;
+    Alma)
+        version="${Alma_Version:-${DISTRO_Version}}"
+        ;;
+    Oracle)
+        version="${Oracle_Version:-${DISTRO_Version}}"
+        ;;
     esac
 
     EL_Ver="${version%%.*}"
@@ -411,23 +411,23 @@ Set_RHEL_Family_CRB_Repo() {
     repo_id=""
 
     case "${DISTRO}" in
-        RHEL)
-            if [ -n "${EL_Ver}" ]; then
-                repo_id="codeready-builder-for-rhel-${EL_Ver}-${DB_ARCH}-rpms"
-            fi
-            ;;
-        Rocky|Alma)
-            if [ "${EL_Ver}" = "8" ]; then
-                repo_id="powertools"
-            elif [[ "${EL_Ver}" =~ ^(9|10)$ ]]; then
-                repo_id="crb"
-            fi
-            ;;
-        Oracle)
-            if [[ "${EL_Ver}" =~ ^(8|9|10)$ ]]; then
-                repo_id="ol${EL_Ver}_codeready_builder"
-            fi
-            ;;
+    RHEL)
+        if [ -n "${EL_Ver}" ]; then
+            repo_id="codeready-builder-for-rhel-${EL_Ver}-${DB_ARCH}-rpms"
+        fi
+        ;;
+    Rocky | Alma)
+        if [ "${EL_Ver}" = "8" ]; then
+            repo_id="powertools"
+        elif [[ "${EL_Ver}" =~ ^(9|10)$ ]]; then
+            repo_id="crb"
+        fi
+        ;;
+    Oracle)
+        if [[ "${EL_Ver}" =~ ^(8|9|10)$ ]]; then
+            repo_id="ol${EL_Ver}_codeready_builder"
+        fi
+        ;;
     esac
 
     if [ -z "${repo_id}" ]; then
@@ -574,14 +574,14 @@ Check_Download() {
 }
 
 Make_Install() {
-    make -j"$(nproc)" || make || { 
+    make -j"$(nproc)" || make || {
         Echo_Red "Make Failed!"
         exit 1
-        }
-    make install || { 
+    }
+    make install || {
         Echo_Red "Make Install Failed!"
         exit 1
-        }
+    }
 }
 
 # Need to accept an optional argument for app name to provide more specific error messages
@@ -630,8 +630,7 @@ PHP_Make_Install() {
     PHP_ENV_UNSET
 }
 
-MySQL_Make_Install()
-{
+MySQL_Make_Install() {
     make -j"$(nproc)" || make || {
         Echo_Red "Error: failed to build MySQL."
         return 1
@@ -642,8 +641,7 @@ MySQL_Make_Install()
     }
 }
 
-MariaDB_Make_Install()
-{
+MariaDB_Make_Install() {
     make -j"$(nproc)" || make || {
         Echo_Red "Error: failed to build MariaDB."
         return 1
@@ -658,7 +656,7 @@ MariaDB_Make_Install()
 # autoconf 2.69 is required for php 5.6, but we've dropped support for 5.6
 Install_Autoconf() {
     if [ -s /usr/local/autoconf-2.69/bin/autoconf ] && [ -s /usr/local/autoconf-2.69/bin/autoheader ]; then
-        Echo_Yellow "autoconf 2.69 already installed, skip."       
+        Echo_Yellow "autoconf 2.69 already installed, skip."
     else
         rm -rf /usr/local/autoconf-2.69
         Echo_Blue "[+] Installing ${Autoconf_Ver}"
@@ -707,7 +705,7 @@ Install_Libmcrypt() {
                 Echo_Blue "[+] Installing libmcrypt-dev from apt repository"
                 apt-get -y install libmcrypt-dev
             else
-                Compile_Libmcrypt                
+                Compile_Libmcrypt
             fi
         fi
     else
@@ -747,7 +745,6 @@ Install_Mcrypt() {
     rm -rf ${cur_dir}/src/${Mcypt_Ver}
 }
 
-
 # only for php 5.2. As of PHP 5.3.0, the mhash extension is emulated thru the Hash extension
 # for php 5.3 - php 7.3, '--with-mhash' flag is required and mhash() enabled via the Hash extension.
 # for php 7.4 - php 8.0, '--with-mhash' flag is required and legacy function names is enabled.
@@ -764,7 +761,6 @@ Install_Mhash() {
         return
     fi
 }
-
 
 Compile_Mhash() {
     Echo_Blue "[+] Installing ${Mhash_Ver}"
@@ -833,8 +829,8 @@ Install_Curl() {
         cd ${cur_dir}/src
         Download_Files ${Curl_DL} ${Curl_Ver}.tar.bz2
         Tar_Cd ${Curl_Ver}.tar.bz2 ${Curl_Ver}
-        if [ "${BuildOpenssl}" = "y"  ] ; then
-             ./configure --prefix=/usr/local/curl --enable-ares --without-nss --with-zlib --disable-ldap --disable-ldaps --with-ssl=${Custom_Openssl_Path}
+        if [ "${BuildOpenssl}" = "y" ]; then
+            ./configure --prefix=/usr/local/curl --enable-ares --without-nss --with-zlib --disable-ldap --disable-ldaps --with-ssl=${Custom_Openssl_Path}
         else
             ./configure --prefix=/usr/local/curl --enable-ares --without-nss --with-zlib --with-ssl
         fi
@@ -854,7 +850,7 @@ Install_OldCurl() {
         cd ${cur_dir}/src
         Download_Files ${Curl_DL} ${Curl_Ver}.tar.bz2
         Tar_Cd ${Curl_Ver}.tar.bz2 ${Curl_Ver}
-        if [ "${BuildOpenssl}" = "y"  ] ; then
+        if [ "${BuildOpenssl}" = "y" ]; then
             ./configure --prefix=/usr/local/oldcurl --enable-ares --without-nss --with-zlib --disable-ldap --disable-ldaps --with-ssl=${Custom_Openssl_Path}
         else
             ./configure --prefix=/usr/local/oldcurl --enable-ares --without-nss --with-zlib --with-ssl
@@ -891,7 +887,7 @@ Install_Jemalloc() {
         rm -rf ${cur_dir}/src/${Jemalloc_Ver}
     fi
 
-    echo "/usr/local/jemalloc/lib" > /etc/ld.so.conf.d/jemalloc.conf
+    echo "/usr/local/jemalloc/lib" >/etc/ld.so.conf.d/jemalloc.conf
     ldconfig
 }
 
@@ -910,7 +906,7 @@ Install_TCMalloc() {
         rm -rf ${cur_dir}/src/${TCMalloc_Ver}
     fi
 
-    echo "/usr/local/tcmalloc/lib" > /etc/ld.so.conf.d/tcmalloc.conf
+    echo "/usr/local/tcmalloc/lib" >/etc/ld.so.conf.d/tcmalloc.conf
     ldconfig
 
 }
@@ -1060,9 +1056,9 @@ Download_Boost() {
             MySQL_WITH_BOOST="-DWITH_BOOST=${cur_dir}/src/${Boost_Ver}"
         fi
     elif [[ "${DBSelect}" =~ ^(4|5)$ ]] || echo "${mysql_version}" | grep -Eqi '^8\.'; then
-       # Get_Boost_Ver=$(grep 'SET(BOOST_PACKAGE_NAME' cmake/boost.cmake | grep -oP '\d+(\_\d+){2}')
-       Get_Boost_Ver=$(grep 'SET(BOOST_PACKAGE_NAME' cmake/boost.cmake | cut -d'"' -f2)
-       Boost_Ver_Short=$(echo ${Get_Boost_Ver} | sed 's/boost_//' | tr '_' '.')
+        # Get_Boost_Ver=$(grep 'SET(BOOST_PACKAGE_NAME' cmake/boost.cmake | grep -oP '\d+(\_\d+){2}')
+        Get_Boost_Ver=$(grep 'SET(BOOST_PACKAGE_NAME' cmake/boost.cmake | cut -d'"' -f2)
+        Boost_Ver_Short=$(echo ${Get_Boost_Ver} | sed 's/boost_//' | tr '_' '.')
         if [ -s "${cur_dir}/src/${Get_Boost_Ver}.tar.bz2" ]; then
             [[ -d "${cur_dir}/src/${Get_Boost_Ver}" ]] && rm -rf "${cur_dir}/src/${Get_Boost_Ver}"
             tar jxf ${cur_dir}/src/${Get_Boost_Ver}.tar.bz2 -C ${cur_dir}/src
@@ -1111,7 +1107,7 @@ Install_Openssl() {
 
         rm -rf ${cur_dir}/src/${Openssl_Ver}
 
-        echo "/usr/local/openssl/lib" > /etc/ld.so.conf.d/openssl.conf
+        echo "/usr/local/openssl/lib" >/etc/ld.so.conf.d/openssl.conf
         ldconfig
     fi
 
@@ -1136,10 +1132,10 @@ Install_Openssl_New() {
 
         rm -rf ${cur_dir}/src/${Openssl_New_Ver}
 
-        echo "/usr/local/openssl1.1.1/lib" > /etc/ld.so.conf.d/openssl1.1.1.conf
+        echo "/usr/local/openssl1.1.1/lib" >/etc/ld.so.conf.d/openssl1.1.1.conf
         ldconfig
     fi
-        apache_with_ssl='--with-ssl=/usr/local/openssl1.1.1'
+    apache_with_ssl='--with-ssl=/usr/local/openssl1.1.1'
 }
 
 Install_Openssl3() {
@@ -1160,7 +1156,7 @@ Install_Openssl3() {
         if [ -s /etc/ld.so.conf.d/openssl3.conf ]; then
             rm -rf /etc/ld.so.conf.d/openssl3.conf
         fi
-        echo "/usr/local/openssl3/lib" > /etc/ld.so.conf.d/openssl3.conf
+        echo "/usr/local/openssl3/lib" >/etc/ld.so.conf.d/openssl3.conf
         ldconfig
     fi
 
@@ -1182,7 +1178,7 @@ Install_Nghttp2() {
         rm -rf ${cur_dir}/src/${Nghttp2_Ver}
     fi
     # always (re)assert the dynamic linker path so a missing/stale conf is fixed without a full rebuild
-    echo "/usr/local/nghttp2/lib" > /etc/ld.so.conf.d/nghttp2.conf
+    echo "/usr/local/nghttp2/lib" >/etc/ld.so.conf.d/nghttp2.conf
     ldconfig
 }
 
@@ -1211,8 +1207,8 @@ Install_Libzip() {
             -DCMAKE_BUILD_TYPE=Release \
             -DENABLE_GNUTLS=OFF \
             -DENABLE_OPENSSL=ON
-          # -DENABLE_BZIP2=ON 
-    
+        # -DENABLE_BZIP2=ON
+
         # Build and install
         make -j"$(nproc)" || {
             echo "Failed to build libzip. Please check the error messages above."
@@ -1223,6 +1219,12 @@ Install_Libzip() {
             exit 1
         }
         rm -rf ${cur_dir}/src/${Libzip_Ver}
+    fi
+
+    if [ -d "${Custom_Libzip_Path}/lib64" ]; then
+        Libzip_lib="lib64"
+    else
+        Libzip_lib="lib"
     fi
 
 }
@@ -1327,10 +1329,10 @@ Add_Swap() {
         echo "Add Swap file..."
         [ $(cat /proc/sys/vm/swappiness) -eq 0 ] && sysctl vm.swappiness=10
         echo "Enable Swap..."
-        if dd if=/dev/zero of=/var/swapfile bs=1M count=${DD_Count} \
-            && chmod 0600 /var/swapfile \
-            && /sbin/mkswap /var/swapfile \
-            && /sbin/swapon /var/swapfile; then
+        if dd if=/dev/zero of=/var/swapfile bs=1M count=${DD_Count} &&
+            chmod 0600 /var/swapfile &&
+            /sbin/mkswap /var/swapfile &&
+            /sbin/swapon /var/swapfile; then
             if ! grep -q '^/var/swapfile' /etc/fstab; then
                 echo "/var/swapfile swap swap defaults 0 0" >>/etc/fstab
             fi
