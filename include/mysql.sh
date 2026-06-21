@@ -7,7 +7,6 @@
 # mysql 8.4+    : openssl 3.x
 # for best performance, mysql 5.7 should be compiled with openssl 1.1.1, mysql 8.0+ should be compiled with openssl 3.x
 
-
 # deprecated as we dropped support for mysql 5.5
 #MySQL_ARM_Patch()
 #{
@@ -54,8 +53,7 @@ MySQL_Add_UG() {
     fi
 }
 
-MySQL_SQL_Escape()
-{
+MySQL_SQL_Escape() {
     local value=$1
     local sq="'"
 
@@ -64,10 +62,7 @@ MySQL_SQL_Escape()
     printf "%s" "${value}"
 }
 
-
-
-MySQL_Sec_Setting()
-{   
+MySQL_Sec_Setting() {
     # 1. system set up
     if [ -d "/proc/vz" ]; then
         ulimit -s unlimited
@@ -76,20 +71,20 @@ MySQL_Sec_Setting()
     if [ -d "/etc/mysql" ]; then
         mv /etc/mysql "/etc/mysql.backup.$(date +%Y%m%d%H%M%S)"
     fi
-    
+
     # 2. service management and symlinks
     systemctl enable mysql
     systemctl start mysql
 
     local bin_dir="/usr/local/mysql/bin"
     local bins=("mysql" "mysqld" "mysqldump" "mysqld_safe" "mysqlcheck" "myisamchk")
-    
+
     for bin in "${bins[@]}"; do
         if [ -f "$bin_dir/$bin" ] && { [ ! -e "/usr/bin/$bin" ] || [ -L "/usr/bin/$bin" ]; }; then
             ln -sf "$bin_dir/$bin" "/usr/bin/$bin"
         fi
     done
-    
+
     echo "Waiting for MySQL to re-start..."
     systemctl restart mysql
     sleep 2
@@ -110,7 +105,7 @@ MySQL_Sec_Setting()
     if [ "${mysqladmin_ok}" -eq 0 ]; then
         echo "mysqladmin failed; trying ALTER USER fallback..."
         systemctl restart mysql
-        cat >~/.emptymy.cnf<<EOF
+        cat >~/.emptymy.cnf <<EOF
 [client]
 user=root
 password=''
@@ -135,8 +130,8 @@ EOF
 
     Make_TempMycnf "${DB_Root_Password}"
     Mysql_Do_Query "SELECT 1;" || {
-         Echo_Red "Error: MySQL root password verification failed after setup."
-         exit 1
+        Echo_Red "Error: MySQL root password verification failed after setup."
+        exit 1
     }
     echo "OK, MySQL root password correct."
 
@@ -178,8 +173,7 @@ EOF
     systemctl stop mysql
 }
 
-MySQL_Set_Opt()
-{
+MySQL_Set_Opt() {
     local name=$1
     local value=$2
 
@@ -188,29 +182,88 @@ MySQL_Set_Opt()
     fi
 }
 
-MySQL_Opt()
-{
+MySQL_Opt() {
     local key_buffer table_open sort_buffer read_buffer myisam_sort thread_cache query_cache tmp_table
     local innodb_buffer innodb_log innodb_redo performance_tables
 
     if [[ ${MemTotal} -gt 1024 && ${MemTotal} -lt 2048 ]]; then
-        key_buffer="32M"; table_open="128"; sort_buffer="768K"; read_buffer="768K"; myisam_sort="8M"
-        thread_cache="16"; query_cache="16M"; tmp_table="32M"; innodb_buffer="128M"; innodb_log="32M"; innodb_redo="128M"; performance_tables="1000"
+        key_buffer="32M"
+        table_open="128"
+        sort_buffer="768K"
+        read_buffer="768K"
+        myisam_sort="8M"
+        thread_cache="16"
+        query_cache="16M"
+        tmp_table="32M"
+        innodb_buffer="128M"
+        innodb_log="32M"
+        innodb_redo="128M"
+        performance_tables="1000"
     elif [[ ${MemTotal} -ge 2048 && ${MemTotal} -lt 4096 ]]; then
-        key_buffer="64M"; table_open="256"; sort_buffer="1M"; read_buffer="1M"; myisam_sort="16M"
-        thread_cache="32"; query_cache="32M"; tmp_table="64M"; innodb_buffer="256M"; innodb_log="64M"; innodb_redo="256M"; performance_tables="2000"
+        key_buffer="64M"
+        table_open="256"
+        sort_buffer="1M"
+        read_buffer="1M"
+        myisam_sort="16M"
+        thread_cache="32"
+        query_cache="32M"
+        tmp_table="64M"
+        innodb_buffer="256M"
+        innodb_log="64M"
+        innodb_redo="256M"
+        performance_tables="2000"
     elif [[ ${MemTotal} -ge 4096 && ${MemTotal} -lt 8192 ]]; then
-        key_buffer="128M"; table_open="512"; sort_buffer="2M"; read_buffer="2M"; myisam_sort="32M"
-        thread_cache="64"; query_cache="64M"; tmp_table="64M"; innodb_buffer="512M"; innodb_log="128M"; innodb_redo="512M"; performance_tables="4000"
+        key_buffer="128M"
+        table_open="512"
+        sort_buffer="2M"
+        read_buffer="2M"
+        myisam_sort="32M"
+        thread_cache="64"
+        query_cache="64M"
+        tmp_table="64M"
+        innodb_buffer="512M"
+        innodb_log="128M"
+        innodb_redo="512M"
+        performance_tables="4000"
     elif [[ ${MemTotal} -ge 8192 && ${MemTotal} -lt 16384 ]]; then
-        key_buffer="256M"; table_open="1024"; sort_buffer="4M"; read_buffer="4M"; myisam_sort="64M"
-        thread_cache="128"; query_cache="128M"; tmp_table="128M"; innodb_buffer="1024M"; innodb_log="256M"; innodb_redo="1024M"; performance_tables="6000"
+        key_buffer="256M"
+        table_open="1024"
+        sort_buffer="4M"
+        read_buffer="4M"
+        myisam_sort="64M"
+        thread_cache="128"
+        query_cache="128M"
+        tmp_table="128M"
+        innodb_buffer="1024M"
+        innodb_log="256M"
+        innodb_redo="1024M"
+        performance_tables="6000"
     elif [[ ${MemTotal} -ge 16384 && ${MemTotal} -lt 32768 ]]; then
-        key_buffer="512M"; table_open="2048"; sort_buffer="8M"; read_buffer="8M"; myisam_sort="128M"
-        thread_cache="256"; query_cache="256M"; tmp_table="256M"; innodb_buffer="2048M"; innodb_log="512M"; innodb_redo="2048M"; performance_tables="8000"
+        key_buffer="512M"
+        table_open="2048"
+        sort_buffer="8M"
+        read_buffer="8M"
+        myisam_sort="128M"
+        thread_cache="256"
+        query_cache="256M"
+        tmp_table="256M"
+        innodb_buffer="2048M"
+        innodb_log="512M"
+        innodb_redo="2048M"
+        performance_tables="8000"
     elif [[ ${MemTotal} -ge 32768 ]]; then
-        key_buffer="1024M"; table_open="4096"; sort_buffer="16M"; read_buffer="16M"; myisam_sort="256M"
-        thread_cache="512"; query_cache="512M"; tmp_table="512M"; innodb_buffer="4096M"; innodb_log="1024M"; innodb_redo="4096M"; performance_tables="10000"
+        key_buffer="1024M"
+        table_open="4096"
+        sort_buffer="16M"
+        read_buffer="16M"
+        myisam_sort="256M"
+        thread_cache="512"
+        query_cache="512M"
+        tmp_table="512M"
+        innodb_buffer="4096M"
+        innodb_log="1024M"
+        innodb_redo="4096M"
+        performance_tables="10000"
     elif [ "${MemTotal}" -le 1024 ]; then
         Echo_Yellow "Detected <1GB RAM; using minimal MySQL optimization."
         return 0
@@ -239,25 +292,24 @@ MySQL_Opt()
 }
 
 # if "${MySQL_Data_Dir} exists, backup it and continue as a fresh installation by default
-Check_MySQL_Data_Dir()
-{
+Check_MySQL_Data_Dir() {
     if [ -d "${MySQL_Data_Dir}" ]; then
-            datetime=$(date +"%Y%m%d%H%M%S")
-            backup_dir="/root/mysql-data-dir-backup${datetime}"
-            echo "Move existing MySQL data directory to ${backup_dir}..."
-            mv "${MySQL_Data_Dir}" "${backup_dir}" || {
-                Echo_Red "Error: failed to backup existing MySQL data directory."
-                exit 1
-            }
+        datetime=$(date +"%Y%m%d%H%M%S")
+        backup_dir="/root/mysql-data-dir-backup${datetime}"
+        echo "Move existing MySQL data directory to ${backup_dir}..."
+        mv "${MySQL_Data_Dir}" "${backup_dir}" || {
+            Echo_Red "Error: failed to backup existing MySQL data directory."
+            exit 1
+        }
         mkdir -p "${MySQL_Data_Dir}" || {
             Echo_Red "Error: failed to create MySQL data directory."
             exit 1
         }
     else
-    mkdir -p "${MySQL_Data_Dir}" || {
-        Echo_Red "Error: failed to create MySQL data directory."
-        exit 1
-    }
+        mkdir -p "${MySQL_Data_Dir}" || {
+            Echo_Red "Error: failed to create MySQL data directory."
+            exit 1
+        }
     fi
     chown -R mysql:mysql /usr/local/mysql || {
         Echo_Red "Error: failed to set MySQL ownership."
@@ -271,8 +323,7 @@ Check_MySQL_Data_Dir()
 
 # [mysqld_safe] malloc-lib in my.cnf is inert on 5.7/8.0/8.4 (systemd launches mysqld
 # directly); apply the selected allocator via LD_PRELOAD instead.
-MySQL_Set_Malloc_Preload()
-{
+MySQL_Set_Malloc_Preload() {
     case "${SelectMalloc}" in
     2) MallocLib='/usr/local/jemalloc/lib/libjemalloc.so.2' ;;
     3) MallocLib='/usr/local/tcmalloc/lib/libtcmalloc.so.4' ;;
@@ -282,173 +333,17 @@ MySQL_Set_Malloc_Preload()
 
     if [ -n "${MallocLib}" ]; then
         mkdir -p /etc/sysconfig
-        echo "LD_PRELOAD=${MallocLib}" > /etc/sysconfig/mysql
+        echo "LD_PRELOAD=${MallocLib}" >/etc/sysconfig/mysql
     else
         rm -f /etc/sysconfig/mysql
     fi
-}
-
-# Allocator is unsupported for mysql 5.6
-Install_MySQL_56()
-{
-    if [ "${Bin}" = "y" ]; then
-        Echo_Blue "[+] Installing ${Mysql_Ver} Using Generic Binaries..."
-        Tar_Cd ${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}.tar.gz
-        if [ -x /usr/local/mysql/bin/mysqld ]; then
-            Echo_Red "MySQL is already installed at /usr/local/mysql. Aborting."
-            exit 1
-        fi
-        mkdir -p /usr/local/mysql
-        mv ${Mysql_Ver}-linux-glibc2.12-${DB_ARCH}/* /usr/local/mysql/
-    else
-        Echo_Blue "[+] Installing ${Mysql_Ver} Using Source code..."
-        if [ "${isOpenSSL3}" = "y" ]; then
-            Install_Openssl_New
-            MySQL_WITH_SSL='-DWITH_SSL=/usr/local/openssl1.1.1'
-        else
-            MySQL_WITH_SSL='yes'
-        fi
-        Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
-        sed -i '1s/^/set(CMAKE_CXX_STANDARD 11)\n/' CMakeLists.txt
-        if echo "${Rocky_Version}${Alma_Version}" | grep -Eqi "^9"; then
-            sed -i 's@^INCLUDE(cmake/abi_check.cmake)@#INCLUDE(cmake/abi_check.cmake)@' CMakeLists.txt
-        fi
-        cmake -DCMAKE_INSTALL_PREFIX=/usr/local/mysql -DSYSCONFDIR=/etc -DWITH_MYISAM_STORAGE_ENGINE=1 -DWITH_INNOBASE_STORAGE_ENGINE=1 -DWITH_PARTITION_STORAGE_ENGINE=1 -DWITH_FEDERATED_STORAGE_ENGINE=1 -DEXTRA_CHARSETS=all -DDEFAULT_CHARSET=utf8mb4 -DDEFAULT_COLLATION=utf8mb4_general_ci -DWITH_EMBEDDED_SERVER=1 -DENABLED_LOCAL_INFILE=1 ${MySQL_WITH_SSL} || {
-            Echo_Red "Error: failed to configure MySQL."
-            exit 1
-        }
-        MySQL_Make_Install || exit 1
-    fi
-
-    MySQL_Add_UG
-
-    cat > /etc/my.cnf<<EOF
-[client]
-#password   = your_password
-port        = 3306
-socket      = /tmp/mysql.sock
-
-[mysqld]
-port        = 3306
-socket      = /tmp/mysql.sock
-datadir = ${MySQL_Data_Dir}
-local_infile=0
-skip-external-locking
-key_buffer_size = 16M
-max_allowed_packet = 1M
-table_open_cache = 64
-sort_buffer_size = 512K
-net_buffer_length = 8K
-read_buffer_size = 256K
-read_rnd_buffer_size = 512K
-myisam_sort_buffer_size = 8M
-thread_cache_size = 8
-query_cache_size = 8M
-tmp_table_size = 16M
-performance_schema_max_table_instances = 500
-
-explicit_defaults_for_timestamp = true
-#skip-networking
-max_connections = 500
-max_connect_errors = 100
-open_files_limit = 65535
-
-log-bin=mysql-bin
-binlog_format=mixed
-server-id   = 1
-expire_logs_days = 10
-
-#loose-innodb-trx=0
-#loose-innodb-locks=0
-#loose-innodb-lock-waits=0
-#loose-innodb-cmp=0
-#loose-innodb-cmp-per-index=0
-#loose-innodb-cmp-per-index-reset=0
-#loose-innodb-cmp-reset=0
-#loose-innodb-cmpmem=0
-#loose-innodb-cmpmem-reset=0
-#loose-innodb-buffer-page=0
-#loose-innodb-buffer-page-lru=0
-#loose-innodb-buffer-pool-stats=0
-#loose-innodb-metrics=0
-#loose-innodb-ft-default-stopword=0
-#loose-innodb-ft-inserted=0
-#loose-innodb-ft-deleted=0
-#loose-innodb-ft-being-deleted=0
-#loose-innodb-ft-config=0
-#loose-innodb-ft-index-cache=0
-#loose-innodb-ft-index-table=0
-#loose-innodb-sys-tables=0
-#loose-innodb-sys-tablestats=0
-#loose-innodb-sys-indexes=0
-#loose-innodb-sys-columns=0
-#loose-innodb-sys-fields=0
-#loose-innodb-sys-foreign=0
-#loose-innodb-sys-foreign-cols=0
-
-default_storage_engine = InnoDB
-#innodb_file_per_table = 1
-#innodb_data_home_dir = ${MySQL_Data_Dir}
-#innodb_data_file_path = ibdata1:10M:autoextend
-#innodb_log_group_home_dir = ${MySQL_Data_Dir}
-#innodb_buffer_pool_size = 16M
-#innodb_log_file_size = 5M
-#innodb_log_buffer_size = 8M
-#innodb_flush_log_at_trx_commit = 1
-#innodb_lock_wait_timeout = 50
-
-[mysqldump]
-quick
-max_allowed_packet = 16M
-
-[mysql]
-no-auto-rehash
-
-[myisamchk]
-key_buffer_size = 20M
-sort_buffer_size = 20M
-read_buffer = 2M
-write_buffer = 2M
-
-[mysqlhotcopy]
-interactive-timeout
-EOF
-
-    if [ "${InstallInnodb}" = "y" ]; then
-        sed -i 's/^#innodb/innodb/g' /etc/my.cnf
-    else
-        sed -i '/^default_storage_engine/d' /etc/my.cnf
-        sed -i '/skip-external-locking/i\innodb=OFF\nignore-builtin-innodb\nskip-innodb\ndefault_storage_engine = MyISAM\ndefault_tmp_storage_engine = MyISAM' /etc/my.cnf
-        sed -i 's/^#loose-innodb/loose-innodb/g' /etc/my.cnf
-    fi
-    MySQL_Opt
-    Check_MySQL_Data_Dir
-    /usr/local/mysql/scripts/mysql_install_db --defaults-file=/etc/my.cnf --basedir=/usr/local/mysql --datadir="${MySQL_Data_Dir}" --user=mysql || {
-        Echo_Red "Error: failed to initialize MySQL data directory."
-        exit 1
-    }
-    chown -R mysql:mysql "${MySQL_Data_Dir}" || {
-        Echo_Red "Error: failed to set MySQL data directory ownership."
-        exit 1
-    }
-    \cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysql
-    \cp ${cur_dir}/init.d/mysql.service /etc/systemd/system/mysql.service
-    chmod 755 /etc/init.d/mysql
-
-    cat > /etc/ld.so.conf.d/mysql.conf<<EOF
-/usr/local/mysql/lib
-EOF
-    ldconfig
-
-    MySQL_Sec_Setting
 }
 
 # mysql 5.7.44 still only support openssl 1.1.1. But binary package uses openssl 3.
 # mysql 5.7 and before BIN is built with libncurses.so.5, but most OS use libncurses.so.6 now.
 # So we need to install ncurses5 compatibility library for mysql 5.7 BIN package
 
-Install_MySQL_57()
-{
+Install_MySQL_57() {
     Ncurses5_Compat_Check
     if [ "${Bin}" = "y" ]; then
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Generic Binaries..."
@@ -495,11 +390,11 @@ Install_MySQL_57()
         }
         MySQL_Make_Install || exit 1
     fi
-    
+
     MySQL_Add_UG
 
     rm -f /etc/my.cnf
-    cat > /etc/my.cnf<<EOF
+    cat >/etc/my.cnf <<EOF
 [client]
 #password   = your_password
 port        = 3306
@@ -574,7 +469,7 @@ EOF
     MySQL_Opt
     Check_MySQL_Data_Dir
     MySQL_Initialize_DB
- 
+
     \cp ${cur_dir}/init.d/mysql.service5.7 /etc/systemd/system/mysql.service
     ln -sf /etc/systemd/system/mysql.service /etc/systemd/system/mysqld.service
     if [ -s /usr/local/mysql/bin/mysqld_pre_systemd ]; then
@@ -582,8 +477,8 @@ EOF
     fi
     MySQL_Set_Malloc_Preload
     systemctl daemon-reload
- 
-    cat > /etc/ld.so.conf.d/mysql.conf<<EOF
+
+    cat >/etc/ld.so.conf.d/mysql.conf <<EOF
 /usr/local/mysql/lib
 EOF
     ldconfig
@@ -592,8 +487,7 @@ EOF
 }
 
 # support both openssl 1.1.1 and openssl 3
-Install_MySQL_80()
-{
+Install_MySQL_80() {
     if [ "${Bin}" = "y" ]; then
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Generic Binaries..."
         Tar_Cd ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
@@ -633,7 +527,7 @@ Install_MySQL_80()
     MySQL_Add_UG
 
     rm -f /etc/my.cnf
-    cat > /etc/my.cnf<<EOF
+    cat >/etc/my.cnf <<EOF
 [client]
 #password   = your_password
 port        = 3306
@@ -729,7 +623,7 @@ EOF
     MySQL_Set_Malloc_Preload
     systemctl daemon-reload
 
-    cat > /etc/ld.so.conf.d/mysql.conf<<EOF
+    cat >/etc/ld.so.conf.d/mysql.conf <<EOF
 /usr/local/mysql/lib
 EOF
     ldconfig
@@ -740,8 +634,7 @@ EOF
 # mysql 8.4 has boost bundled in source package
 # support openssl 1.1.1 and openssl 3
 # for best performance, please use openssl 3
-Install_MySQL_84()
-{
+Install_MySQL_84() {
     if [ "${Bin}" = "y" ]; then
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Generic Binaries..."
         Tar_Cd ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}.tar.xz
@@ -760,26 +653,26 @@ Install_MySQL_84()
         fi
         mkdir -p mysql-build && cd mysql-build
         cmake .. \
-        -DCMAKE_INSTALL_PREFIX=/usr/local/mysql \
-        -DSYSCONFDIR=/etc \
-        -DWITH_MYISAM_STORAGE_ENGINE=1 \
-        -DWITH_INNOBASE_STORAGE_ENGINE=1 \
-        -DWITH_FEDERATED_STORAGE_ENGINE=1 \
-        -DDEFAULT_CHARSET=utf8mb4 \
-        -DDEFAULT_COLLATION=utf8mb4_general_ci \
-        -DENABLED_LOCAL_INFILE=1 \
-        -DWITH_SYSTEMD=1 || {
+            -DCMAKE_INSTALL_PREFIX=/usr/local/mysql \
+            -DSYSCONFDIR=/etc \
+            -DWITH_MYISAM_STORAGE_ENGINE=1 \
+            -DWITH_INNOBASE_STORAGE_ENGINE=1 \
+            -DWITH_FEDERATED_STORAGE_ENGINE=1 \
+            -DDEFAULT_CHARSET=utf8mb4 \
+            -DDEFAULT_COLLATION=utf8mb4_general_ci \
+            -DENABLED_LOCAL_INFILE=1 \
+            -DWITH_SYSTEMD=1 || {
             Echo_Red "Error: failed to configure MySQL."
             exit 1
         }
-        
+
         MySQL_Make_Install || exit 1
     fi
 
     MySQL_Add_UG
 
     rm -f /etc/my.cnf
-    cat > /etc/my.cnf<<EOF
+    cat >/etc/my.cnf <<EOF
 [client]
 #password   = your_password
 port        = 3306
@@ -876,7 +769,7 @@ EOF
     MySQL_Set_Malloc_Preload
     systemctl daemon-reload
 
-    cat > /etc/ld.so.conf.d/mysql.conf<<EOF
+    cat >/etc/ld.so.conf.d/mysql.conf <<EOF
 /usr/local/mysql/lib
 EOF
     ldconfig

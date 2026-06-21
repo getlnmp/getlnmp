@@ -59,12 +59,14 @@ MariaDB_Symbol_Check() {
 }
 
 MariaDB_Enable_Innodb() {
-    if [ "${InstallInnodb}" = "y" ]; then
-        sed -i 's/^#innodb/innodb/g' /etc/my.cnf
-    else
-        sed -i '/^default_storage_engine/d' /etc/my.cnf
-        sed -i 's/^#loose-innodb/loose-innodb/g' /etc/my.cnf
-        sed -i '/skip-external-locking/i\default_storage_engine = MyISAM\nloose-skip-innodb' /etc/my.cnf
+    if [ "${Bin}" != "y" ]; then
+        if [ "${InstallInnodb}" = "y" ]; then
+            sed -i 's/^#innodb/innodb/g' /etc/my.cnf
+        else
+            sed -i '/^default_storage_engine/d' /etc/my.cnf
+            sed -i 's/^#loose-innodb/loose-innodb/g' /etc/my.cnf
+            sed -i '/skip-external-locking/i\default_storage_engine = MyISAM\nloose-skip-innodb' /etc/my.cnf
+        fi
     fi
 }
 
