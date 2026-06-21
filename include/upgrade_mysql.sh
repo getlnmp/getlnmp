@@ -723,29 +723,30 @@ Upgrade_MySQL() {
     else
         Bin="n"
     fi
-    if [ "${Bin}" != "y" ]; then
-        #do you want to install the InnoDB Storage Engine?
-        echo "==========================="
+    # InnoDB is enabled by default
+    # if [ "${Bin}" != "y" ]; then
+    #     #do you want to install the InnoDB Storage Engine?
+    #     echo "==========================="
 
-        InstallInnodb="y"
-        Echo_Yellow "Do you want to install the InnoDB Storage Engine?"
-        read -r -p "(Default yes,if you want please enter: y , if not please enter: n): " InstallInnodb
+    #     InstallInnodb="y"
+    #     Echo_Yellow "Do you want to install the InnoDB Storage Engine?"
+    #     read -r -p "(Default yes,if you want please enter: y , if not please enter: n): " InstallInnodb
 
-        case "${InstallInnodb}" in
-        [yY][eE][sS] | [yY])
-            echo "You will install the InnoDB Storage Engine"
-            InstallInnodb="y"
-            ;;
-        [nN][oO] | [nN])
-            echo "You will NOT install the InnoDB Storage Engine!"
-            InstallInnodb="n"
-            ;;
-        *)
-            echo "No input, The InnoDB Storage Engine will enable."
-            InstallInnodb="y"
-            ;;
-        esac
-    fi
+    #     case "${InstallInnodb}" in
+    #     [yY][eE][sS] | [yY])
+    #         echo "You will install the InnoDB Storage Engine"
+    #         InstallInnodb="y"
+    #         ;;
+    #     [nN][oO] | [nN])
+    #         echo "You will NOT install the InnoDB Storage Engine!"
+    #         InstallInnodb="n"
+    #         ;;
+    #     *)
+    #         echo "No input, The InnoDB Storage Engine will enable."
+    #         InstallInnodb="y"
+    #         ;;
+    #     esac
+    # fi
 
     mysql_short_version=$(echo ${mysql_version} | cut -d. -f1-2)
     if [ ${mysql_version} != '' ]; then

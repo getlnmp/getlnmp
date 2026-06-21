@@ -407,31 +407,32 @@ Database_Selection() {
         fi
         echo "MySQL root password: ${DB_Root_Password}"
 
-        if [ "${Bin}" != "y" ]; then
-            #do you want to enable or disable the InnoDB Storage Engine?
-            echo "==========================="
+        # Enable InnoDB by default
+        # if [ "${Bin}" != "y" ]; then
+        #     #do you want to enable or disable the InnoDB Storage Engine?
+        #     echo "==========================="
 
-            if [ -z ${InstallInnodb} ]; then
-                InstallInnodb="y"
-                Echo_Yellow "Do you want to enable or disable the InnoDB Storage Engine?"
-                read -p "Default enable,Enter your choice [Y/n]: " InstallInnodb
-            fi
+        #     if [ -z ${InstallInnodb} ]; then
+        #         InstallInnodb="y"
+        #         Echo_Yellow "Do you want to enable or disable the InnoDB Storage Engine?"
+        #         read -p "Default enable,Enter your choice [Y/n]: " InstallInnodb
+        #     fi
 
-            case "${InstallInnodb}" in
-            [yY][eE][sS] | [yY])
-                echo "You will enable the InnoDB Storage Engine"
-                InstallInnodb="y"
-                ;;
-            [nN][oO] | [nN])
-                echo "You will disable the InnoDB Storage Engine!"
-                InstallInnodb="n"
-                ;;
-            *)
-                echo "No input,The InnoDB Storage Engine will enable."
-                InstallInnodb="y"
-                ;;
-            esac
-        fi
+        #     case "${InstallInnodb}" in
+        #     [yY][eE][sS] | [yY])
+        #         echo "You will enable the InnoDB Storage Engine"
+        #         InstallInnodb="y"
+        #         ;;
+        #     [nN][oO] | [nN])
+        #         echo "You will disable the InnoDB Storage Engine!"
+        #         InstallInnodb="n"
+        #         ;;
+        #     *)
+        #         echo "No input,The InnoDB Storage Engine will enable."
+        #         InstallInnodb="y"
+        #         ;;
+        #     esac
+        # fi
     fi
 }
 
@@ -1056,9 +1057,9 @@ Print_APP_Ver() {
     fi
     # InnoDB is only selectable when compiling MySQL/MariaDB from source, so
     # the status is meaningless for binary (Bin=y) or DB-less (DBSelect=0) installs.
-    if [ "${DBSelect}" != "0" ] && [ "${Bin}" != "y" ]; then
-        echo "Enable InnoDB: ${InstallInnodb}"
-    fi
+    # if [ "${DBSelect}" != "0" ] && [ "${Bin}" != "y" ]; then
+    #     echo "Enable InnoDB: ${InstallInnodb}"
+    # fi
     echo "Print lnmp.conf infomation..."
     echo "Download Mirror: ${Download_Mirror}"
     echo "Nginx Additional Modules: ${Nginx_Modules_Options}"

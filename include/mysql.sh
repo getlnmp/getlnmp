@@ -365,9 +365,9 @@ Install_MySQL_57() {
         fi
         Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
         #Install_Boost
-        if echo "${Rocky_Version}${Alma_Version}" | grep -Eqi "^9"; then
-            sed -i 's@^INCLUDE(cmake/abi_check.cmake)@#INCLUDE(cmake/abi_check.cmake)@' CMakeLists.txt
-        fi
+        #if echo "${Rocky_Version}${Alma_Version}" | grep -Eqi "^9"; then
+        #    sed -i 's@^INCLUDE(cmake/abi_check.cmake)@#INCLUDE(cmake/abi_check.cmake)@' CMakeLists.txt
+        #fi
         mkdir -p mysql-build && cd mysql-build
         cmake .. \
             -DCMAKE_INSTALL_PREFIX=/usr/local/mysql \

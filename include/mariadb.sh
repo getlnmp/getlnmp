@@ -59,15 +59,16 @@ MariaDB_Symbol_Check() {
 }
 
 MariaDB_Enable_Innodb() {
-    if [ "${Bin}" != "y" ]; then
-        if [ "${InstallInnodb}" = "y" ]; then
-            sed -i 's/^#innodb/innodb/g' /etc/my.cnf
-        else
-            sed -i '/^default_storage_engine/d' /etc/my.cnf
-            sed -i 's/^#loose-innodb/loose-innodb/g' /etc/my.cnf
-            sed -i '/skip-external-locking/i\default_storage_engine = MyISAM\nloose-skip-innodb' /etc/my.cnf
-        fi
-    fi
+    # if [ "${Bin}" != "y" ]; then
+    #     if [ "${InstallInnodb}" = "y" ]; then
+    #         sed -i 's/^#innodb/innodb/g' /etc/my.cnf
+    #     else
+    #         sed -i '/^default_storage_engine/d' /etc/my.cnf
+    #         sed -i 's/^#loose-innodb/loose-innodb/g' /etc/my.cnf
+    #         sed -i '/skip-external-locking/i\default_storage_engine = MyISAM\nloose-skip-innodb' /etc/my.cnf
+    #     fi
+    # fi
+    echo "InnoDB is enabled by default"
 }
 
 MariaDB_Disable_Explicit_Timestamp() {
@@ -481,7 +482,7 @@ Install_MariaDB_104() {
     MariaDB_Add_UG
     MariaDB_My_Cnf
     MariaDB_Set_MyCNF_104
-    MariaDB_Enable_Innodb
+    #MariaDB_Enable_Innodb
     MySQL_Opt
     Check_MariaDB_Data_Dir
     MariaDB_Initialize_DB
@@ -522,7 +523,7 @@ Install_MariaDB_105() {
 
     MariaDB_Add_UG
     MariaDB_My_Cnf
-    MariaDB_Enable_Innodb
+    #MariaDB_Enable_Innodb
     MySQL_Opt
     Check_MariaDB_Data_Dir
     MariaDB_Initialize_DB
@@ -563,7 +564,7 @@ Install_MariaDB_106() {
 
     MariaDB_Add_UG
     MariaDB_My_Cnf
-    MariaDB_Enable_Innodb
+    #MariaDB_Enable_Innodb
     MySQL_Opt
     Check_MariaDB_Data_Dir
     MariaDB_Initialize_DB
@@ -604,7 +605,7 @@ Install_MariaDB_1011() {
 
     MariaDB_Add_UG
     MariaDB_My_Cnf
-    MariaDB_Enable_Innodb
+    #MariaDB_Enable_Innodb
     MySQL_Opt
     Check_MariaDB_Data_Dir
     MariaDB_Initialize_DB
@@ -645,7 +646,7 @@ Install_MariaDB_114() {
 
     MariaDB_Add_UG
     MariaDB_My_Cnf
-    MariaDB_Enable_Innodb
+    #MariaDB_Enable_Innodb
     MySQL_Opt
     Check_MariaDB_Data_Dir
     MariaDB_Initialize_DB
@@ -686,7 +687,7 @@ Install_MariaDB_118() {
 
     MariaDB_Add_UG
     MariaDB_My_Cnf
-    MariaDB_Enable_Innodb
+    #MariaDB_Enable_Innodb
     MySQL_Opt
     Check_MariaDB_Data_Dir
     MariaDB_Initialize_DB
