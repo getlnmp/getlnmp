@@ -1560,11 +1560,20 @@ Install_Ncurses5_Compat() {
         --without-manpages \
         --without-progs
     Make_Install
-    if [ -f /usr/local/ncurses5/lib/libncurses.so.5 ] && [ ! -e /usr/lib/x86_64-linux-gnu/libncurses.so.5 ]; then
-        ln -sf /usr/local/ncurses5/lib/libncurses.so.5 /usr/lib/x86_64-linux-gnu/libncurses.so.5
-        ln -sf /usr/local/ncurses5/lib/libtinfo.so.5 /usr/lib/x86_64-linux-gnu/libtinfo.so.5
-        echo "ncurses5 compatibility library installed successfully."
+    if [ "${PM}" = "yum" ] || [ "${PM}" = "dnf" ]; then
+        if [ -f /usr/local/ncurses5/lib/libncurses.so.5 ] && [ ! -e /usr/lib64/libncurses.so.5 ]; then
+            ln -sf /usr/local/ncurses5/lib/libncurses.so.5 /usr/lib64/libncurses.so.5
+            ln -sf /usr/local/ncurses5/lib/libtinfo.so.5 /usr/lib64/libtinfo.so.5
+            echo "ncurses5 compatibility library installed successfully."
+        fi
+    elif [ "${PM}" = "apt" ]; then
+        if [ -f /usr/local/ncurses5/lib/libncurses.so.5 ] && [ ! -e /usr/lib/x86_64-linux-gnu/libncurses.so.5 ]; then
+            ln -sf /usr/local/ncurses5/lib/libncurses.so.5 /usr/lib/x86_64-linux-gnu/libncurses.so.5
+            ln -sf /usr/local/ncurses5/lib/libtinfo.so.5 /usr/lib/x86_64-linux-gnu/libtinfo.so.5
+            echo "ncurses5 compatibility library installed successfully."
+        fi
     fi
+
 }
 
 # mysql 5.7 and before BIN is built with libncurses.so.5, but most OS use libncurses.so.6 now.
@@ -1572,7 +1581,7 @@ Install_Ncurses5_Compat() {
 # So we need to install ncurses5 compatibility library for mysql 5.7 BIN package
 Ncurses5_Compat_Check() {
     if [[ $Bin = "y" ]]; then
-        if [ -f /usr/lib/x86_64-linux-gnu/libncurses.so.5 ] || [ -f /usr/lib/i386-linux-gnu/libncurses.so.5 ]; then
+        if [ -f /usr/lib/x86_64-linux-gnu/libncurses.so.5 ] || [ -f /usr/lib64/libncurses.so.5 ]; then
             echo "ncurses5 compatibility library found."
         else
             echo "ncurses5 compatibility library not found."

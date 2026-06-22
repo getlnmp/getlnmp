@@ -186,11 +186,6 @@ Check_Hosts() {
 #}
 
 Ubuntu_Modify_Source() {
-    if [ "${country}" = "CN" ]; then
-        OldReleasesURL='http://mirrors.ustc.edu.cn/ubuntu-old-releases/'
-    else
-        OldReleasesURL='http://old-releases.ubuntu.com/ubuntu/'
-    fi
     CodeName=''
     if grep -Eqi "10.10" /etc/*-release || echo "${Ubuntu_Version}" | grep -Eqi '^10.10'; then
         CodeName='maverick'
@@ -1048,7 +1043,7 @@ Download_Boost() {
             tar jxf ${cur_dir}/src/${Boost_Ver}.tar.bz2 -C ${cur_dir}/src
             MySQL_WITH_BOOST="-DWITH_BOOST=${cur_dir}/src/${Boost_Ver}"
         else
-            cd ${cur_dir}/src/
+            cd ${cur_dir}/src
             echo "Downloading ${Boost_Ver}.tar.bz2 ..."
             Download_Files ${Boost_DL} ${Boost_Ver}.tar.bz2
             tar jxf ${cur_dir}/src/${Boost_Ver}.tar.bz2
