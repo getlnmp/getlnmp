@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if [ "${Use_Official}" = "y" ]; then
-    Acmesh_DL="https://github.com/acmesh-official/acme.sh/archive/refs/tags/${Acmesh_Ver}.tar.gz";
+    Acmesh_DL="https://github.com/acmesh-official/acme.sh/archive/refs/tags/${Acmesh_Ver}.tar.gz"
     PHPNewApcu_DL="https://pecl.php.net/get/${PHPNewApcu_Ver}.tgz"
     PHPOldApcu_DL="https://pecl.php.net/get/${PHPOldApcu_Ver}.tgz"
     PHPApcu_Bc_DL="https://pecl.php.net/get/${PHPApcu_Bc_Ver}.tgz"
@@ -16,7 +16,6 @@ if [ "${Use_Official}" = "y" ]; then
     libc_client_2007f_el10_DL="https://rpmfind.net/linux/remi/enterprise/10/remi/${ARCH}/libc-client-2007f-32.el10.remi.${ARCH}.rpm"
     uw_imap_devel_2007f_el10_DL="https://rpmfind.net/linux/remi/enterprise/10/remi/${ARCH}/uw-imap-devel-2007f-32.el10.remi.${ARCH}.rpm"
 
-
     PHPSodium_DL="https://pecl.php.net/get/${PHPSodium_Ver}.tgz"
     PHPSodiumOld_DL="https://pecl.php.net/get/libsodium-1.0.7.tgz"
     PHPSwoole_DL="https://pecl.php.net/get/${PHPSwoole_Ver}.tgz"
@@ -29,7 +28,7 @@ if [ "${Use_Official}" = "y" ]; then
     Openssl_New_DL="https://www.openssl.org/source/${Openssl_New_Ver}.tar.gz"
     Openssl_3_DL="https://www.openssl.org/source/${Openssl_3_Ver}.tar.gz"
     Openssl_35_DL="https://www.openssl.org/source/${Openssl_35_Ver}.tar.gz"
- #  Luajit_DL="${Download_Mirror}/lib/lua/${Luajit_Ver}.tar.gz"
+    #  Luajit_DL="${Download_Mirror}/lib/lua/${Luajit_Ver}.tar.gz"
     LuaNginxModule_DL="https://github.com/openresty/lua-nginx-module/archive/refs/tags/v${LuaNginxModule_Short}.tar.gz"
     NgxDevelKit_DL="https://github.com/vision5/ngx_devel_kit/archive/refs/tags/v${NgxDevelKit_Short}.tar.gz"
     LuaRestyCore_DL="https://github.com/openresty/lua-resty-core/archive/refs/tags/v${LuaRestyCore_Short}.tar.gz"
@@ -77,7 +76,7 @@ if [ "${Use_Official}" = "y" ]; then
     Redis_DL="https://download.redis.io/releases/${Redis_Stable_Ver}.tar.gz"
 
 else
-    Acmesh_DL="${Download_Mirror}/lib/acme.sh/${Acmesh_Ver}.tar.gz";
+    Acmesh_DL="${Download_Mirror}/lib/acme.sh/${Acmesh_Ver}.tar.gz"
     PHPNewApcu_DL="${Download_Mirror}/web/apcu/${PHPNewApcu_Ver}.tgz"
     PHPOldApcu_DL="${Download_Mirror}/web/apcu/${PHPOldApcu_Ver}.tgz"
     PHPApcu_Bc_DL="${Download_Mirror}/web/apcu_bc/${PHPApcu_Bc_Ver}.tgz"
@@ -103,7 +102,7 @@ else
     Openssl_DL="${Download_Mirror}/lib/openssl/${Openssl_Ver}.tar.gz"
     Openssl_New_DL="${Download_Mirror}/lib/openssl/${Openssl_New_Ver}.tar.gz"
     Openssl_3_DL="${Download_Mirror}/lib/openssl/${Openssl_3_Ver}.tar.gz"
- #  Luajit_DL="${Download_Mirror}/lib/lua/${Luajit_Ver}.tar.gz"
+    #  Luajit_DL="${Download_Mirror}/lib/lua/${Luajit_Ver}.tar.gz"
     LuaNginxModule_DL="${Download_Mirror}/lib/lua/${LuaNginxModule}.tar.gz"
     NgxDevelKit_DL="${Download_Mirror}/lib/lua/${NgxDevelKit}.tar.gz"
     LuaRestyCore_DL="${Download_Mirror}/lib/lua/${LuaRestyCore}.tar.gz"

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-Install_Multiplephp()
-{
+Install_Multiplephp() {
     Get_Dist_Name
     Check_DB
     Check_Stack
@@ -155,7 +154,6 @@ MPHP_Cp_Ini() {
     \cp php.ini-production ${MPHP_Path}/etc/php.ini
 }
 
-
 MPHP_Set_Ini() {
     if [ -n "${Cur_MPHP_Path}" ] && [ -z "${MPHP_Path}" ]; then
         local M_Path="${Cur_MPHP_Path}"
@@ -182,7 +180,7 @@ MPHP_U_Set_Ini() {
     if [ -s "${old_ini}" ]; then
         \cp "${old_ini}" "${Cur_MPHP_Path}/etc/php.ini"
     else
-        echo "Copy new php configure file..."        
+        echo "Copy new php configure file..."
         \cp php.ini-production ${Cur_MPHP_Path}/etc/php.ini
         MPHP_Set_Ini
     fi
@@ -200,7 +198,7 @@ MPHP_Set_Conf() {
         exit 1
     fi
     echo "Creating new php-fpm configure file..."
-    cat >${M_Path}/etc/php-fpm.conf<<EOF
+    cat >${M_Path}/etc/php-fpm.conf <<EOF
 [global]
 pid = ${M_Path}/var/run/php-fpm.pid
 error_log = ${M_Path}/var/log/php-fpm.log
@@ -291,8 +289,7 @@ MPHP_U_Final_Check() {
     fi
 }
 
-Install_MPHP7_3()
-{
+Install_MPHP7_3() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -310,8 +307,7 @@ Install_MPHP7_3()
     MPHP_Final_Check "7.3"
 }
 
-Install_MPHP7_4()
-{
+Install_MPHP7_4() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -329,8 +325,7 @@ Install_MPHP7_4()
     MPHP_Final_Check "7.4"
 }
 
-Install_MPHP8_0()
-{
+Install_MPHP8_0() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -348,8 +343,7 @@ Install_MPHP8_0()
     MPHP_Final_Check "8.0"
 }
 
-Install_MPHP8_1()
-{
+Install_MPHP8_1() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -367,8 +361,7 @@ Install_MPHP8_1()
     MPHP_Final_Check "8.1"
 }
 
-Install_MPHP8_2()
-{
+Install_MPHP8_2() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -386,8 +379,7 @@ Install_MPHP8_2()
     MPHP_Final_Check "8.2"
 }
 
-Install_MPHP8_3()
-{
+Install_MPHP8_3() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install

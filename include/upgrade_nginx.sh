@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
-Upgrade_Nginx()
-{
+Upgrade_Nginx() {
     Cur_Nginx_Version=$(/usr/local/nginx/sbin/nginx -v 2>&1 | cut -d '/' -f 2)
 
-    if [ -s /usr/local/jemalloc/include/jemalloc/jemalloc.h ] && /usr/local/nginx/sbin/nginx -V 2>&1|grep -Eqi 'ljemalloc'; then
+    if [ -s /usr/local/jemalloc/include/jemalloc/jemalloc.h ] && /usr/local/nginx/sbin/nginx -V 2>&1 | grep -Eqi 'ljemalloc'; then
         NginxMAOpt="--with-ld-opt='-ljemalloc'"
     elif [ -s /usr/local/tcmalloc/include/gperftools/tcmalloc.h ] && grep -Eqi "google_perftools_profiles" /usr/local/nginx/conf/nginx.conf; then
         NginxMAOpt='--with-google_perftools_module'
@@ -35,13 +34,16 @@ Upgrade_Nginx()
     fi
     echo "+---------------------------------------------------------+"
     echo "|    You will upgrade nginx version to ${Nginx_Version}   |"
-    echo "|   YOU MAY NEED TO MODIFY YOUR NGINX.CONF AFTER UPGRADE  |"  
+    echo "|   YOU MAY NEED TO MODIFY YOUR NGINX.CONF AFTER UPGRADE  |"
     echo "+---------------------------------------------------------+"
 
     Press_Start
 
     echo "============================check files=================================="
-    cd ${cur_dir}/src || { Echo_Red "Error: cannot enter ${cur_dir}/src"; exit 1; }
+    cd "${cur_dir}/src" || {
+        Echo_Red "Error: cannot enter ${cur_dir}/src"
+        exit 1
+    }
     # Reuse the base URL (official site or mirror) that downloadlink.sh resolved for
     # Nginx_DL, but with the user-requested version, so the Use_Official/mirror toggle is honored.
     Download_Files_Exit "${Nginx_DL%/*}/nginx-${Nginx_Version}.tar.gz" "nginx-${Nginx_Version}.tar.gz"
@@ -55,8 +57,8 @@ Upgrade_Nginx()
     Tar_Cd nginx-${Nginx_Version}.tar.gz nginx-${Nginx_Version}
     Get_Dist_Version
     Nginx_Ver_Com=$(${cur_dir}/include/version_compare 1.14.2 ${Nginx_Version})
-    if gcc -dumpversion|grep -q "^[78\.]" && [ "${Nginx_Ver_Com}" == "1" ]; then
-        patch -p1 < ${cur_dir}/src/patch/nginx-gcc8.patch
+    if gcc -dumpversion | grep -q "^[78\.]" && [ "${Nginx_Ver_Com}" == "1" ]; then
+        patch -p1 <${cur_dir}/src/patch/nginx-gcc8.patch
     fi
     Validate_Nginx_Modules_Options
     NGINX_LD_OPT='-Wl,-z,relro -Wl,-z,now -pie'
@@ -64,13 +66,13 @@ Upgrade_Nginx()
         NGINX_LD_OPT="${NGINX_LD_OPT} -Wl,-rpath,/usr/local/luajit/lib"
     fi
     case "${NginxMAOpt}" in
-        *ljemalloc*)
-            NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/jemalloc/lib -ljemalloc"
-            NginxMAOpt=""
-            ;;
-        *google_perftools*)
-            NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/tcmalloc/lib"
-            ;;
+    *ljemalloc*)
+        NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/jemalloc/lib -ljemalloc"
+        NginxMAOpt=""
+        ;;
+    *google_perftools*)
+        NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/tcmalloc/lib"
+        ;;
     esac
     echo "Starting configure nginx..."
     ./configure \
@@ -108,20 +110,20 @@ Upgrade_Nginx()
 
     make -j"$(nproc)" || make || {
         Echo_Red "Error: Nginx build failed."
-        exit 1  
+        exit 1
     }
-    
+
     # unset LuaJIT environment variables to avoid potential conflicts with other software
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
         unset LUAJIT_LIB
         unset LUAJIT_INC
-    fi 
+    fi
 
     if [ ! -x objs/nginx ]; then
         Echo_Red "Error: new nginx binary was not built."
         exit 1
     fi
-    
+
     # Move the old binary aside before installing the new one.
     # A running executable cannot be overwritten in place: the kernel returns ETXTBSY
     # ("Text file busy"), so an in-place "cp objs/nginx ..." silently fails and the old
@@ -130,7 +132,10 @@ Upgrade_Nginx()
     # USR2 live upgrade re-execs the new binary from this same path.
     old_nginx="/usr/local/nginx/sbin/nginx"
     backup_nginx="/usr/local/nginx/sbin/nginx.${Upgrade_Date}"
-    mv "${old_nginx}" "${backup_nginx}" || { Echo_Red "Error: failed to move aside the old nginx binary."; exit 1; }
+    mv "${old_nginx}" "${backup_nginx}" || {
+        Echo_Red "Error: failed to move aside the old nginx binary."
+        exit 1
+    }
 
     # install the new binary and test it before upgrading
     \cp objs/nginx "${old_nginx}" || {
@@ -171,13 +176,12 @@ Upgrade_Nginx()
         systemctl start nginx
     fi
 
-
-#    echo "upgrade..."
-#    make upgrade || {
-#        Echo_Red "Error: nginx live upgrade failed, restoring backup."
-#        \cp "${backup_nginx}" "${old_nginx}" 2>/dev/null
-#        exit 1
-#    }
+    #    echo "upgrade..."
+    #    make upgrade || {
+    #        Echo_Red "Error: nginx live upgrade failed, restoring backup."
+    #        \cp "${backup_nginx}" "${old_nginx}" 2>/dev/null
+    #        exit 1
+    #    }
 
     # reload nginx to apply the new version
     #echo "Reloading nginx to apply the new version..."
@@ -186,7 +190,7 @@ Upgrade_Nginx()
     #    \cp "${backup_nginx}" "${old_nginx}" 2>/dev/null
     #    systemctl restart nginx
     #    exit 1
-    #}   
+    #}
 
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
         if ! grep -q 'lua_package_path "/usr/local/nginx/lib/lua/?.lua";' /usr/local/nginx/conf/nginx.conf; then
@@ -216,7 +220,7 @@ Upgrade_Nginx()
         Echo_Yellow "Start it with: systemctl start nginx"
     fi
 
-   ## cleaning
+    ## cleaning
     cd ${cur_dir}/src && rm -rf nginx-${Nginx_Version} && rm -rf nginx-${Nginx_Version}.tar.gz
     [[ -d "${Custom_Openssl_Ver}" ]] && rm -rf "${Custom_Openssl_Ver}"
     [[ -d "${Pcre2_Ver}" ]] && rm -rf "${Pcre2_Ver}"

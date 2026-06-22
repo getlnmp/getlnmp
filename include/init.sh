@@ -512,7 +512,7 @@ Deb_Dependent() {
 
 Check_Download() {
     Echo_Blue "[+] Downloading files..."
-    cd ${cur_dir}/src
+    cd "${cur_dir}"/src || exit
     if [ "${Stack}" != "lamp" ]; then
         Download_Files ${Nginx_DL} ${Nginx_Ver}.tar.gz
     fi

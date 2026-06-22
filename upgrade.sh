@@ -51,11 +51,11 @@ Display_Upgrade_Menu()
 
 clear
 echo "+-----------------------------------------------------------------------+"
-echo "|            Upgrade script for LNMP V2.1, Written by Licess            |"
+echo "|                     Upgrade script for GetLNMP                        |"
 echo "+-----------------------------------------------------------------------+"
 echo "|     A tool to upgrade Nginx,MySQL/Mariadb,PHP for LNMP/LNMPA/LAMP     |"
 echo "+-----------------------------------------------------------------------+"
-echo "|           For more information please visit https://lnmp.org          |"
+echo "|         For more information please visit https://getlnmp.com         |"
 echo "+-----------------------------------------------------------------------+"
 
 if [ "${action}" == "" ]; then

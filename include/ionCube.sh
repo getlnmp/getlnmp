@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-Install_ionCube()
-{
+Install_ionCube() {
     echo "====== Installing ionCube ======"
     Press_Start
 
@@ -14,7 +13,7 @@ Install_ionCube()
         zend_ext="ioncube_loader_lin_${PHP_Short_Ver}.so"
     fi
 
-    cd "${cur_dir}/src" || { 
+    cd "${cur_dir}/src" || {
         Echo_Red "Error: ${cur_dir}/src not found"
         exit 1
     }
@@ -23,11 +22,14 @@ Install_ionCube()
 
     local ic_arch
     case "${ARCH}" in
-        i386)    ic_arch='x86' ;;
-        x86_64)  ic_arch='x86-64' ;;
-        armhf)   ic_arch='armv7l' ;;
-        aarch64) ic_arch='aarch64' ;;
-        *) Echo_Red "Unsupported architecture: ${ARCH}"; exit 1 ;;
+    i386) ic_arch='x86' ;;
+    x86_64) ic_arch='x86-64' ;;
+    armhf) ic_arch='armv7l' ;;
+    aarch64) ic_arch='aarch64' ;;
+    *)
+        Echo_Red "Unsupported architecture: ${ARCH}"
+        exit 1
+        ;;
     esac
 
     Download_Files https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_${ic_arch}.tar.gz ioncube_loaders_lin_${ic_arch}.tar.gz || {
@@ -50,7 +52,7 @@ Install_ionCube()
     fi
 
     echo "Writing ionCube Loader to configure files..."
-    cat >${PHP_Path}/conf.d/001-ioncube.ini<<EOF
+    cat >${PHP_Path}/conf.d/001-ioncube.ini <<EOF
 [ionCube Loader]
 zend_extension="/usr/local/ioncube/${zend_ext}"
 ;ioncubeend
@@ -66,13 +68,10 @@ EOF
     fi
 }
 
-Uninstall_ionCube()
-{
+Uninstall_ionCube() {
     echo "You will uninstall ionCube..."
     Press_Start
     rm -f "${PHP_Path}/conf.d/001-ioncube.ini"
-    #echo "Delete ionCube files..."
-    #rm -rf /usr/local/ioncube/
     Restart_PHP
     Echo_Green "Uninstall ionCube completed."
 }

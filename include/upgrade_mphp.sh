@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-Upgrade_Multiplephp()
-{
+Upgrade_Multiplephp() {
     Get_Dist_Name
     Check_DB
     Check_Stack
@@ -46,7 +45,7 @@ Upgrade_Multiplephp()
         fi
     fi
 
-    while :;do
+    while :; do
         MPHP_Select=""
         read -r -p "Please select which multiple php version to upgrade: " MPHP_Select
         if [ "${MPHP_Select}" = "" ]; then
@@ -108,7 +107,7 @@ Upgrade_Multiplephp()
         exit 1
     fi
     Press_Start
-    cd ${cur_dir}/src
+    cd "${cur_dir}/src"
     if [ -s "php-${php_version}.tar.bz2" ]; then
         echo "php-${php_version}.tar.bz2 [found]"
     else
@@ -156,15 +155,14 @@ Upgrade_Multiplephp()
     elif [ "${MPHP_Select}" = "11" ]; then
         Upgrade_MPHP8_4
     elif [ "${MPHP_Select}" = "12" ]; then
-        Upgrade_MPHP8_5 
+        Upgrade_MPHP8_5
     else
         Echo_Red "PHP version: ${php_version} is not supported."
         exit 1
     fi
 }
 
-Upgrade_MPHP7_3()
-{
+Upgrade_MPHP7_3() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -180,8 +178,7 @@ Upgrade_MPHP7_3()
     MPHP_U_Final_Check "7.3"
 }
 
-Upgrade_MPHP7_4()
-{
+Upgrade_MPHP7_4() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -197,8 +194,7 @@ Upgrade_MPHP7_4()
     MPHP_U_Final_Check "7.4"
 }
 
-Upgrade_MPHP8_0()
-{
+Upgrade_MPHP8_0() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -214,8 +210,7 @@ Upgrade_MPHP8_0()
     MPHP_U_Final_Check "8.0"
 }
 
-Upgrade_MPHP8_1()
-{
+Upgrade_MPHP8_1() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -231,8 +226,7 @@ Upgrade_MPHP8_1()
     MPHP_U_Final_Check "8.1"
 }
 
-Upgrade_MPHP8_2()
-{
+Upgrade_MPHP8_2() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -248,8 +242,7 @@ Upgrade_MPHP8_2()
     MPHP_U_Final_Check "8.2"
 }
 
-Upgrade_MPHP8_3()
-{
+Upgrade_MPHP8_3() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install

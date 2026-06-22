@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ngx_http_v3_module require the OpenSSL library version 1.1.1 or higher, and the OpenSSL library version 3.0.0 or higher is recommended for better performance and security. 
+# ngx_http_v3_module require the OpenSSL library version 1.1.1 or higher, and the OpenSSL library version 3.0.0 or higher is recommended for better performance and security.
 # http_v3_module's 0-RTT support requires the OpenSSL library version 3.5.1 or higher
 # The OpenSSL library version 3.5.1 or higher is recommended to build nginx with QUIC support
 # for best compability, if system openssl version is 1.1.1, compile nginx with openssl 3.5 if nginx version is 1.29 or higher, otherwise compile nginx with openssl 3.0
@@ -12,7 +12,7 @@ Install_Nginx_Openssl() {
         else
             Custom_Openssl_Ver=${Openssl_3_Ver}
             Custom_Openssl_DL=${Openssl_3_DL}
-        fi  
+        fi
         echo "System uses OpenSSL 1.1.1, compile nginx with custom OpenSSL version: ${Custom_Openssl_Ver}"
         cd ${cur_dir}/src
         Download_Files_Exit ${Custom_Openssl_DL} ${Custom_Openssl_Ver}.tar.gz
@@ -54,7 +54,7 @@ Install_Nginx_Pcre2() {
         Nginx_With_Pcre="--with-pcre-jit"
     else
         echo "OS has no PCRE2 installed, compile nginx with custom PCRE2"
-        cd ${cur_dir}/src
+        cd "${cur_dir}"/src || exit
         Download_Files_Exit ${Pcre2_DL} ${Pcre2_Ver}.tar.bz2
         rm -rf ${Pcre2_Ver}
         tar jxf ${Pcre2_Ver}.tar.bz2
@@ -66,7 +66,7 @@ Install_Nginx_Lua() {
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
         echo "Installing Lua for Nginx..."
         cd ${cur_dir}/src
-       
+
         # build and install LuaJIT if not already installed
         if [[ ! -d "/usr/local/luajit/lib/" ]] && [[ ! -f "/etc/ld.so.conf.d/luajit.conf" ]]; then
             Echo_Blue "[+] Installing Luajit... "
@@ -84,7 +84,7 @@ Install_Nginx_Lua() {
             make install PREFIX=/usr/local/luajit || {
                 Echo_Red "Luajit install failed!"
                 exit 1
-             }
+            }
             cd ${cur_dir}/src
 
             # add Luajit library path to ldconfig runtime linker
@@ -95,14 +95,14 @@ EOF
         else
             echo "LuaJIT is already installed, skipping LuaJIT installation."
         fi
-        
+
         # build time environment variables for LuaJIT
         # LUAJIT_LIB for compile-time headers
         # LUAJIT_INC for compile-time linking
         # tells lua-nginx-mobule where to find LuaJIT's headers and libraries during the nginx build process
         export LUAJIT_LIB=/usr/local/luajit/lib
         export LUAJIT_INC=/usr/local/luajit/include/luajit-2.1
-        
+
         cd ${cur_dir}/src
         # download and prepare lua-nginx-module and ngx_devel_kit
         Download_O_Files_Exit ${LuaNginxModule_DL} ${LuaNginxModule}.tar.gz
@@ -181,13 +181,13 @@ Install_Nginx() {
         NGINX_LD_OPT="${NGINX_LD_OPT} -Wl,-rpath,/usr/local/luajit/lib"
     fi
     case "${NginxMAOpt}" in
-        *ljemalloc*)
-            NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/jemalloc/lib -ljemalloc"
-            NginxMAOpt=""
-            ;;
-        *google_perftools*)
-            NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/tcmalloc/lib"
-            ;;
+    *ljemalloc*)
+        NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/jemalloc/lib -ljemalloc"
+        NginxMAOpt=""
+        ;;
+    *google_perftools*)
+        NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/tcmalloc/lib"
+        ;;
     esac
     echo "Starting configure nginx..."
     # -fPIC for dynamic modules
@@ -228,17 +228,17 @@ Install_Nginx() {
         --with-cc-opt="-O2 -g -fstack-protector-strong -Wp,-D_FORTIFY_SOURCE=2 -fPIC"
 
     Make_Install_Exit "Nginx"
-    
+
     # unset LuaJIT environment variables to avoid potential conflicts with other software
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
         unset LUAJIT_LIB
         unset LUAJIT_INC
     fi
-    
+
     cd ${cur_dir}/src
 
     ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx
-    
+
     # fresh install, we don't need to back up any .conf files
     rm -f /usr/local/nginx/conf/nginx.conf
     cd ${cur_dir}
@@ -302,7 +302,7 @@ google_perftools_profiles /tmp/tcmalloc;' /usr/local/nginx/conf/nginx.conf
     if [ "${Stack}" != "lamp" ]; then
         KMAJ=$(uname -r | cut -d. -f1)
         KMIN=$(uname -r | cut -d. -f2 | cut -d- -f1)
-        if [ "${KMAJ}" -gt 3 ] 2>/dev/null || { [ "${KMAJ}" -eq 3 ] && [ "${KMIN}" -ge 9 ] ; }; then
+        if [ "${KMAJ}" -gt 3 ] 2>/dev/null || { [ "${KMAJ}" -eq 3 ] && [ "${KMIN}" -ge 9 ]; }; then
             sed -i 's/listen 80 default_server;/listen 80 default_server reuseport;/g' /usr/local/nginx/conf/nginx.conf
         fi
     fi

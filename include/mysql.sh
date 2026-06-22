@@ -363,7 +363,7 @@ Install_MySQL_57() {
         else
             MySQL_WITH_SSL='-DWITH_SSL=system'
         fi
-        Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
+        Tar_Cd "${Mysql_Ver}.tar.gz" "${Mysql_Ver}"
         #Install_Boost
         #if echo "${Rocky_Version}${Alma_Version}" | grep -Eqi "^9"; then
         #    sed -i 's@^INCLUDE(cmake/abi_check.cmake)@#INCLUDE(cmake/abi_check.cmake)@' CMakeLists.txt

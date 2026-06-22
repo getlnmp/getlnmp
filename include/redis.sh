@@ -19,7 +19,7 @@ Compile_Redis() {
     # Export the recommended build environment variables
     # INSTALL_RUST_TOOLCHAIN=yes causes Redis's Makefile to silently curl | sh rustup from sh.rustup.rs / static.rust-lang.org during make.
     export BUILD_TLS=yes BUILD_WITH_MODULES=yes INSTALL_RUST_TOOLCHAIN=yes DISABLE_WERRORS=yes
-    
+
     # Compile Redis using all available CPU cores (-j "$(nproc)")
     make -j"$(nproc)"
     #make test || echo " Redis Tests failed, continuing..."
@@ -27,7 +27,7 @@ Compile_Redis() {
     # Use the PREFIX variable to specify the custom installation path
     # This tells 'make install' where to place the binaries and script files
     make PREFIX=/usr/local/redis install
-        
+
     #if [[ "${Is_64bit}" = "y" || "${Is_ARM}" = "y" ]]; then
     #    make PREFIX=/usr/local/redis install
     #else
@@ -36,17 +36,15 @@ Compile_Redis() {
 
     # Unset environment variables to avoid leakage
     unset BUILD_TLS BUILD_WITH_MODULES INSTALL_RUST_TOOLCHAIN DISABLE_WERRORS
-    
+
     # verify installation
     if [ ! -x /usr/local/redis/bin/redis-server ]; then
-        Echo_Red "Redis server installation failed!";
-        exit 1;
+        Echo_Red "Redis server installation failed!"
+        exit 1
     fi
 }
 
-
-Install_Redis()
-{
+Install_Redis() {
     echo "====== Installing Redis ======"
     echo "Install ${Redis_Stable_Ver} Stable Version..."
     Press_Start
@@ -62,7 +60,7 @@ Install_Redis()
     if [ -s /usr/local/redis/bin/redis-server ]; then
         echo "Redis server already exists."
     else
-        if gcc -dumpversion|grep -q "^[34]."; then
+        if gcc -dumpversion | grep -q "^[34]."; then
             Redis_Stable_Ver='redis-5.0.9'
             Redis_DL="https://download.redis.io/releases/${Redis_Stable_Ver}.tar.gz"
 
@@ -74,7 +72,7 @@ Install_Redis()
         Compile_Redis
 
         mkdir -p /usr/local/redis/etc/
-        \cp redis.conf  /usr/local/redis/etc/
+        \cp redis.conf /usr/local/redis/etc/
         #sed -i 's/daemonize no/daemonize yes/g' /usr/local/redis/etc/redis.conf
         if ! grep -Eq '^bind[[:space:]]+127\.0\.0\.1' /usr/local/redis/etc/redis.conf; then
             sed -i -E 's@^[#[:space:]]*bind[[:space:]]+.*@bind 127.0.0.1@' /usr/local/redis/etc/redis.conf
@@ -90,13 +88,13 @@ Install_Redis()
         rm -rf ${PHPRedis_Ver}
     fi
 
-    if echo "${Cur_PHP_Version}" | grep -Eqi '^5\.2\.';then
+    if echo "${Cur_PHP_Version}" | grep -Eqi '^5\.2\.'; then
         Download_Files https://pecl.php.net/get/redis-2.2.7.tgz redis-2.2.7.tgz
         Tar_Cd redis-2.2.7.tgz redis-2.2.7
-    elif echo "${Cur_PHP_Version}" | grep -Eqi '^5\.[3456]\.';then
+    elif echo "${Cur_PHP_Version}" | grep -Eqi '^5\.[3456]\.'; then
         Download_Files https://pecl.php.net/get/redis-4.3.0.tgz redis-4.3.0.tgz
         Tar_Cd redis-4.3.0.tgz redis-4.3.0
-    elif echo "${Cur_PHP_Version}" | grep -Eqi '^7\.[0123]\.';then
+    elif echo "${Cur_PHP_Version}" | grep -Eqi '^7\.[0123]\.'; then
         Download_Files https://pecl.php.net/get/redis-5.3.7.tgz redis-5.3.7.tgz
         Tar_Cd redis-5.3.7.tgz redis-5.3.7
     else
@@ -108,7 +106,7 @@ Install_Redis()
     Make_Install_Exit "Phpredis"
     cd ${cur_dir}/src
 
-    cat >${PHP_Path}/conf.d/007-redis.ini<<EOF
+    cat >${PHP_Path}/conf.d/007-redis.ini <<EOF
 extension = "redis.so"
 EOF
 
@@ -133,8 +131,7 @@ EOF
     fi
 }
 
-Uninstall_Redis()
-{
+Uninstall_Redis() {
     echo "You will uninstall Redis..."
     Press_Start
     systemctl stop redis

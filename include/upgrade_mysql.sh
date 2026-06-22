@@ -256,7 +256,7 @@ Upgrade_MySQL80() {
         if [ -d ${Mysql_Ver} ]; then
             rm -rf ${Mysql_Ver}
         fi
-        Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
+        Tar_Cd "${Mysql_Ver}.tar.gz" "${Mysql_Ver}"
         #Install_Boost
         mkdir -p mysql-build && cd mysql-build
         cmake .. \

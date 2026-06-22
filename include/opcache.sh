@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
 # bundled with PHP 5.5.0 and later, and is » available in PECL for PHP versions 5.2, 5.3 and 5.4
-Install_Opcache()
-{
+Install_Opcache() {
     echo "====== Installing zend opcache ======"
     Press_Start
 
@@ -15,7 +14,7 @@ Install_Opcache()
     fi
 
     if echo "${Cur_PHP_Version}" | grep -Eqi '^5\.[56]\.' || echo "${Cur_PHP_Version}" | grep -Eqi '^7\.'; then
-        cat >${PHP_Path}/conf.d/004-opcache.ini<<EOF
+        cat >${PHP_Path}/conf.d/004-opcache.ini <<EOF
 [Zend Opcache]
 zend_extension="opcache.so"
 opcache.memory_consumption=128
@@ -26,7 +25,7 @@ opcache.fast_shutdown=1
 opcache.enable_cli=1
 EOF
     elif echo "${Cur_PHP_Version}" | grep -Eqi '^8\.'; then
-        cat >${PHP_Path}/conf.d/004-opcache.ini<<EOF
+        cat >${PHP_Path}/conf.d/004-opcache.ini <<EOF
 [Zend Opcache]
 zend_extension="opcache.so"
 opcache.memory_consumption=128
@@ -62,11 +61,10 @@ EOF
     fi
 }
 
-Uninstall_Opcache()
-{
+Uninstall_Opcache() {
     echo "You will uninstall opcache..."
     Press_Start
-    rm -f ${Default_Website_Dir}/ocp.php
+    rm -f "${Default_Website_Dir}"/ocp.php
     rm -f "${PHP_Path}"/conf.d/004-opcache.ini
     Restart_PHP
     Echo_Green "Uninstall Opcache completed."

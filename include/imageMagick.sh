@@ -4,7 +4,7 @@ Install_ImageMagick() {
     echo "====== Installing ImageMagick ======"
     Press_Start
 
-    rm -f ${PHP_Path}/conf.d/008-imagick.ini
+    rm -f "${PHP_Path}/conf.d/008-imagick.ini"
     Addons_Get_PHP_Ext_Dir
     zend_ext="${zend_ext_dir}imagick.so"
     if [ -s "${zend_ext}" ]; then
@@ -38,7 +38,7 @@ Install_ImageMagick() {
     fi
     ldconfig
 
-    cd ${cur_dir}/src
+    cd "${cur_dir}/src"
     if [ -x /usr/local/imagemagick/bin/convert ]; then
         echo "ImageMagick already exists."
     else

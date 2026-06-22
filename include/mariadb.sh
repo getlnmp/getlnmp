@@ -421,7 +421,7 @@ Check_MariaDB_Data_Dir() {
 MariaDB_Set_SSL_Cert() {
     # 1. Create directory
     mkdir -p /usr/local/mariadb/ssl
-    cd /usr/local/mariadb/ssl
+    cd /usr/local/mariadb/ssl || exit
 
     # 2. Generate CA Key and Certificate (Use -traditional for yaSSL compatibility)
     openssl genrsa -traditional -out ca-key.pem 2048

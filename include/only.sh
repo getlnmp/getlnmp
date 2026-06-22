@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 
-Install_EL9_Chkconfig()
-{
+Install_EL9_Chkconfig() {
     [ "${EL_Ver}" = "9" ] && dnf install chkconfig -y
 }
 
-Nginx_Dependent()
-{
+Nginx_Dependent() {
     if [ "$PM" = "yum" ]; then
         if rpm -q httpd >/dev/null 2>&1; then
             Echo_Red "Detected Apache (httpd) installed via distro packages."
@@ -14,13 +12,15 @@ Nginx_Dependent()
             Press_Install
             rpm -e httpd httpd-tools
         fi
-        for packages in make gcc gcc-c++ wget crontabs zlib zlib-devel openssl openssl-devel perl patch bzip2 bzip2-devel initscripts xz gzip;
-        do yum -y install $packages; done
+        for packages in make gcc gcc-c++ wget crontabs zlib zlib-devel openssl openssl-devel perl patch bzip2 bzip2-devel initscripts xz gzip; do yum -y install $packages; done
         Get_RHEL_Family_Major
         Install_EL9_Chkconfig
     elif [ "$PM" = "apt" ]; then
         export DEBIAN_FRONTEND=noninteractive
-        apt-get update -y || apt-get update --allow-releaseinfo-change -y || { Echo_Red "apt-get update failed."; exit 1; }
+        apt-get update -y || apt-get update --allow-releaseinfo-change -y || {
+            Echo_Red "apt-get update failed."
+            exit 1
+        }
         if dpkg -l apache2 2>/dev/null | grep -q '^ii'; then
             Echo_Red "Detected Apache (apache2) installed via distro packages."
             Echo_Yellow "Nginx-only install will remove it. Back up /etc/apache2 now if you need its config."
@@ -29,13 +29,11 @@ Nginx_Dependent()
                 dpkg -l "$removepackages" 2>/dev/null | grep -q '^ii' && apt-get remove -y $removepackages
             done
         fi
-        for packages in debian-keyring debian-archive-keyring build-essential gcc g++ make autoconf automake wget cron openssl libssl-dev zlib1g zlib1g-dev bzip2 bzip2-doc xz-utils gzip;
-        do apt-get --no-install-recommends install -y $packages; done
+        for packages in debian-keyring debian-archive-keyring build-essential gcc g++ make autoconf automake wget cron openssl libssl-dev zlib1g zlib1g-dev bzip2 bzip2-doc xz-utils gzip; do apt-get --no-install-recommends install -y $packages; done
     fi
 }
 
-Install_Only_Nginx()
-{
+Install_Only_Nginx() {
     clear
     echo "+-----------------------------------------------------------------------+"
     echo "|                        Install Nginx for LNMP                         |"
@@ -49,7 +47,7 @@ Install_Only_Nginx()
     Get_Dist_Version
     Modify_Source
     Nginx_Dependent
-    cd ${cur_dir}/src
+    cd "${cur_dir}"/src || exit
     Download_Files ${Nginx_DL} ${Nginx_Ver}.tar.gz
     Install_Nginx
     StartUp nginx
@@ -60,8 +58,7 @@ Install_Only_Nginx()
     Check_Nginx_Files
 }
 
-DB_Dependent()
-{
+DB_Dependent() {
     if [ "$PM" = "yum" ]; then
         # yum resolves reverse-deps; avoid `rpm -e --nodeps` (silently breaks dependents).
         yum -y remove mysql-server mysql mysql-libs mariadb-server mariadb mariadb-libs
@@ -72,8 +69,7 @@ DB_Dependent()
             echo "Removing remaining DB packages: ${remaining_db_pkgs}"
             yum -y remove ${remaining_db_pkgs}
         fi
-        for packages in make cmake gcc gcc-c++ flex bison wget zlib zlib-devel openssl openssl-devel ncurses ncurses-devel libaio-devel rpcgen libtirpc-devel patch cyrus-sasl-devel pkg-config pcre-devel libxml2-devel hostname ncurses-libs numactl-devel libxcrypt gnutls-devel initscripts libxcrypt-compat perl xz gzip systemd-devel;
-        do yum -y install $packages; done
+        for packages in make cmake gcc gcc-c++ flex bison wget zlib zlib-devel openssl openssl-devel ncurses ncurses-devel libaio-devel rpcgen libtirpc-devel patch cyrus-sasl-devel pkg-config pcre-devel libxml2-devel hostname ncurses-libs numactl-devel libxcrypt gnutls-devel initscripts libxcrypt-compat perl xz gzip systemd-devel; do yum -y install $packages; done
         Get_RHEL_Family_Major
 
         if [ "${EL_Ver}" = "8" ]; then
@@ -99,15 +95,17 @@ DB_Dependent()
         Install_EL9_Chkconfig
     elif [ "$PM" = "apt" ]; then
         export DEBIAN_FRONTEND=noninteractive
-        apt-get update -y || apt-get update --allow-releaseinfo-change -y || { Echo_Red "apt-get update failed."; exit 1; }
+        apt-get update -y || apt-get update --allow-releaseinfo-change -y || {
+            Echo_Red "apt-get update failed."
+            exit 1
+        }
         # Back up the distro DB config tree, then remove (not purge) installed packages so
         # user my.cnf / TLS material is preserved and reverse-deps are respected.
         [ -d /etc/mysql ] && mv /etc/mysql "/etc/mysql.lnmp_backup.$(date +%Y%m%d%H%M%S)"
         for removepackages in mysql-client mysql-server mysql-common mariadb-client mariadb-server mariadb-common; do
             dpkg -l "$removepackages" 2>/dev/null | grep -q '^ii' && apt-get remove -y $removepackages
         done
-        for packages in debian-keyring debian-archive-keyring build-essential gcc g++ make cmake autoconf automake wget openssl libssl-dev zlib1g zlib1g-dev libncurses-dev bison libaio-dev libtirpc-dev libsasl2-dev pkg-config libpcre2-dev libxml2-dev libtinfo-dev libnuma-dev libgnutls28-dev gnutls-dev xz-utils gzip libsystemd-dev;
-        do apt-get --no-install-recommends install -y $packages; done
+        for packages in debian-keyring debian-archive-keyring build-essential gcc g++ make cmake autoconf automake wget openssl libssl-dev zlib1g zlib1g-dev libncurses-dev bison libaio-dev libtirpc-dev libsasl2-dev pkg-config libpcre2-dev libxml2-dev libtinfo-dev libnuma-dev libgnutls28-dev gnutls-dev xz-utils gzip libsystemd-dev; do apt-get --no-install-recommends install -y $packages; done
         if echo "${Debian_Version}" | grep -Eqi "^1[3-9]" || echo "${Ubuntu_Version}" | grep -Eqi "^2[4-9]\."; then
             apt-get --no-install-recommends install -y systemd-dev
         fi
@@ -115,28 +113,36 @@ DB_Dependent()
     Ncurses5_Compat_Check
 }
 
-Install_Database()
-{
-    [ -z "${DBSelect}" ] && { Echo_Red "DBSelect is not set."; exit 1; }
+Install_Database() {
+    [ -z "${DBSelect}" ] && {
+        Echo_Red "DBSelect is not set."
+        exit 1
+    }
     case "${DBSelect}" in
-        [1-5])
-            { [ -z "${Mysql_Ver}" ] || [ -z "${Mysql_Ver_Short}" ]; } && { Echo_Red "MySQL version not resolved."; exit 1; }
-            ;;
-        [6-9]|1[0-2])
-            { [ -z "${Mariadb_Ver}" ] || [ -z "${Mariadb_Version}" ]; } && { Echo_Red "MariaDB version not resolved."; exit 1; }
-            ;;
+    [1-5])
+        { [ -z "${Mysql_Ver}" ] || [ -z "${Mysql_Ver_Short}" ]; } && {
+            Echo_Red "MySQL version not resolved."
+            exit 1
+        }
+        ;;
+    [6-9] | 1[0-2])
+        { [ -z "${Mariadb_Ver}" ] || [ -z "${Mariadb_Version}" ]; } && {
+            Echo_Red "MariaDB version not resolved."
+            exit 1
+        }
+        ;;
     esac
     echo "============================check files=================================="
     cd ${cur_dir}/src
-#    Mysql_Ver_Short=$(echo ${Mysql_Ver} | sed 's/mysql-//' | cut -d. -f1-2)
+    #    Mysql_Ver_Short=$(echo ${Mysql_Ver} | sed 's/mysql-//' | cut -d. -f1-2)
     if [[ "${DBSelect}" =~ ^[1-5]$ ]]; then
         case "${Mysql_Ver_Short}" in
-            5.6|5.7) MySQL_BIN_Glibc_Tag="glibc2.12" ;;
-            *) MySQL_BIN_Glibc_Tag="glibc2.28" ;;
+        5.6 | 5.7) MySQL_BIN_Glibc_Tag="glibc2.12" ;;
+        *) MySQL_BIN_Glibc_Tag="glibc2.28" ;;
         esac
         if [[ "${Bin}" = "y" && "${DBSelect}" =~ ^[2-3]$ ]]; then
             Download_Files https://cdn.mysql.com/Downloads/MySQL-${Mysql_Ver_Short}/${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz ${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz
-#            [[ $? -ne 0 ]] && Download_Files https://cdn.mysql.com/archives/mysql-${Mysql_Ver_Short}/${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz ${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz
+            #            [[ $? -ne 0 ]] && Download_Files https://cdn.mysql.com/archives/mysql-${Mysql_Ver_Short}/${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz ${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz
             if [[ $? -ne 0 ]]; then
                 Download_Files https://cdn.mysql.com/archives/mysql-${Mysql_Ver_Short}/${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz ${Mysql_Ver}-linux-${MySQL_BIN_Glibc_Tag}-${DB_ARCH}.tar.gz
             fi
@@ -250,8 +256,7 @@ Install_Database()
     fi
 }
 
-Install_Only_Database()
-{
+Install_Only_Database() {
     clear
     echo "+-----------------------------------------------------------------------+"
     echo "|             Install MySQL/MariaDB database for LNMP                   |"
