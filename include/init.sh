@@ -484,6 +484,11 @@ RHEL_Dependent() {
         dnf install chkconfig -y
     fi
 
+    # Mysql 8.4 on RHEL 10 needs libquadmath-devel library
+    if [ "${EL_Ver}" = "10" ]; then
+        dnf install libquadmath-devel -y
+    fi
+
     if [ -s /etc/yum.conf.lnmp ]; then
         mv -f /etc/yum.conf.lnmp /etc/yum.conf
     fi

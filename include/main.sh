@@ -990,8 +990,8 @@ Tar_Cd() {
     local FileName=$1
     local DirName=$2
     local extension=${FileName##*.}
-    cd ${cur_dir}/src
-    [[ -d "${DirName}" ]] && rm -rf ${DirName}
+    cd "${cur_dir}/src"
+    [[ -d "${DirName}" ]] && rm -rf "${DirName}"
     echo "Uncompress ${FileName}..."
     if [ "$extension" == "gz" ] || [ "$extension" == "tgz" ]; then
         tar zxf "${FileName}"

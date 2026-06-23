@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GetLNMP Welcome</title>
+  <meta name="author" content="GetLNMP">
+  <meta name="keywords" content="GetLNMP,LNMP,LNMPA,LAMP,Nginx,MySQL,MariaDB,PHP">
+  <meta name="description" content="GetLNMP environment is ready.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #fafafa;
+      --surface: #ffffff;
+      --text: #1a1a2e;
+      --muted: #7c7c8a;
+      --border: #e8e8ec;
+      --accent: #3730a3;
+      --accent-light: #eef2ff;
+      --accent-hover: #312e81;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-hover); }
+
+    .page {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 80px 24px 60px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 40px;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 6px;
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 42px;
+      font-weight: 500;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+
+    .subtitle {
+      margin-top: 20px;
+      font-size: 17px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .divider {
+      width: 48px;
+      height: 1px;
+      background: var(--border);
+      margin: 40px 0;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      height: 42px;
+      padding: 0 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .btn-ghost {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    .btn-ghost:hover {
+      background: #dde3fc;
+      color: var(--accent-hover);
+      text-decoration: none;
+    }
+
+    .info-section {
+      margin-top: 48px;
+    }
+
+    .info-section h2 {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .info-list {
+      list-style: none;
+    }
+
+    .info-list li {
+      padding: 16px 0;
+      border-top: 1px solid var(--border);
+      font-size: 15px;
+    }
+
+    .info-list li:last-child {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .info-list strong {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .info-list span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .links {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .links a {
+      display: inline-flex;
+      align-items: center;
+      height: 34px;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 13px;
+      color: var(--text);
+      transition: border-color 0.15s;
+    }
+
+    .links a:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .notice {
+      margin-top: 48px;
+      padding: 14px 16px;
+      background: var(--accent-light);
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 600px) {
+      .page { padding: 48px 20px 40px; }
+      h1 { font-size: 32px; }
+      .actions { flex-direction: column; }
+      .btn { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="brand">
+      <span class="brand-mark">G</span>
+      <span>GetLNMP</span>
+    </div>
+
+    <h1>Your web stack is ready.</h1>
+    <p class="subtitle">
+      GetLNMP has prepared this server for LNMP, LNMPA, or LAMP workloads.
+      Replace this page with your own site files when you are ready to publish.
+    </p>
+
+    <div class="actions">
+      <a class="btn btn-primary" href="/phpinfo.php">phpinfo</a>
+      <a class="btn btn-ghost" href="/phpmyadmin/">phpMyAdmin</a>
+    </div>
+
+    <div class="divider"></div>
+
+    <section class="info-section">
+      <h2>Server</h2>
+      <ul class="info-list">
+        <li>
+          <strong>Web Service</strong>
+          <span>Nginx or Apache is serving the default site from the configured web root.</span>
+        </li>
+        <li>
+          <strong>PHP Runtime</strong>
+          <span>Use the diagnostic pages to confirm modules, limits, and loaded configuration.</span>
+        </li>
+        <li>
+          <strong>Next Steps</strong>
+          <span>Upload your application, configure virtual hosts, add SSL, and remove diagnostic files.</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="info-section">
+      <h2>Resources</h2>
+      <p style="font-size: 14px; color: var(--muted); margin-bottom: 12px;">Documentation and community links.</p>
+      <div class="links">
+        <a href="https://getlnmp.com" target="_blank" rel="noopener">Official</a>
+        <a href="https://getlnmp.com/faq" target="_blank" rel="noopener">FAQ</a>
+        <a href="https://github.com/getlnmp/getlnmp" target="_blank" rel="noopener">Github</a>
+      </div>
+    </section>
+
+    <div class="notice">
+      This page only indicates that the current domain is hosted on a GetLNMP-managed environment.
+      It does not imply any relationship between this domain and the GetLNMP project.
+    </div>
+
+    <footer>
+      <a href="https://github.com/getlnmp/getlnmp" target="_blank" rel="noopener">Powered by GetLNMP</a>
+    </footer>
+  </main>
+</body>
+</html>

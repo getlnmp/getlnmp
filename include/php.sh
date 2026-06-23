@@ -76,6 +76,15 @@ PHP_with_Libzip() {
                 with_libzip="--enable-zip --with-libzip=${Custom_Libzip_Path}"
                 LDFLAGS_TEMP="-Wl,-rpath=${Custom_Libzip_Path}/${Libzip_lib}"
             fi
+            # for php 7.3 on RHEL 10, we need to export LIBRARY_PATH
+            if echo "${php_version}" | grep -Eqi '^7\.3\.' || echo "${Php_Ver}" | grep -Eqi "php-7\.3\."; then
+                if [ "$PM" = "yum" ]; then
+                    if grep -Eqi "release 10." /etc/redhat-release; then
+                        echo "LIBRARY_PATH export is required for php 7.3 on RHEL10"
+                        LIBRARY_PATH_TEMP="${Custom_Libzip_Path}/${Libzip_lib}"
+                    fi
+                fi
+            fi
         else
             with_libzip='--enable-zip'
         fi
@@ -508,6 +517,11 @@ PHP_ENV_UNSET() {
         unset LDFLAGS
         unset LDFLAGS_TEMP
     fi
+    if [[ -n "${LIBRARY_PATH_TEMP+x}" ]]; then
+        echo "Resetting LIBRARY_PATH (was: ${LIBRARY_PATH_TEMP})"
+        unset LIBRARY_PATH
+        unset LIBRARY_PATH_TEMP
+    fi
     if [[ -n "${CC+x}" ]]; then
         echo "Resetting CC (was: ${CC}) and CXX (was: ${CXX})"
         unset CC
@@ -533,6 +547,13 @@ PHP_ENV_SET() {
         echo "LDFLAGS is set to ${LDFLAGS}"
     else
         echo "No LDFLAGS Environment EXPORT required."
+    fi
+
+    if [[ -n "${LIBRARY_PATH_TEMP}" ]]; then
+        export LIBRARY_PATH="${LIBRARY_PATH_TEMP}"
+        echo "LIBRARY_PATH is set to ${LIBRARY_PATH}"
+    else
+        echo "No LIBRARY_PATH Environment EXPORT required."
     fi
 
     #    if echo "${php_version}" | grep -Eqi '^7\.[1-3]\.' && echo "${Php_Ver}" | grep -Eqi '^php-7\.[1-3]\.'; then
