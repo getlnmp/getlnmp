@@ -1460,6 +1460,7 @@ Gcc14_Check() {
         yum | dnf) ${PM} install -y gcc gcc-c++ ;;
         esac
     fi
+    local gcc_major_version
     gcc_major_version=$(gcc -dumpversion | cut -f1 -d.)
     if [ "${gcc_major_version}" -eq "14" ]; then
         case "${PM}" in

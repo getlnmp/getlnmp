@@ -171,10 +171,11 @@ Install_Nginx() {
     Install_Ngx_FancyIndex
     rm -rf ${Nginx_Ver}
     Tar_Cd ${Nginx_Ver}.tar.gz ${Nginx_Ver}
-    Nginx_Ver_Com=$(${cur_dir}/include/version_compare 1.14.2 ${Nginx_Version})
-    if gcc -dumpversion | grep -q "^[78\.]" && [ "${Nginx_Ver_Com}" == "1" ]; then
-        patch -p1 <${cur_dir}/src/patch/nginx-gcc8.patch
-    fi
+    # Nginx Version 1.14.2 is too old, therefore we dropped this patch.
+    # Nginx_Ver_Com=$(${cur_dir}/include/version_compare 1.14.2 ${Nginx_Version})
+    #if gcc -dumpversion | grep -q "^[78\.]" && [ "${Nginx_Ver_Com}" == "1" ]; then
+    #    patch -p1 <${cur_dir}/src/patch/nginx-gcc8.patch
+    #fi
     Validate_Nginx_Modules_Options
     NGINX_LD_OPT='-Wl,-z,relro -Wl,-z,now -pie'
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then

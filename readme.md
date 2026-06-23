@@ -6,16 +6,16 @@ GetLNMP is a Linux Shell-based installer for deploying production LNMP (Nginx/My
 
 ## Supported Versions
 
-| Distribution  |  EOL   | kernel | glibc | OpenSSL | GCC  | ICU  |
-| :-----------: | :----: | :----: | :---: | :-----: | :--: | :--: |
-|   Debian 11   | 2026.8 |  5.1   | 2.31  |  1.1.1  | 10.2 | 67.1 |
-|   Debian 12   | 2028.6 |  6.1   | 2.36  | 3.0.\*  | 12.2 | 72.1 |
-|   Debian 13   | 2030.6 |  6.8   | 2.41  | 3.5.\*  |  14  | 74.1 |
-| Ubuntu 22 LTS | 2027.4 |  5.15  | 2.35  | 3.0.\*  | 11.2 | 70.1 |
-| Ubuntu 24 LTS | 2029.5 |  6.8   | 2.39  | 3.0.\*  | 13.2 | 74.2 |
-|    RHEL 8     | 2029.5 |  4.1   | 2.28  |  1.1.1  | 8.3  | 60.3 |
-|    RHEL 9     | 2032.5 |  5.1   | 2.34  | 3.0.\*  | 11.2 | 67.1 |
-|    RHEL 10    | 2035.5 |  6.1   | 2.39  | 3.5.\*  |  14  | 74.2 |
+| Distribution  |  EOL   | kernel | glibc | OpenSSL |  GCC  | ICU  |
+| :-----------: | :----: | :----: | :---: | :-----: | :---: | :--: |
+|   Debian 11   | 2026.8 |  5.1   | 2.31  |  1.1.1  | 10.2  | 67.1 |
+|   Debian 12   | 2028.6 |  6.1   | 2.36  | 3.0.\*  | 12.2  | 72.1 |
+|   Debian 13   | 2030.6 |  6.8   | 2.41  | 3.5.\*  |  14   | 74.1 |
+| Ubuntu 22 LTS | 2027.4 |  5.15  | 2.35  | 3.0.\*  | 11.2  | 70.1 |
+| Ubuntu 24 LTS | 2029.5 |  6.8   | 2.39  | 3.0.\*  | 13.2  | 74.2 |
+|    RHEL 8     | 2029.5 |  4.1   | 2.28  |  1.1.1  | 8.\*  | 60.3 |
+|    RHEL 9     | 2032.5 |  5.1   | 2.34  | 3.5.\*  | 11.\* | 67.1 |
+|    RHEL 10    | 2035.5 |  6.1   | 2.39  | 3.5.\*  |  14   | 74.2 |
 
 ## Installation Recommendations
 
@@ -38,7 +38,7 @@ In other words:
 ## Software Versions
 
 - PHP currently supports PHP 7.3-7.4 and PHP 8.0-8.5.
-- MySQL supports 5.7, 8.0, and 8.4. RHEL 10 series supports only MySQL 8.4.
+- MySQL supports 5.7, 8.0, and 8.4.
 - MariaDB supports 10.6, 10.11, 11.4, and 11.8.
 - Nginx installs the latest stable version by default.
 - Apache currently supports only 2.4.

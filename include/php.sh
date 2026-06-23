@@ -429,21 +429,22 @@ PHP_with_Intl() {
     php_with_custom_icu='n'
     #PHP_Install_ICU
 
-    # ICU >= 68 introduces TRUE and FALSE macros in some of its headers, which causes compilation failure for PHP 8.1 and older that does not define these macros in its internal C++ code.
+    # ICU >= 68 introduces TRUE and FALSE macros in some of its headers, which causes compilation failure for earlier PHP 7.3, 7.4 and 8.0.0
     # Official fix was introduced in PHP 7.4.13, PHP 7.3.25, and the final release of PHP 8.0.0. For older PHP versions, we need to set compiler flags to define these macros to avoid compilation failure.
     # Usually need workaround:
     # PHP 7.2.x or older + ICU >= 68
     # PHP 7.3.0 - 7.3.24 + ICU >= 68
     # PHP 7.4.0 - 7.4.12 + ICU >= 68
-    if [ "${local_icu_version}" -gt 68 ]; then
-        if echo "${php_version}" | grep -Eqi '^7\.2\.' && ! echo "${Php_Ver}" | grep -Eqi '^php-7\.2\.'; then
-            echo "GCC Compiler flags need to be set for ICU 68+ with PHP 7.2 or older"
-            export CXX="g++ -DTRUE=1 -DFALSE=0"
-            export CC="gcc -DTRUE=1 -DFALSE=0"
-        else
-            echo "GCC Compiler flags does not to be set for ICU 68+ with PHP 7.3 or newer"
-        fi
-    fi
+    # Since we've dropped support for php 7.2, below is actually useless.
+    # if [ "${local_icu_version}" -gt 68 ]; then
+    #     if echo "${php_version}" | grep -Eqi '^7\.2\.' && ! echo "${Php_Ver}" | grep -Eqi '^php-7\.2\.'; then
+    #         echo "GCC Compiler flags need to be set for ICU 68+ with PHP 7.2 or older"
+    #         export CXX="g++ -DTRUE=1 -DFALSE=0"
+    #         export CC="gcc -DTRUE=1 -DFALSE=0"
+    #     else
+    #         echo "GCC Compiler flags does not to be set for ICU 68+ with PHP 7.3 or newer"
+    #     fi
+    # fi
 }
 
 # Only used for php 5.6, therefore no need pkg_config_path for php environment
@@ -509,31 +510,60 @@ PHP_Post_Set() {
 PHP_ENV_UNSET() {
     if [[ -n "${PKG_CONFIG_PATH_TEMP+x}" ]]; then
         echo "Resetting PKG_CONFIG_PATH (was: ${PKG_CONFIG_PATH_TEMP})"
-        unset PKG_CONFIG_PATH
+        if [[ -n "${PKG_CONFIG_PATH_Original}" ]]; then
+            export PKG_CONFIG_PATH=${PKG_CONFIG_PATH_Original}
+        else
+            unset PKG_CONFIG_PATH
+        fi
         unset PKG_CONFIG_PATH_TEMP
     fi
     if [[ -n "${LDFLAGS_TEMP+x}" ]]; then
         echo "Resetting LDFLAGS (was: ${LDFLAGS_TEMP})"
-        unset LDFLAGS
+        if [[ -n "${LDFLAGS_Original}" ]]; then
+            export LDFLAGS=${LDFLAGS_Original}
+        else
+            unset LDFLAGS
+        fi
         unset LDFLAGS_TEMP
     fi
     if [[ -n "${LIBRARY_PATH_TEMP+x}" ]]; then
         echo "Resetting LIBRARY_PATH (was: ${LIBRARY_PATH_TEMP})"
-        unset LIBRARY_PATH
+        if [[ -n "${LIBRARY_PATH_Original}" ]]; then
+            export LIBRARY_PATH=${LIBRARY_PATH_Original}
+        else
+            unset LDFLAGS
+        fi
         unset LIBRARY_PATH_TEMP
     fi
-    if [[ -n "${CC+x}" ]]; then
-        echo "Resetting CC (was: ${CC}) and CXX (was: ${CXX})"
-        unset CC
-        unset CXX
+    # if [[ -n "${CC+x}" ]]; then
+    #     echo "Resetting CC (was: ${CC}) and CXX (was: ${CXX})"
+    #     unset CC
+    #     unset CXX
+    # fi
+    # Unset CFLAGS, CXXFLAGS and LDFLAGS mainly for php 8.3+ when gcc = 8
+    if echo "${php_version}" | grep -Eqi '^8\.[3-6\.' && echo "${Php_Ver}" | grep -Eqi '^php-8\.[3-6]\.'; then
+        local gcc_major_version
+        gcc_major_version=$(gcc -dumpversion | cut -f1 -d.)
+        if [ "${gcc_major_version}" -eq "8" ]; then
+            unset CFLAGS
+            unset CXXFLAGS
+            unset LDFLAGS
+        fi
+
     fi
-    #    PHP_GCC14_Unset
 }
 
 PHP_ENV_SET() {
     PHP_PEAR_Reset
+    # Below PKG_CONFIG_PATH, LDFLAGS, LIBRARY_PATH export are mainly for php 7.3 - 8.0
     if [[ -n "${PKG_CONFIG_PATH_TEMP}" ]]; then
-        export PKG_CONFIG_PATH="${PKG_CONFIG_PATH_TEMP}"
+        if [[ -n "${PKG_CONFIG_PATH}" ]]; then
+            echo "Original PKG_CONFIG_PATH is ${PKG_CONFIG_PATH}"
+            PKG_CONFIG_PATH_Original="${PKG_CONFIG_PATH}"
+        else
+            echo "PKG_CONFIG_PATH is not set"
+        fi
+        export PKG_CONFIG_PATH="${PKG_CONFIG_PATH_TEMP}${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
         #export CPPFLAGS="${CPPFLAGS_TEMP}"
         echo "PKG_CONFIG_PATH is set to ${PKG_CONFIG_PATH}"
         #echo "CPPFLAGS is set to ${CPPFLAGS}"
@@ -543,17 +573,41 @@ PHP_ENV_SET() {
     fi
 
     if [[ -n "${LDFLAGS_TEMP}" ]]; then
-        export LDFLAGS="${LDFLAGS_TEMP}"
+        if [[ -n "${LDFLAGS}" ]]; then
+            echo "Original LDFLAGS is ${LDFLAGS}"
+            LDFLAGS_Original="${LDFLAGS}"
+        else
+            echo "LDFLAGS is not set"
+        fi
+        export LDFLAGS="${LDFLAGS_TEMP}${LDFLAGS:+:${LDFLAGS}}"
         echo "LDFLAGS is set to ${LDFLAGS}"
     else
         echo "No LDFLAGS Environment EXPORT required."
     fi
 
     if [[ -n "${LIBRARY_PATH_TEMP}" ]]; then
-        export LIBRARY_PATH="${LIBRARY_PATH_TEMP}"
+        if [[ -n "${LIBRARY_PATH}" ]]; then
+            echo "Original LDFLAGS is ${LIBRARY_PATH}"
+            LIBRARY_PATH_Original="${LLIBRARY_PATH}"
+        else
+            echo "LIBRARY_PATH is not set"
+        fi
+        export LIBRARY_PATH="${LIBRARY_PATH_TEMP}${LIBRARY_PATH:+:${LIBRARY_PATH}}"
         echo "LIBRARY_PATH is set to ${LIBRARY_PATH}"
     else
         echo "No LIBRARY_PATH Environment EXPORT required."
+    fi
+
+    # Below export CFLAGS, CXXFLAGS and  LDFLAGS mainly for php 8.3+ when gcc=8
+    if echo "${php_version}" | grep -Eqi '^8\.[3-6]\.' && echo "${Php_Ver}" | grep -Eqi '^php-8\.[3-6]\.'; then
+        local gcc_major_version
+        gcc_major_version=$(gcc -dumpversion | cut -f1 -d.)
+        if [ "${gcc_major_version}" -eq "8" ]; then
+            export CFLAGS="$CFLAGS -fPIE"
+            export CXXFLAGS="$CXXFLAGS -fPIE"
+            export LDFLAGS="$LDFLAGS -pie"
+        fi
+
     fi
 
     #    if echo "${php_version}" | grep -Eqi '^7\.[1-3]\.' && echo "${Php_Ver}" | grep -Eqi '^php-7\.[1-3]\.'; then
@@ -1001,7 +1055,7 @@ PHP_Patch() {
             if [ "${Autoconf_Second_Digit}" -gt 69 ]; then
                 Install_Autoconf
                 echo "Rebuilding the configure script after patching with new autoconf 2.69..."
-                cd ${cur_dir}/src/${Php_Ver}
+                cd "${cur_dir}/src/${Php_Ver}"
                 PHP_AUTOCONF="/usr/local/autoconf-2.69/bin/autoconf" PHP_AUTOHEADER="/usr/local/autoconf-2.69/bin/autoheader" ./buildconf --force
             else
                 echo "Rebuilding the configure script after patching with system autoconf..."
