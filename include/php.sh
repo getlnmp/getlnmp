@@ -542,10 +542,11 @@ PHP_ENV_UNSET() {
     #     unset CXX
     # fi
     # Unset CFLAGS, CXXFLAGS and LDFLAGS mainly for php 8.3+ when gcc = 8
-    if echo "${php_version}" | grep -Eqi '^8\.[3-6]\.' && echo "${Php_Ver}" | grep -Eqi '^php-8\.[3-6]\.'; then
+    if echo "${php_version}" | grep -Eqi '^8\.[3-6]\.' || echo "${Php_Ver}" | grep -Eqi '^php-8\.[3-6]\.'; then
         local gcc_major_version
         gcc_major_version=$(gcc -dumpversion | cut -f1 -d.)
         if [ "${gcc_major_version}" -eq "8" ]; then
+            echo "Unsetting CFLAGS, CXXFLAGS, LDFLAGS"
             unset CFLAGS
             unset CXXFLAGS
             unset LDFLAGS
@@ -600,7 +601,7 @@ PHP_ENV_SET() {
     fi
 
     # Below export CFLAGS, CXXFLAGS and  LDFLAGS mainly for php 8.3+ when gcc=8
-    if echo "${php_version}" | grep -Eqi '^8\.[3-6]\.' && echo "${Php_Ver}" | grep -Eqi '^php-8\.[3-6]\.'; then
+    if echo "${php_version}" | grep -Eqi '^8\.[3-6]\.' || echo "${Php_Ver}" | grep -Eqi '^php-8\.[3-6]\.'; then
         local gcc_major_version
         gcc_major_version=$(gcc -dumpversion | cut -f1 -d.)
         if [ "${gcc_major_version}" -eq "8" ]; then
@@ -612,8 +613,11 @@ PHP_ENV_SET() {
             fi
             echo "GCC 8 can't compile ${gcc_php_version}, we're going to add -fPIE to CFLAGS and CXXFLAGS and add -pie to LDFLAGS"
             export CFLAGS="$CFLAGS -fPIE"
+            echo "CFLAGS is set to $CFLAGS"
             export CXXFLAGS="$CXXFLAGS -fPIE"
+            echo "CXXFLAGS is set to $CXXFLAGS"
             export LDFLAGS="$LDFLAGS -pie"
+            echo "LDFLAGS is set to $LDFLAGS"
         fi
 
     fi

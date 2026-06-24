@@ -225,7 +225,7 @@ Install_PHP_Dependent() {
 }
 
 Check_PHP_Upgrade_Files() {
-    PHP_ENV_UNSET
+    #PHP_ENV_UNSET
     Echo_LNMPA_Upgrade_PHP_Failed() {
         Echo_Red "======== upgrade php failed ======"
         Echo_Red "upgrade php log: /root/upgrade_a_php${Upgrade_Date}.log"
