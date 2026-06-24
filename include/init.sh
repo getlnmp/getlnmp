@@ -455,9 +455,10 @@ RHEL_Dependent() {
 
     Get_RHEL_Family_Major
 
-    if [ "${DISTRO}" = "RHEL" ] && [[ "${EL_Ver}" =~ ^[5-7]$ ]]; then
-        for legacy_packages in gcc-g77 libtool-libs libpng10 libpng10-devel git-core; do yum -y install $legacy_packages; done
-    fi
+    # We've dropped support for RHEL 5,6,7
+    # if [ "${DISTRO}" = "RHEL" ] && [[ "${EL_Ver}" =~ ^[5-7]$ ]]; then
+    #     for legacy_packages in gcc-g77 libtool-libs libpng10 libpng10-devel git-core; do yum -y install $legacy_packages; done
+    # fi
 
     if [ "${EL_Ver}" = "8" ]; then
         Set_RHEL_Family_CRB_Repo
@@ -467,7 +468,7 @@ RHEL_Dependent() {
         fi
         dnf install libarchive -y
 
-        dnf install gcc-toolset-10 -y
+        #dnf install gcc-toolset-10 -y
     fi
 
     if [[ "${EL_Ver}" =~ ^(9|10)$ ]]; then
@@ -475,9 +476,9 @@ RHEL_Dependent() {
         if [ "${repo_id}" != "" ]; then
             for cs9packages in oniguruma-devel libzip-devel libtirpc-devel libxcrypt-compat; do dnf --enablerepo=${repo_id} install ${cs9packages} -y; done
         fi
-        if [[ "${EL_Ver}" = "9" && "${Bin}" != "y" && "${DBSelect}" =~ ^[45]$ ]]; then
-            dnf install gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-binutils gcc-toolset-12-annobin-annocheck gcc-toolset-12-annobin-plugin-gcc -y
-        fi
+        # if [[ "${EL_Ver}" = "9" && "${Bin}" != "y" && "${DBSelect}" =~ ^[45]$ ]]; then
+        #     dnf install gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-binutils gcc-toolset-12-annobin-annocheck gcc-toolset-12-annobin-plugin-gcc -y
+        # fi
     fi
 
     if [ "${EL_Ver}" = "9" ]; then

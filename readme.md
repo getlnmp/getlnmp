@@ -57,11 +57,11 @@ Before installation, make sure `wget` and `git` are installed.
 If you see `wget: command not found`, install it with `yum install wget` or `apt-get install wget`.
 If you see `git: command not found`, install it with `yum install git` or `apt-get install git`.
 
-To avoid interruption from disconnected SSH sessions, `screen` is recommended. You can run `screen -S lnmp` first, then run the GetLNMP installation command:
+To avoid interruption from disconnected SSH sessions, `screen` is recommended. You can run `screen -S getlnmp` first, then run the GetLNMP installation command:
 
-`wget http://soft.lnmp.com/lnmp/lnmp2.1.tar.gz -cO lnmp2.1.tar.gz && tar zxf lnmp2.1.tar.gz && cd lnmp2.1 && ./install.sh {lnmp|lnmpa|lamp}`
+`git clone https://github.com/getlnmp/getlnmp.git && cd getlnmp && ./install.sh {lnmp|lnmpa|lamp}`
 
-If the connection drops, use `screen -r lnmp` to reconnect.
+If the connection drops, use `screen -r getlnmp` to reconnect.
 
 ## Common Usage
 
@@ -203,7 +203,7 @@ The interactive installer defaults to MariaDB 11.4 (`DBSelect=11`) and PHP 8.3 (
 
 Example: in LNMP mode, install MariaDB 11.4, set the database root password to `getlnmp.com`, enable InnoDB, install PHP 8.3, and use no memory allocator. First run screen if needed, then download and extract the LNMP package:
 
-`wget http://soft.getlnmp.com/lnmp/lnmp2.1.tar.gz -cO lnmp2.1.tar.gz && tar zxf lnmp2.1.tar.gz && cd lnmp2.1`
+`git clone https://github.com/getlnmp/getlnmp.git && cd getlnmp && ./install.sh {lnmp|lnmpa|lamp}`
 
 Then set unattended parameters and install:
 

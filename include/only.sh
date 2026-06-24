@@ -79,7 +79,7 @@ DB_Dependent() {
             fi
             dnf install libarchive -y
 
-            dnf install gcc-toolset-10 -y
+            #dnf install gcc-toolset-10 -y
         fi
 
         if [[ "${EL_Ver}" =~ ^(9|10)$ ]]; then
@@ -87,9 +87,9 @@ DB_Dependent() {
             if [ "${repo_id}" != "" ]; then
                 dnf --enablerepo=${repo_id} install libtirpc-devel libxcrypt-compat -y
             fi
-            if [[ "${EL_Ver}" = "9" && "${Bin}" != "y" && "${DBSelect}" =~ ^[45]$ ]]; then
-                dnf install gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-binutils gcc-toolset-12-annobin-annocheck gcc-toolset-12-annobin-plugin-gcc -y
-            fi
+            # if [[ "${EL_Ver}" = "9" && "${Bin}" != "y" && "${DBSelect}" =~ ^[45]$ ]]; then
+            #     dnf install gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-binutils gcc-toolset-12-annobin-annocheck gcc-toolset-12-annobin-plugin-gcc -y
+            # fi
         fi
 
         Install_EL9_Chkconfig
