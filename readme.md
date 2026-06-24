@@ -52,7 +52,7 @@ GetLNMP supports custom Nginx and PHP compile options, custom website and databa
 
 ## Installing GetLNMP
 
-Before installation, make sure `wget` and `git` are installed.
+Before installation, update system first (`apt update && apt upgrade` or `dnf clean all && dnf update`) and make sure `wget` and `git` are installed.
 
 If you see `wget: command not found`, install it with `yum install wget` or `apt-get install wget`.
 If you see `git: command not found`, install it with `yum install git` or `apt-get install git`.

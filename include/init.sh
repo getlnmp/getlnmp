@@ -449,7 +449,7 @@ RHEL_Dependent() {
     fi
 
     Echo_Blue "[+] Yum installing dependent packages..."
-    for packages in make cmake gcc gcc-c++ kernel-headers glibc-headers glibc-devel flex bison file libtool autoconf patch wget crontabs libjpeg libjpeg-devel libjpeg-turbo-devel libpng libpng-devel gd gd-devel libxml2 libxml2-devel zlib zlib-devel glib2 glib2-devel unzip tar bzip2 bzip2-devel libzip-devel libevent libevent-devel ncurses ncurses-devel curl curl-devel libcurl libcurl-devel e2fsprogs e2fsprogs-devel krb5 krb5-devel libidn libidn-devel openssl openssl-devel pcre2-devel gettext gettext-devel ncurses-devel gmp-devel pspell-devel unzip libcap diffutils ca-certificates net-tools libc-client-devel psmisc libXpm-devel c-ares-devel libicu-devel libxslt libxslt-devel xz expat-devel libaio-devel rpcgen libtirpc-devel perl cyrus-sasl-devel sqlite-devel oniguruma-devel lsof re2c pkg-config libarchive hostname ncurses-libs numactl-devel libxcrypt libwebp-devel gnutls-devel initscripts iproute libxcrypt-compat git systemd-devel freetype-devel pkgconf libsodium-devel; do yum -y install $packages; done
+    for packages in make cmake gcc gcc-c++ kernel-headers glibc-headers glibc-devel flex bison file libtool autoconf patch wget crontabs libjpeg libjpeg-devel libjpeg-turbo-devel libpng libpng-devel gd gd-devel libxml2 libxml2-devel zlib zlib-devel glib2 glib2-devel unzip tar bzip2 bzip2-devel libzip-devel libevent libevent-devel ncurses ncurses-devel curl curl-devel libcurl libcurl-devel e2fsprogs e2fsprogs-devel krb5 krb5-devel libidn libidn-devel openssl openssl-devel pcre2-devel gettext gettext-devel ncurses-devel gmp-devel aspell-devel unzip libcap diffutils ca-certificates net-tools libc-client-devel psmisc libXpm-devel c-ares-devel libicu-devel libxslt libxslt-devel xz expat-devel libaio-devel rpcgen libtirpc-devel perl cyrus-sasl-devel sqlite-devel oniguruma-devel lsof re2c pkg-config libarchive hostname ncurses-libs numactl-devel libxcrypt libwebp-devel gnutls-devel initscripts iproute libxcrypt-compat git systemd-devel freetype-devel pkgconf libsodium-devel; do yum -y install $packages; done
 
     yum -y update nss
 
@@ -1098,14 +1098,14 @@ Install_Openssl() {
         rm -rf /usr/local/openssl
         rm -rf /etc/ld.so.conf.d/openssl.conf
         Echo_Blue "[+] Installing ${Openssl_Ver}"
-        cd ${cur_dir}/src
+        cd "${cur_dir}/src"
         Download_Files ${Openssl_DL} ${Openssl_Ver}.tar.gz
         [[ -d "${Openssl_Ver}" ]] && rm -rf ${Openssl_Ver}
         Tar_Cd ${Openssl_Ver}.tar.gz ${Openssl_Ver}
         ./config -fPIC --prefix=/usr/local/openssl --openssldir=/usr/local/openssl
         make depend
         Make_Install_Exit "OpenSSL 1.0.2"
-
+        cd "${cur_dir}/src"
         rm -rf ${cur_dir}/src/${Openssl_Ver}
 
         echo "/usr/local/openssl/lib" >/etc/ld.so.conf.d/openssl.conf
@@ -1123,7 +1123,7 @@ Install_Openssl_New() {
         rm -rf /etc/ld.so.conf.d/openssl1.1.1.conf
 
         Echo_Blue "[+] Installing ${Openssl_New_Ver}"
-        cd ${cur_dir}/src
+        cd "${cur_dir}/src"
         Download_Files ${Openssl_New_DL} ${Openssl_New_Ver}.tar.gz
         [[ -d "${Openssl_New_Ver}" ]] && rm -rf ${Openssl_New_Ver}
         Tar_Cd ${Openssl_New_Ver}.tar.gz ${Openssl_New_Ver}
@@ -1131,6 +1131,7 @@ Install_Openssl_New() {
         make depend
         Make_Install_Exit "OpenSSL 1.1.1"
 
+        cd "${cur_dir}/src"
         rm -rf ${cur_dir}/src/${Openssl_New_Ver}
 
         echo "/usr/local/openssl1.1.1/lib" >/etc/ld.so.conf.d/openssl1.1.1.conf
@@ -1146,13 +1147,14 @@ Install_Openssl3() {
     else
         rm -rf /usr/local/openssl3
         Echo_Blue "[+] Installing ${Openssl_3_Ver}"
-        cd ${cur_dir}/src
+        cd "${cur_dir}/src"
         Download_Files ${Openssl_3_DL} ${Openssl_3_Ver}.tar.gz
         [[ -d "${Openssl_3_Ver}" ]] && rm -rf ${Openssl_3_Ver}
         Tar_Cd ${Openssl_3_Ver}.tar.gz ${Openssl_3_Ver}
         ./config enable-weak-ssl-ciphers -fPIC --prefix=/usr/local/openssl3 --openssldir=/usr/local/openssl3
         make depend
         Make_Install_Exit "OpenSSL 3"
+        cd "${cur_dir}/src"
         rm -rf ${cur_dir}/src/${Openssl_3_Ver}
         if [ -s /etc/ld.so.conf.d/openssl3.conf ]; then
             rm -rf /etc/ld.so.conf.d/openssl3.conf
@@ -1175,8 +1177,8 @@ Install_Nghttp2() {
         Tar_Cd ${Nghttp2_Ver}.tar.xz ${Nghttp2_Ver}
         ./configure --prefix=/usr/local/nghttp2
         Make_Install_Exit "Nghttp2"
-        cd ${cur_dir}/src/
-        rm -rf ${cur_dir}/src/${Nghttp2_Ver}
+        cd "${cur_dir}/src/"
+        rm -rf "${cur_dir}/src/${Nghttp2_Ver}"
     fi
     # always (re)assert the dynamic linker path so a missing/stale conf is fixed without a full rebuild
     echo "/usr/local/nghttp2/lib" >/etc/ld.so.conf.d/nghttp2.conf
@@ -1195,7 +1197,7 @@ Install_Libzip() {
         fi
     else
         Echo_Blue "[+] Installing ${Libzip_Ver}"
-        cd ${cur_dir}/src
+        cd "${cur_dir}"/src || exit
         Download_Files ${Libzip_DL} ${Libzip_Ver}.tar.xz
         Tar_Cd ${Libzip_Ver}.tar.xz ${Libzip_Ver}
         mkdir -p build && cd build
@@ -1219,7 +1221,8 @@ Install_Libzip() {
             echo "Failed to install libzip. Please check the error messages above."
             exit 1
         }
-        rm -rf ${cur_dir}/src/${Libzip_Ver}
+        cd "${cur_dir}"/src || exit
+        rm -rf "${cur_dir}/src/${Libzip_Ver}"
     fi
 
     if [ -d "${Custom_Libzip_Path}/lib64" ]; then

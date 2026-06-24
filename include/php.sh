@@ -79,8 +79,8 @@ PHP_with_Libzip() {
             # for php 7.3 on RHEL 10, we need to export LIBRARY_PATH
             if echo "${php_version}" | grep -Eqi '^7\.3\.' || echo "${Php_Ver}" | grep -Eqi "php-7\.3\."; then
                 if [ "$PM" = "yum" ]; then
-                    if grep -Eqi "release 10." /etc/redhat-release; then
-                        echo "LIBRARY_PATH export is required for php 7.3 on RHEL10"
+                    if ! grep -Eqi "release 8." /etc/redhat-release; then
+                        echo "LIBRARY_PATH export is required for php 7.3 on RHEL 9/10"
                         LIBRARY_PATH_TEMP="${Custom_Libzip_Path}/${Libzip_lib}"
                     fi
                 fi

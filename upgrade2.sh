@@ -67,7 +67,7 @@ Detect_System() {
 Display_Banner() {
     clear
     echo "+-----------------------------------------------------------------------+"
-    echo "|            Upgrade script for LNMP V2.1, Written by Licess            |"
+    echo "|                    Upgrade script for GetLNMP                         |"
     echo "+-----------------------------------------------------------------------+"
     echo "|     A tool to upgrade Nginx,MySQL/Mariadb,PHP for LNMP/LNMPA/LAMP     |"
     echo "+-----------------------------------------------------------------------+"

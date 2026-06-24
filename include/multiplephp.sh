@@ -118,12 +118,13 @@ MPHP_Get_Files() {
     if [ -n "${php_version}" ] && [ -z "${Php_Ver}" ]; then
         Php_Ver="php-${php_version}"
     fi
-    cd ${cur_dir}/src
+    cd "${cur_dir}"/src || exit
     if [ ! -s "${Php_Ver}.tar.bz2" ]; then
         Download_Files_Exit https://www.php.net/distributions/${Php_Ver}.tar.bz2 ${Php_Ver}.tar.bz2
     fi
     Echo_Blue "[+] Installing ${Php_Ver}"
-    Tar_Cd ${Php_Ver}.tar.bz2 ${Php_Ver}
+    rm -rf "${Php_Ver}"
+    Tar_Cd "${Php_Ver}.tar.bz2" "${Php_Ver}"
     PHP_Patch
 }
 
@@ -227,7 +228,7 @@ EOF
 MPHP_Cp_Startup() {
     local M_Version="$1"
     echo "Copy php-fpm systemctl file..."
-    \cp ${cur_dir}/src/${Php_Ver}/sapi/fpm/systemd.php-fpm /etc/systemd/system/php-fpm"${M_Version}".service
+    \cp ${cur_dir}/src/${Php_Ver}/sapi/fpm/php-fpm.service /etc/systemd/system/php-fpm"${M_Version}".service
     sed -i "s@# Provides:          php-fpm@# Provides:          php-fpm${M_Version}@g" "/etc/systemd/system/php-fpm${M_Version}.service"
     systemctl daemon-reload
     systemctl start php-fpm"${M_Version}"
