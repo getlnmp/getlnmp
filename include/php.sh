@@ -500,6 +500,7 @@ PHP_Check_PKG() {
     echo "Checking PKG_CONFIG..."
     if echo "${php_version}" | grep -Eqi '^(7\.4\.|8\.[0-9]\.)' || echo "${Php_Ver}" | grep -Eqi "(php-7\.4\.|php-8\.[0-9]\.)"; then
         PHP_Use_PKG="y"
+        echo "PHP is using PKG_CONFIG.."
     fi
 }
 
@@ -508,7 +509,7 @@ PHP_Post_Set() {
 }
 
 PHP_ENV_UNSET() {
-    if [[ -n "${PKG_CONFIG_PATH_TEMP+x}" ]]; then
+    if [[ -n "${PKG_CONFIG_PATH_TEMP}" ]]; then
         echo "Resetting PKG_CONFIG_PATH (was: ${PKG_CONFIG_PATH_TEMP})"
         if [[ -n "${PKG_CONFIG_PATH_Original}" ]]; then
             export PKG_CONFIG_PATH=${PKG_CONFIG_PATH_Original}
@@ -517,7 +518,7 @@ PHP_ENV_UNSET() {
         fi
         unset PKG_CONFIG_PATH_TEMP
     fi
-    if [[ -n "${LDFLAGS_TEMP+x}" ]]; then
+    if [[ -n "${LDFLAGS_TEMP}" ]]; then
         echo "Resetting LDFLAGS (was: ${LDFLAGS_TEMP})"
         if [[ -n "${LDFLAGS_Original}" ]]; then
             export LDFLAGS=${LDFLAGS_Original}
@@ -526,7 +527,7 @@ PHP_ENV_UNSET() {
         fi
         unset LDFLAGS_TEMP
     fi
-    if [[ -n "${LIBRARY_PATH_TEMP+x}" ]]; then
+    if [[ -n "${LIBRARY_PATH_TEMP}" ]]; then
         echo "Resetting LIBRARY_PATH (was: ${LIBRARY_PATH_TEMP})"
         if [[ -n "${LIBRARY_PATH_Original}" ]]; then
             export LIBRARY_PATH=${LIBRARY_PATH_Original}
@@ -541,7 +542,7 @@ PHP_ENV_UNSET() {
     #     unset CXX
     # fi
     # Unset CFLAGS, CXXFLAGS and LDFLAGS mainly for php 8.3+ when gcc = 8
-    if echo "${php_version}" | grep -Eqi '^8\.[3-6\.' && echo "${Php_Ver}" | grep -Eqi '^php-8\.[3-6]\.'; then
+    if echo "${php_version}" | grep -Eqi '^8\.[3-6]\.' && echo "${Php_Ver}" | grep -Eqi '^php-8\.[3-6]\.'; then
         local gcc_major_version
         gcc_major_version=$(gcc -dumpversion | cut -f1 -d.)
         if [ "${gcc_major_version}" -eq "8" ]; then
@@ -603,6 +604,13 @@ PHP_ENV_SET() {
         local gcc_major_version
         gcc_major_version=$(gcc -dumpversion | cut -f1 -d.)
         if [ "${gcc_major_version}" -eq "8" ]; then
+            local gcc_php_version
+            if [ -n "${php_version}" ]; then
+                gcc_php_version=php-"${php_version}"
+            else
+                gcc_php_version=${Php_Ver}
+            fi
+            echo "GCC 8 can't compile ${gcc_php_version}, we're going to add -fPIE to CFLAGS and CXXFLAGS and add -pie to LDFLAGS"
             export CFLAGS="$CFLAGS -fPIE"
             export CXXFLAGS="$CXXFLAGS -fPIE"
             export LDFLAGS="$LDFLAGS -pie"
@@ -621,7 +629,7 @@ PHP_ENV_SET() {
 
 Check_PHP_Option() {
     PHP_Check_PKG
-    PHP_ENV_UNSET
+    #PHP_ENV_UNSET
     PHP_with_openssl
     PHP_with_curl
     PHP_with_Libzip
