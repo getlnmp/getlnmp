@@ -30,59 +30,59 @@ Database_Selection() {
     fi
 
     case "${DBSelect}" in
-    1)
-        echo "You will install ${DB_Info[0]}"
-        if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
-            fi
-            case "${Bin}" in
-            [yY][eE][sS] | [yY])
-                echo "You will install ${DB_Info[0]} Using Generic Binaries."
-                Bin="y"
-                ;;
-            [nN][oO] | [nN])
-                echo "You will install ${DB_Info[0]} from Source."
-                Bin="n"
-                ;;
-            *)
-                Bin="n"
-                ;;
-            esac
-        else
-            echo "Default install ${DB_Info[0]} from Source."
-            Bin="n"
-        fi
-        ;;
-    2)
-        echo "You will install ${DB_Info[1]}"
-        if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
-            fi
-            case "${Bin}" in
-            [yY][eE][sS] | [yY])
-                echo "You will install ${DB_Info[1]} Using Generic Binaries."
-                Bin="y"
-                ;;
-            [nN][oO] | [nN])
-                echo "You will install ${DB_Info[1]} from Source."
-                Bin="n"
-                ;;
-            *)
-                Bin="n"
-                ;;
-            esac
-        else
-            echo "Default install ${DB_Info[1]} from Source."
-            Bin="n"
-        fi
-        ;;
+    # 1)
+    #     echo "You will install ${DB_Info[0]}"
+    #     if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
+    #         if [ -z ${Bin} ]; then
+    #             read -r -p "Using Generic Binaries [y/n]: " Bin
+    #         fi
+    #         case "${Bin}" in
+    #         [yY][eE][sS] | [yY])
+    #             echo "You will install ${DB_Info[0]} Using Generic Binaries."
+    #             Bin="y"
+    #             ;;
+    #         [nN][oO] | [nN])
+    #             echo "You will install ${DB_Info[0]} from Source."
+    #             Bin="n"
+    #             ;;
+    #         *)
+    #             Bin="n"
+    #             ;;
+    #         esac
+    #     else
+    #         echo "Default install ${DB_Info[0]} from Source."
+    #         Bin="n"
+    #     fi
+    #     ;;
+    # 2)
+    #     echo "You will install ${DB_Info[1]}"
+    #     if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
+    #         if [ -z ${Bin} ]; then
+    #             read -r -p "Using Generic Binaries [y/n]: " Bin
+    #         fi
+    #         case "${Bin}" in
+    #         [yY][eE][sS] | [yY])
+    #             echo "You will install ${DB_Info[1]} Using Generic Binaries."
+    #             Bin="y"
+    #             ;;
+    #         [nN][oO] | [nN])
+    #             echo "You will install ${DB_Info[1]} from Source."
+    #             Bin="n"
+    #             ;;
+    #         *)
+    #             Bin="n"
+    #             ;;
+    #         esac
+    #     else
+    #         echo "Default install ${DB_Info[1]} from Source."
+    #         Bin="n"
+    #     fi
+    #     ;;
     3)
         echo "You will install ${DB_Info[2]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -110,8 +110,8 @@ Database_Selection() {
     4)
         echo "You will install ${DB_Info[3]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -139,8 +139,8 @@ Database_Selection() {
     5)
         echo "You will install ${DB_Info[4]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -168,8 +168,8 @@ Database_Selection() {
     6)
         echo "You will install ${DB_Info[5]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -197,8 +197,8 @@ Database_Selection() {
     7)
         echo "You will install ${DB_Info[6]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -226,8 +226,8 @@ Database_Selection() {
     8)
         echo "You will install ${DB_Info[7]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -255,8 +255,8 @@ Database_Selection() {
     9)
         echo "You will install ${DB_Info[8]}"
         if [[ "${DB_ARCH}" = "x86_64" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -284,8 +284,8 @@ Database_Selection() {
     10)
         echo "You will install ${DB_Info[9]}"
         if [[ "${DB_ARCH}" = "x86_64" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -313,8 +313,8 @@ Database_Selection() {
     11)
         echo "You will install ${DB_Info[10]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -342,8 +342,8 @@ Database_Selection() {
     12)
         echo "You will install ${DB_Info[11]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])

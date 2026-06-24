@@ -689,7 +689,7 @@ Upgrade_MySQL() {
     fi
 
     if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]] && echo "${mysql_version}" | grep -Eqi '^5\.[5-7].'; then
-        read -r -p "Using Generic Binaries [y/n]: " Bin
+        read -r -p "Using Generic Binaries [Y/n]: " Bin
         case "${Bin}" in
         [yY][eE][sS] | [yY])
             echo "You will install MySQL ${mysql_version} Using Generic Binaries."
@@ -705,7 +705,7 @@ Upgrade_MySQL() {
             ;;
         esac
     elif [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" || "${DB_ARCH}" = "aarch64" ]] && echo "${mysql_version}" | grep -Eqi '^8\.'; then
-        read -r -p "Using Generic Binaries [y/n]: " Bin
+        read -r -p "Using Generic Binaries [Y/n]: " Bin
         case "${Bin}" in
         [yY][eE][sS] | [yY])
             echo "You will install MySQL ${mysql_version} Using Generic Binaries."

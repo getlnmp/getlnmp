@@ -133,7 +133,7 @@ Install_Database() {
         ;;
     esac
     echo "============================check files=================================="
-    cd ${cur_dir}/src
+    cd "${cur_dir}"/src || exit
     #    Mysql_Ver_Short=$(echo ${Mysql_Ver} | sed 's/mysql-//' | cut -d. -f1-2)
     if [[ "${DBSelect}" =~ ^[1-5]$ ]]; then
         case "${Mysql_Ver_Short}" in

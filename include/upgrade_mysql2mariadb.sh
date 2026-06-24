@@ -130,7 +130,7 @@ Upgrade_MySQL2MariaDB() {
 
     if echo "${mariadb_version}" | grep -Eqi '^10\.6\.'; then
         if [[ "${DB_ARCH}" = "x86_64" ]]; then
-            read -r -p "Using Generic Binaries [y/n]: " Bin
+            read -r -p "Using Generic Binaries [Y/n]: " Bin
             case "${Bin}" in
             [yY][eE][sS] | [yY])
                 echo "You will install mariadb-${mariadb_version} Using Generic Binaries."
@@ -150,7 +150,7 @@ Upgrade_MySQL2MariaDB() {
         fi
     else
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            read -r -p "Using Generic Binaries [y/n]: " Bin
+            read -r -p "Using Generic Binaries [Y/n]: " Bin
             case "${Bin}" in
             [yY][eE][sS] | [yY])
                 echo "You will install mariadb-${mariadb_version} Using Generic Binaries."
