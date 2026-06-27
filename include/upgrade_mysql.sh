@@ -785,6 +785,11 @@ Upgrade_MySQL() {
         Echo_Blue "Install dependent packages..."
         . ${cur_dir}/include/only.sh
         DB_Dependent
+
+        # Check GCC12 for RHEL8/9
+        if [ "${mysql_short_version}" = "8.0" ] || [ "${mysql_short_version}" = "8.0" ]; then
+            RHEL89_GCC12_Check
+        fi
     fi
     echo "============================check files=================================="
 

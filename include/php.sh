@@ -590,7 +590,7 @@ PHP_ENV_SET() {
     if [[ -n "${LIBRARY_PATH_TEMP}" ]]; then
         if [[ -n "${LIBRARY_PATH}" ]]; then
             echo "Original LDFLAGS is ${LIBRARY_PATH}"
-            LIBRARY_PATH_Original="${LLIBRARY_PATH}"
+            LIBRARY_PATH_Original="${LIBRARY_PATH}"
         else
             echo "LIBRARY_PATH is not set"
         fi

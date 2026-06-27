@@ -1453,6 +1453,21 @@ Get_ICU_Version() {
     local_icu_version=${local_icu_version:-0}
 }
 
+# Oracle Mysql 8.0 and 8.4 hardcodes GCC12 requirementsfor RHEL8/9
+RHEL89_GCC12_Check() {
+    if [ "${PM}" = "yum" ]; then
+        if grep -Eqi "release 8." /etc/redhat-release || grep -Eqi "release 9." /etc/redhat-release; then
+            echo "Checking GCC-toolset-12..."
+            if [ -x /opt/rh/gcc-toolset-12/root/usr/bin/gcc ]; then
+                echo "GCC-toolset-12 exists"
+            else
+                echo "Installing GCC-toolset-12..."
+                dnf install gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-binutils gcc-toolset-12-annobin-annocheck gcc-toolset-12-annobin-plugin-gcc -y
+            fi
+        fi
+    fi
+}
+
 Gcc14_Check() {
     if ! command -v gcc >/dev/null 2>&1; then
         case "${PM}" in
