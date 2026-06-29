@@ -25,6 +25,8 @@ The system OpenSSL version has a large impact on which PHP versions can be used.
 Systems with OpenSSL 1.1.1: install PHP 7.3-8.\*  
 Systems with OpenSSL 3.\*: install PHP 8.1+
 
+- **Ubuntu 26 LTS uses GCC 15 and CMake 4, only supports PHP 8.1+**
+
 In other words:
 
 - Debian 11: PHP 7.3+
@@ -32,6 +34,7 @@ In other words:
 - Debian 13: PHP 8.1+
 - Ubuntu 22 LTS: PHP 8.1+
 - Ubuntu 24 LTS: PHP 8.1+
+- **Ubuntu 26 LTS: ONLY support PHP 8.1+**
 - RHEL 8/Rocky 8/AlmaLinux 8: PHP 7.3+
 - RHEL 9/Rocky 9/AlmaLinux 9: PHP 8.1+
 - RHEL 10/Rocky 10/AlmaLinux 10: PHP 8.1+

@@ -1205,23 +1205,40 @@ Check_Mirror() {
         fi
     fi
 }
-
+# Ubuntu 26 only supports PHP 8.1+
 Check_CMPT() {
-    if [[ "${DBSelect}" =~ ^[45]$ && "${Bin}" != "y" ]]; then
-        if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-7]" || echo "${RHEL_Version}" | grep -Eqi "^[4-7]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
-            Echo_Red "MySQL 8.0 please use latest linux distributions!"
+    if [[ "${php_version}" =~ ^(7\.[34]\.|8\.0\.) ]] || [[ "${Php_Ver}" =~ (php-7\.[34]\.|php-8\.0\.) ]]; then
+        if echo "${Ubuntu_Version}" | grep -Eqi "^26\."; then
+            Echo_Red "Error: Ubuntu 26 only supports PHP 8.1+"
             exit 1
         fi
+
     fi
-    if [[ "${PHPSelect}" =~ ^1[0-6]$ ]]; then
-        if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-6]" || echo "${RHEL_Version}" | grep -Eqi "^[4-6]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
-            Echo_Red "PHP 7.4 and PHP 8.* please use latest linux distributions!"
-            exit 1
-        fi
-    fi
-    if [[ "${PHPSelect}" = "1" ]]; then
-        if echo "${Ubuntu_Version}" | grep -Eqi "^(19\.|2[0-7]\.)" || echo "${Debian_Version}" | grep -Eqi "^1[0-9]" || echo "${Raspbian_Version}" | grep -Eqi "^1[0-9]" || echo "${Deepin_Version}" | grep -Eqi "^2[0-9]" || echo "${UOS_Version}" | grep -Eqi "^2[0-9]" || echo "${Fedora_Version}" | grep -Eqi "^(29|3[0-9])"; then
-            Echo_Red "PHP 5.2 is not supported on very new linux versions such as Ubuntu 19+, Debian 10, Deepin 20+, Fedora 29+ etc."
+    # if [[ "${DBSelect}" =~ ^[45]$ && "${Bin}" != "y" ]]; then
+    #     if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-7]" || echo "${RHEL_Version}" | grep -Eqi "^[4-7]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
+    #         Echo_Red "MySQL 8.0 please use latest linux distributions!"
+    #         exit 1
+    #     fi
+    # fi
+    # if [[ "${PHPSelect}" =~ ^1[0-6]$ ]]; then
+    #     if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-6]" || echo "${RHEL_Version}" | grep -Eqi "^[4-6]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
+    #         Echo_Red "PHP 7.4 and PHP 8.* please use latest linux distributions!"
+    #         exit 1
+    #     fi
+    # fi
+    # if [[ "${PHPSelect}" = "1" ]]; then
+    #     if echo "${Ubuntu_Version}" | grep -Eqi "^(19\.|2[0-7]\.)" || echo "${Debian_Version}" | grep -Eqi "^1[0-9]" || echo "${Raspbian_Version}" | grep -Eqi "^1[0-9]" || echo "${Deepin_Version}" | grep -Eqi "^2[0-9]" || echo "${UOS_Version}" | grep -Eqi "^2[0-9]" || echo "${Fedora_Version}" | grep -Eqi "^(29|3[0-9])"; then
+    #         Echo_Red "PHP 5.2 is not supported on very new linux versions such as Ubuntu 19+, Debian 10, Deepin 20+, Fedora 29+ etc."
+    #         exit 1
+    #     fi
+    # fi
+}
+
+# Multiple PHP version of Check_CMPT
+Check_MPHP_CMPT() {
+    if [[ "${MPHP_Path}" =~ ^/usr/local/php(7\.[34]|8\.0)$ ]] || [[ "${php_version}" =~ ^(7\.[34]\.|8\.0\.) ]]; then
+        if echo "${Ubuntu_Version}" | grep -Eqi "^26\."; then
+            Echo_Red "Error: Ubuntu 26 only supports PHP 8.1+"
             exit 1
         fi
     fi
@@ -1508,9 +1525,17 @@ PHP-FPM_notify_support() {
 }
 
 Block_Dist_Name() {
+    Get_Dist_Version
     if [[ $PM = "yum" ]]; then
         if [[ ${DISTRO} != "RHEL" && ${DISTRO} != "Rocky" && ${DISTRO} != "Alma" && ${DISTRO} != "Oracle" ]]; then
             Echo_Red "Only RHEL/Rocky Linux/AlmaLinux/Oracle Linux are supported!"
+            Echo_Red "Exit"
+            exit 1
+        fi
+        local RHEL_Major_Version
+        RHEL_Major_Version=$(grep '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"' | cut -d. -f1)
+        if [[ ! $RHEL_Major_Version =~ ^(8|9|10)$ ]]; then
+            Echo_Red "Only RHEL/Rocky Linux/AlmaLinux/Oracle Linux 8, 9, 10 are supported!"
             Echo_Red "Exit"
             exit 1
         fi
@@ -1519,6 +1544,23 @@ Block_Dist_Name() {
             Echo_Red "Only Debian/Ubuntu are supported!"
             Echo_Red "Exit"
             exit 1
+        fi
+        if [[ ${DISTRO} = "Debian" ]]; then
+            local Debian_Major_Version
+            Debian_Major_Version=$(grep '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"' | cut -d. -f1)
+            if [[ ! $Debian_Major_Version =~ ^(11|12|13)$ ]]; then
+                Echo_Red "Only Debian 11, 12, 13 are supported!"
+                Echo_Red "Exit"
+                exit 1
+            fi
+        elif [[ ${DISTRO} = "Ubuntu" ]]; then
+            local Ubuntu_Major_Version
+            Ubuntu_Major_Version=$(grep '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"' | cut -d. -f1)
+            if [[ ! $Ubuntu_Major_Version =~ ^(22|24|26)$ ]]; then
+                Echo_Red "Only Ubuntu 22, 24, 26 are supported!"
+                Echo_Red "Exit"
+                exit 1
+            fi
         fi
     else
         Echo_Red "GetLNMP does not support your OS!"

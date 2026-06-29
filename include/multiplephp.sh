@@ -72,7 +72,8 @@ Install_Multiplephp() {
         exit 1
         ;;
     esac
-
+    # Ubuntu 26 only supports PHP 8.1+
+    Check_MPHP_CMPT
     # Press_Install sources include/version.sh, which maps the menu choice
     # ${PHPSelect} to the matching ${Php_Ver} (e.g. 9 -> php-7.3.33); the
     # guard below catches the case where that mapping produced nothing.

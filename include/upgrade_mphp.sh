@@ -106,6 +106,8 @@ Upgrade_Multiplephp() {
         Echo_Red "Error: You can't upgrade php cross-version!"
         exit 1
     fi
+    # Ubuntu 26 only supports PHP 8.1+
+    Check_MPHP_CMPT
     Press_Start
     cd "${cur_dir}/src"
     if [ -s "php-${php_version}.tar.bz2" ]; then
