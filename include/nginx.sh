@@ -147,7 +147,8 @@ Install_Ngx_FancyIndex() {
 }
 
 Validate_Nginx_Modules_Options() {
-    if [[ "${Nginx_Modules_Options}" =~ [^A-Za-z0-9_=,/.+\-[:space:]] ]]; then
+    # Notice the hyphen is now safely at the very end, right before the closing bracket
+    if [[ "${Nginx_Modules_Options}" =~ [^A-Za-z0-9_=,/.+[:space:]-] ]]; then
         Echo_Red "Nginx_Modules_Options contains characters not allowed in configure flags. Please check lnmp.conf."
         exit 1
     fi

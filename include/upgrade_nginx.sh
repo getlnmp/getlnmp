@@ -53,13 +53,14 @@ Upgrade_Nginx() {
     Install_Nginx_Pcre2
     Install_Nginx_Lua
     Install_Ngx_FancyIndex
-    rm -rf nginx-${Nginx_Version}
-    Tar_Cd nginx-${Nginx_Version}.tar.gz nginx-${Nginx_Version}
+    rm -rf "nginx-${Nginx_Version}"
+    Tar_Cd "nginx-${Nginx_Version}.tar.gz" "nginx-${Nginx_Version}"
     Get_Dist_Version
-    Nginx_Ver_Com=$(${cur_dir}/include/version_compare 1.14.2 ${Nginx_Version})
-    if gcc -dumpversion | grep -q "^[78\.]" && [ "${Nginx_Ver_Com}" == "1" ]; then
-        patch -p1 <${cur_dir}/src/patch/nginx-gcc8.patch
-    fi
+    # Nginx Version 1.14.2 is too old, therefore we dropped this patch.
+    # Nginx_Ver_Com=$(${cur_dir}/include/version_compare 1.14.2 ${Nginx_Version})
+    # if gcc -dumpversion | grep -q "^[78\.]" && [ "${Nginx_Ver_Com}" == "1" ]; then
+    #     patch -p1 <${cur_dir}/src/patch/nginx-gcc8.patch
+    # fi
     Validate_Nginx_Modules_Options
     NGINX_LD_OPT='-Wl,-z,relro -Wl,-z,now -pie'
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
@@ -106,7 +107,9 @@ Upgrade_Nginx() {
         ${Ngx_FancyIndex} \
         ${Nginx_Modules_Options} \
         --with-ld-opt="${NGINX_LD_OPT}" \
-        --with-cc-opt="-O2 -g -fstack-protector-strong -Wp,-D_FORTIFY_SOURCE=2 -fPIC"
+        --with-cc-opt="-O2 -g -fstack-protector-strong -fPIC"
+    # remove "-Wp,-D_FORTIFY_SOURCE=2" as modern gcc (like gcc15) will inject _FORTIFY_SOURCE=3 automatically
+    #--with-cc-opt="-O2 -g -fstack-protector-strong -Wp,-D_FORTIFY_SOURCE=2 -fPIC"
 
     make -j"$(nproc)" || make || {
         Echo_Red "Error: Nginx build failed."
@@ -221,7 +224,7 @@ Upgrade_Nginx() {
     fi
 
     ## cleaning
-    cd ${cur_dir}/src && rm -rf nginx-${Nginx_Version} && rm -rf nginx-${Nginx_Version}.tar.gz
+    cd "${cur_dir}/src" && rm -rf "nginx-${Nginx_Version}" && rm -rf "nginx-${Nginx_Version}.tar.gz"
     [[ -d "${Custom_Openssl_Ver}" ]] && rm -rf "${Custom_Openssl_Ver}"
     [[ -d "${Pcre2_Ver}" ]] && rm -rf "${Pcre2_Ver}"
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
