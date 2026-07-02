@@ -104,6 +104,10 @@ function version_compare_convert() {
   local minor=$(echo ${version[1]:=0} | sed 's/^0*//')
   local patch=$(echo ${version[2]:=0} | sed 's/^0*//')
   local build=$(echo ${version[3]:=0} | sed 's/^0*//')
+  [ -z "${major}" ] && major=0
+  [ -z "${minor}" ] && minor=0
+  [ -z "${patch}" ] && patch=0
+  [ -z "${build}" ] && build=0
 
   # Combine the version parts and pad everything with zeros, except major.
   printf "%s%04d%04d%04d%s\n" "${major}" "${minor}" "${patch}" "${build}" "${prerelease}"

@@ -28,13 +28,13 @@ cd "${cur_dir}" || exit 1
 # 3. Parse the requested stack mode (defaults to lnmp)
 # -----------------------------------------------------------------------------
 case "${1:-lnmp}" in
-    lnmp|lnmpa|lamp|nginx|db|mphp)
-        Stack="${1:-lnmp}"
-        ;;
-    *)
-        echo "Usage: $0 {lnmp|lnmpa|lamp|nginx|db|mphp}"
-        exit 1
-        ;;
+lnmp | lnmpa | lamp | nginx | db | mphp)
+    Stack="${1:-lnmp}"
+    ;;
+*)
+    echo "Usage: $0 {lnmp|lnmpa|lamp|nginx|db|mphp}"
+    exit 1
+    ;;
 esac
 
 GetLNMP_Ver='1.0'
@@ -57,8 +57,7 @@ GetLNMP_Ver='1.0'
 . include/multiplephp.sh
 
 # Print a red error message and abort. Used for unsupported version selections.
-Exit_Unsupported()
-{
+Exit_Unsupported() {
     Echo_Red "$1"
     exit 1
 }
@@ -73,7 +72,8 @@ if [ "${DISTRO}" = "unknow" ]; then
     exit 1
 fi
 
-Block_Dist_Name
+Block_Unsupported_Distro
+Check_Special_Distro
 
 # Refuse to clobber an existing full-stack install.
 if [[ "${Stack}" = "lnmp" || "${Stack}" = "lnmpa" || "${Stack}" = "lamp" ]]; then
@@ -102,40 +102,38 @@ echo "+------------------------------------------------------------------------+
 # 7. Database installation dispatch (driven by DBSelect)
 #    Legacy versions (MySQL 5.5/5.6, MariaDB 5.5) are intentionally rejected.
 # -----------------------------------------------------------------------------
-Install_Stack_Database()
-{
+Install_Stack_Database() {
     case "${DBSelect}" in
-        1)  Exit_Unsupported "MySQL 5.5 is no longer supported." ;;
-        2)  Exit_Unsupported "MySQL 5.6 is no longer supported." ;;
-        3)  Install_MySQL_57 ;;
-        4)  Install_MySQL_80 ;;
-        5)  Install_MySQL_84 ;;
-        6)  Exit_Unsupported "MariaDB 5.5 is no longer supported" ;;
-        7)  Install_MariaDB_104 ;;
-        8)  Install_MariaDB_105 ;;
-        9)  Install_MariaDB_106 ;;
-        10) Install_MariaDB_1011 ;;
-        11) Install_MariaDB_114 ;;
-        12) Install_MariaDB_118 ;;
+    1) Exit_Unsupported "MySQL 5.5 is no longer supported." ;;
+    2) Exit_Unsupported "MySQL 5.6 is no longer supported." ;;
+    3) Install_MySQL_57 ;;
+    4) Install_MySQL_80 ;;
+    5) Install_MySQL_84 ;;
+    6) Exit_Unsupported "MariaDB 5.5 is no longer supported" ;;
+    7) Install_MariaDB_104 ;;
+    8) Install_MariaDB_105 ;;
+    9) Install_MariaDB_106 ;;
+    10) Install_MariaDB_1011 ;;
+    11) Install_MariaDB_114 ;;
+    12) Install_MariaDB_118 ;;
     esac
 }
 
 # -----------------------------------------------------------------------------
 # 8. Shared initialization run by every full-stack mode
 # -----------------------------------------------------------------------------
-Init_Install()
-{
+Init_Install() {
     Print_APP_Ver
     Press_Install
     Stop_Package_Manager
     Get_Dist_Version
     Print_Sys_Info
     Check_Hosts
-    Check_CMPT
+    #Check_CMPT
 
     if [ "${CheckMirror}" != "n" ]; then
         Modify_Source
-#       Check_Mirror
+        #Check_Mirror
     fi
 
     Add_Swap
@@ -175,25 +173,24 @@ Init_Install()
 # 9. PHP installation dispatch (driven by PHPSelect)
 #    Legacy versions (PHP 5.2 - 7.2) are intentionally rejected.
 # -----------------------------------------------------------------------------
-Install_PHP()
-{
+Install_PHP() {
     case "${PHPSelect}" in
-        1)  Exit_Unsupported "PHP 5.2 is no longer supported" ;;
-        2)  Exit_Unsupported "PHP 5.3 is no longer supported" ;;
-        3)  Exit_Unsupported "PHP 5.4 is no longer supported" ;;
-        4)  Exit_Unsupported "PHP 5.5 is no longer supported" ;;
-        5)  Exit_Unsupported "PHP 5.6 is no longer supported" ;;
-        6)  Exit_Unsupported "PHP 7.0 is no longer supported" ;;
-        7)  Exit_Unsupported "PHP 7.1 is no longer supported" ;;
-        8)  Exit_Unsupported "PHP 7.2 is no longer supported" ;;
-        9)  Install_PHP_73 ;;
-        10) Install_PHP_74 ;;
-        11) Install_PHP_80 ;;
-        12) Install_PHP_81 ;;
-        13) Install_PHP_82 ;;
-        14) Install_PHP_83 ;;
-        15) Install_PHP_84 ;;
-        16) Install_PHP_85 ;;
+    1) Exit_Unsupported "PHP 5.2 is no longer supported" ;;
+    2) Exit_Unsupported "PHP 5.3 is no longer supported" ;;
+    3) Exit_Unsupported "PHP 5.4 is no longer supported" ;;
+    4) Exit_Unsupported "PHP 5.5 is no longer supported" ;;
+    5) Exit_Unsupported "PHP 5.6 is no longer supported" ;;
+    6) Exit_Unsupported "PHP 7.0 is no longer supported" ;;
+    7) Exit_Unsupported "PHP 7.1 is no longer supported" ;;
+    8) Exit_Unsupported "PHP 7.2 is no longer supported" ;;
+    9) Install_PHP_73 ;;
+    10) Install_PHP_74 ;;
+    11) Install_PHP_80 ;;
+    12) Install_PHP_81 ;;
+    13) Install_PHP_82 ;;
+    14) Install_PHP_83 ;;
+    15) Install_PHP_84 ;;
+    16) Install_PHP_85 ;;
     esac
     Clean_PHP_Src_Dir
 }
@@ -201,8 +198,7 @@ Install_PHP()
 # -----------------------------------------------------------------------------
 # 10. Full-stack flows
 # -----------------------------------------------------------------------------
-LNMP_Stack()
-{
+LNMP_Stack() {
     Init_Install
     Install_PHP
     LNMP_PHP_Opt
@@ -213,8 +209,7 @@ LNMP_Stack()
     Check_LNMP_Install
 }
 
-LNMPA_Stack()
-{
+LNMPA_Stack() {
     Apache_Selection
     Init_Install
     Install_Apache_24
@@ -226,8 +221,7 @@ LNMPA_Stack()
     Check_LNMPA_Install
 }
 
-LAMP_Stack()
-{
+LAMP_Stack() {
     Apache_Selection
     Init_Install
     Install_Apache_24
@@ -242,29 +236,29 @@ LAMP_Stack()
 # 11. Dispatch the selected stack mode
 # -----------------------------------------------------------------------------
 case "${Stack}" in
-    lnmp)
-        Display_Selection
-        LNMP_Stack 2>&1 | tee /root/getlnmp-install.log
-        ;;
-    lnmpa)
-        Display_Selection
-        LNMPA_Stack 2>&1 | tee /root/getlnmp-install.log
-        ;;
-    lamp)
-        Display_Selection
-        LAMP_Stack 2>&1 | tee /root/getlnmp-install.log
-        ;;
-    nginx)
-        Install_Only_Nginx 2>&1 | tee /root/nginx-install.log
-        ;;
-    db)
-        Install_Only_Database
-        ;;
-    mphp)
-        Install_Multiplephp
-        ;;
-    *)
-        Echo_Red "Usage: $0 {lnmp|lnmpa|lamp|nginx|db|mphp}"
-        exit 1
-        ;;
+lnmp)
+    Display_Selection
+    LNMP_Stack 2>&1 | tee /root/getlnmp-install.log
+    ;;
+lnmpa)
+    Display_Selection
+    LNMPA_Stack 2>&1 | tee /root/getlnmp-install.log
+    ;;
+lamp)
+    Display_Selection
+    LAMP_Stack 2>&1 | tee /root/getlnmp-install.log
+    ;;
+nginx)
+    Install_Only_Nginx 2>&1 | tee /root/nginx-install.log
+    ;;
+db)
+    Install_Only_Database
+    ;;
+mphp)
+    Install_Multiplephp
+    ;;
+*)
+    Echo_Red "Usage: $0 {lnmp|lnmpa|lamp|nginx|db|mphp}"
+    exit 1
+    ;;
 esac

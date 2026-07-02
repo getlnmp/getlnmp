@@ -56,7 +56,7 @@ Start_Upgrade_PHP() {
         exit 1
     fi
     # Ubuntu 26 only supports PHP 8.1+
-    Check_CMPT
+    Check_PHP_CMPT
     # allow php downgrades
     if echo "${php_version}" | grep -Eqi '^(7\.[3-4]\.|8\.[0-5]\.)'; then
         echo "You will upgrade PHP to version:${php_version}"

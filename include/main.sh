@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #DB_Info=('MySQL 5.1.73' 'MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.37' 'MariaDB 5.5.68' 'MariaDB 10.4.33' 'MariaDB 10.5.24' 'MariaDB 10.6.17' 'MariaDB 10.11.7' 'MySQL 8.4.0')
-DB_Info=('MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.46' 'MySQL 8.4.9' 'MariaDB 5.5.68' 'MariaDB 10.4.34' 'MariaDB 10.5.29' 'MariaDB 10.6.27' 'MariaDB 10.11.18' 'MariaDB 11.4.12' 'MariaDB 11.8.8')
+DB_Info=('MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.46' 'MySQL 8.4.10' 'MariaDB 5.5.68' 'MariaDB 10.4.34' 'MariaDB 10.5.29' 'MariaDB 10.6.27' 'MariaDB 10.11.18' 'MariaDB 11.4.12' 'MariaDB 11.8.8')
 PHP_Info=('PHP 5.2.17' 'PHP 5.3.29' 'PHP 5.4.45' 'PHP 5.5.38' 'PHP 5.6.40' 'PHP 7.0.33' 'PHP 7.1.33' 'PHP 7.2.34' 'PHP 7.3.33' 'PHP 7.4.33' 'PHP 8.0.30' 'PHP 8.1.34' 'PHP 8.2.31' 'PHP 8.3.31' 'PHP 8.4.22' 'PHP 8.5.7')
 Apache_Info=('Apache 2.2.34' 'Apache 2.4.66')
 
@@ -80,6 +80,7 @@ Database_Selection() {
     #     ;;
     3)
         echo "You will install ${DB_Info[2]}"
+        Check_MySQL57_CMPT
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
             if [ -z "${Bin}" ]; then
                 read -r -p "Using Generic Binaries [Y/n]: " Bin
@@ -461,6 +462,9 @@ PHP_Selection() {
         echo "16: Install ${PHP_Info[15]}"
         read -r -p "Enter your choice (8, 9, 10, 11, 12, 13, 14, 15, 16): " PHPSelect
     fi
+
+    # Check PHP version compatibility when ubuntu is 26 LTS
+    Check_PHP_CMPT
 
     case "${PHPSelect}" in
     1)
@@ -1205,42 +1209,58 @@ Check_Mirror() {
         fi
     fi
 }
+
+# Check_CMPT() {
+#     if [[ "${php_version}" =~ ^(7\.[34]\.|8\.0\.) ]] || [[ "${Php_Ver}" =~ (php-7\.[34]\.|php-8\.0\.) ]]; then
+#         if [[ "${Is_Ubuntu26}" = "y" ]]; then
+#             Echo_Red "Error: Ubuntu 26 only supports PHP 8.1+"
+#             exit 1
+#         fi
+
+#     fi
+# if [[ "${DBSelect}" =~ ^[45]$ && "${Bin}" != "y" ]]; then
+#     if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-7]" || echo "${RHEL_Version}" | grep -Eqi "^[4-7]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
+#         Echo_Red "MySQL 8.0 please use latest linux distributions!"
+#         exit 1
+#     fi
+# fi
+# if [[ "${PHPSelect}" =~ ^1[0-6]$ ]]; then
+#     if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-6]" || echo "${RHEL_Version}" | grep -Eqi "^[4-6]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
+#         Echo_Red "PHP 7.4 and PHP 8.* please use latest linux distributions!"
+#         exit 1
+#     fi
+# fi
+# if [[ "${PHPSelect}" = "1" ]]; then
+#     if echo "${Ubuntu_Version}" | grep -Eqi "^(19\.|2[0-7]\.)" || echo "${Debian_Version}" | grep -Eqi "^1[0-9]" || echo "${Raspbian_Version}" | grep -Eqi "^1[0-9]" || echo "${Deepin_Version}" | grep -Eqi "^2[0-9]" || echo "${UOS_Version}" | grep -Eqi "^2[0-9]" || echo "${Fedora_Version}" | grep -Eqi "^(29|3[0-9])"; then
+#         Echo_Red "PHP 5.2 is not supported on very new linux versions such as Ubuntu 19+, Debian 10, Deepin 20+, Fedora 29+ etc."
+#         exit 1
+#     fi
+# fi
+#}
+
 # Ubuntu 26 only supports PHP 8.1+
-Check_CMPT() {
-    if [[ "${php_version}" =~ ^(7\.[34]\.|8\.0\.) ]] || [[ "${Php_Ver}" =~ (php-7\.[34]\.|php-8\.0\.) ]]; then
-        if echo "${Ubuntu_Version}" | grep -Eqi "^26\."; then
+Check_PHP_CMPT() {
+    if [[ "${PHPSelect}" =~ ^(9|10|11)$ ]] || [[ "${php_version}" =~ ^(7\.[34]\.|8\.0\.) ]] || [[ "${Php_Ver}" =~ (php-7\.[34]\.|php-8\.0\.) ]]; then
+        if [[ "${Is_Ubuntu26}" = "y" ]]; then
             Echo_Red "Error: Ubuntu 26 only supports PHP 8.1+"
             exit 1
         fi
-
     fi
-    # if [[ "${DBSelect}" =~ ^[45]$ && "${Bin}" != "y" ]]; then
-    #     if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-7]" || echo "${RHEL_Version}" | grep -Eqi "^[4-7]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
-    #         Echo_Red "MySQL 8.0 please use latest linux distributions!"
-    #         exit 1
-    #     fi
-    # fi
-    # if [[ "${PHPSelect}" =~ ^1[0-6]$ ]]; then
-    #     if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-6]" || echo "${RHEL_Version}" | grep -Eqi "^[4-6]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
-    #         Echo_Red "PHP 7.4 and PHP 8.* please use latest linux distributions!"
-    #         exit 1
-    #     fi
-    # fi
-    # if [[ "${PHPSelect}" = "1" ]]; then
-    #     if echo "${Ubuntu_Version}" | grep -Eqi "^(19\.|2[0-7]\.)" || echo "${Debian_Version}" | grep -Eqi "^1[0-9]" || echo "${Raspbian_Version}" | grep -Eqi "^1[0-9]" || echo "${Deepin_Version}" | grep -Eqi "^2[0-9]" || echo "${UOS_Version}" | grep -Eqi "^2[0-9]" || echo "${Fedora_Version}" | grep -Eqi "^(29|3[0-9])"; then
-    #         Echo_Red "PHP 5.2 is not supported on very new linux versions such as Ubuntu 19+, Debian 10, Deepin 20+, Fedora 29+ etc."
-    #         exit 1
-    #     fi
-    # fi
 }
-
 # Multiple PHP version of Check_CMPT
 Check_MPHP_CMPT() {
     if [[ "${MPHP_Path}" =~ ^/usr/local/php(7\.[34]|8\.0)$ ]] || [[ "${php_version}" =~ ^(7\.[34]\.|8\.0\.) ]]; then
-        if echo "${Ubuntu_Version}" | grep -Eqi "^26\."; then
+        if [[ "${Is_Ubuntu26}" = "y" ]]; then
             Echo_Red "Error: Ubuntu 26 only supports PHP 8.1+"
             exit 1
         fi
+    fi
+}
+
+Check_MySQL57_CMPT() {
+    if [[ "${Is_Ubuntu26}" = "y" ]]; then
+        Echo_Red "Error: Ubuntu 26 only supports MySQL 8.0+"
+        exit 1
     fi
 }
 
@@ -1524,8 +1544,7 @@ PHP-FPM_notify_support() {
         grep -qx 'enabled'
 }
 
-Block_Dist_Name() {
-    Get_Dist_Version
+Block_Unsupported_Distro() {
     if [[ $PM = "yum" ]]; then
         if [[ ${DISTRO} != "RHEL" && ${DISTRO} != "Rocky" && ${DISTRO} != "Alma" && ${DISTRO} != "Oracle" ]]; then
             Echo_Red "Only RHEL/Rocky Linux/AlmaLinux/Oracle Linux are supported!"
@@ -1566,6 +1585,20 @@ Block_Dist_Name() {
         Echo_Red "GetLNMP does not support your OS!"
         Echo_Red "Exit"
         exit 1
+    fi
+}
+
+# Special Distro Check
+# Currently we need to check Ubuntu 26 LTS as its using GCC 15 and CMake 4, only supports PHP 8.1+ and MySQL 8.0+ and MariaDB 10.6+
+Check_Special_Distro() {
+    if [[ "${DISTRO}" = "Ubuntu" ]]; then
+        local Ubuntu_Major_Version
+        Ubuntu_Major_Version=$(grep '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"' | cut -d. -f1)
+        if [[ $Ubuntu_Major_Version == 26 ]]; then
+            Is_Ubuntu26='y'
+        else
+            Is_Ubuntu26='n'
+        fi
     fi
 }
 

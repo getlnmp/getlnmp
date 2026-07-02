@@ -13,13 +13,13 @@ cd "${cur_dir}" || exit 1
 
 # dispatch stack
 case "${1:-lnmp}" in
-    lnmp|lnmpa|lamp|nginx|db|mphp) 
-        Stack="${1:-lnmp}"
-        ;;
-    *) 
-        Echo_Red "Usage: $0 {lnmp|lnmpa|lamp|nginx|db|mphp}"
-        exit 1
-        ;;
+lnmp | lnmpa | lamp | nginx | db | mphp)
+    Stack="${1:-lnmp}"
+    ;;
+*)
+    Echo_Red "Usage: $0 {lnmp|lnmpa|lamp|nginx|db|mphp}"
+    exit 1
+    ;;
 esac
 
 GetLNMP_Ver='1.0'
@@ -44,7 +44,8 @@ if [ "${DISTRO}" = "unknow" ]; then
     exit 1
 fi
 
-Block_Dist_Name
+Block_Unsupported_Distro
+Check_Special_Distro
 
 if [[ "${Stack}" = "lnmp" || "${Stack}" = "lnmpa" || "${Stack}" = "lamp" ]]; then
     if [ -x /usr/local/php/sbin/php-fpm ] || [ -x /usr/local/php/bin/php ]; then
@@ -65,18 +66,17 @@ echo "+------------------------------------------------------------------------+
 echo "|        For more information please visit https://getlnmp.com       |"
 echo "+------------------------------------------------------------------------+"
 
-Init_Install()
-{
+Init_Install() {
     Print_APP_Ver
     Press_Install
     Stop_Package_Manager
     Get_Dist_Version
     Print_Sys_Info
     Check_Hosts
-    Check_CMPT
+    #Check_CMPT
     if [ "${CheckMirror}" != "n" ]; then
         Modify_Source
-#       Check_Mirror
+        #       Check_Mirror
     fi
     Add_Swap
     Set_Timezone
@@ -132,8 +132,7 @@ Init_Install()
     Check_PHP_Option
 }
 
-Install_PHP()
-{
+Install_PHP() {
     if [ "${PHPSelect}" = "1" ]; then
         Echo_Red "PHP 5.2 is no longer supported"
         exit 1
@@ -178,8 +177,7 @@ Install_PHP()
     Clean_PHP_Src_Dir
 }
 
-LNMP_Stack()
-{
+LNMP_Stack() {
     Init_Install
     Install_PHP
     LNMP_PHP_Opt
@@ -190,8 +188,7 @@ LNMP_Stack()
     Check_LNMP_Install
 }
 
-LNMPA_Stack()
-{
+LNMPA_Stack() {
     Apache_Selection
     Init_Install
     Install_Apache_24
@@ -203,8 +200,7 @@ LNMPA_Stack()
     Check_LNMPA_Install
 }
 
-LAMP_Stack()
-{
+LAMP_Stack() {
     Apache_Selection
     Init_Install
     Install_Apache_24
@@ -216,29 +212,29 @@ LAMP_Stack()
 }
 
 case "${Stack}" in
-    lnmp)
-        Display_Selection
-        LNMP_Stack 2>&1 | tee /root/getlnmp-install.log
-        ;;
-    lnmpa)
-        Display_Selection
-        LNMPA_Stack 2>&1 | tee /root/getlnmp-install.log
-        ;;
-    lamp)
-        Display_Selection
-        LAMP_Stack 2>&1 | tee /root/getlnmp-install.log
-        ;;
-    nginx)
-        Install_Only_Nginx 2>&1 | tee /root/nginx-install.log
-        ;;
-    db)
-        Install_Only_Database
-        ;;
-    mphp)
-        Install_Multiplephp
-        ;;
-    *)
-        Echo_Red "Usage: $0 {lnmp|lnmpa|lamp|nginx|db|mphp}"
-        exit 1
-        ;;
+lnmp)
+    Display_Selection
+    LNMP_Stack 2>&1 | tee /root/getlnmp-install.log
+    ;;
+lnmpa)
+    Display_Selection
+    LNMPA_Stack 2>&1 | tee /root/getlnmp-install.log
+    ;;
+lamp)
+    Display_Selection
+    LAMP_Stack 2>&1 | tee /root/getlnmp-install.log
+    ;;
+nginx)
+    Install_Only_Nginx 2>&1 | tee /root/nginx-install.log
+    ;;
+db)
+    Install_Only_Database
+    ;;
+mphp)
+    Install_Multiplephp
+    ;;
+*)
+    Echo_Red "Usage: $0 {lnmp|lnmpa|lamp|nginx|db|mphp}"
+    exit 1
+    ;;
 esac

@@ -25,7 +25,6 @@ action=$1
 . include/init.sh
 . include/downloadlink.sh
 
-
 Open_FTP_Ports() {
     local opened=0
 
@@ -94,7 +93,7 @@ Remove_LNMP_Command_If_Pureftpd_Only() {
         return
     fi
 
-    if [[ -s /bin/lnmp ]]; then 
+    if [[ -s /bin/lnmp ]]; then
         if cmp -s /bin/lnmp "${cur_dir}/conf/lnmp"; then
             echo "Remove standalone /bin/lnmp command..."
             rm -f /bin/lnmp
@@ -103,7 +102,7 @@ Remove_LNMP_Command_If_Pureftpd_Only() {
         fi
     fi
 
-    if [[ -s /bin/lamp ]]; then 
+    if [[ -s /bin/lamp ]]; then
         if cmp -s /bin/lamp "${cur_dir}/conf/lamp"; then
             echo "Remove standalone /bin/lamp command..."
             rm -f /bin/lamp
@@ -112,7 +111,7 @@ Remove_LNMP_Command_If_Pureftpd_Only() {
         fi
     fi
 
-    if [[ -s /bin/lnmpa ]]; then 
+    if [[ -s /bin/lnmpa ]]; then
         if cmp -s /bin/lnmpa "${cur_dir}/conf/lnmpa"; then
             echo "Remove standalone /bin/lnmpa command..."
             rm -f /bin/lnmpa
@@ -120,7 +119,6 @@ Remove_LNMP_Command_If_Pureftpd_Only() {
             Echo_Yellow "/bin/lnmpa differs from ${cur_dir}/conf/lnmpa. Keep it."
         fi
     fi
-  
 
 }
 
@@ -128,23 +126,20 @@ LNMP_Command_Has_FTP() {
     [ -s /bin/lnmp ] && grep -q "/usr/local/pureftpd/bin/pure-pw" /bin/lnmp
 }
 
-Install_Pureftpd()
-{
+Install_Pureftpd() {
     Get_Dist_Name
-    Block_Dist_Name
+    Block_Unsupported_Distro
     Press_Install
 
     Echo_Blue "Installing dependent packages..."
     if [ "$PM" = "yum" ]; then
-        for packages in make gcc gcc-c++ openssl openssl-devel bzip2;
-        do yum -y install $packages; done
+        for packages in make gcc gcc-c++ openssl openssl-devel bzip2; do yum -y install $packages; done
     elif [ "$PM" = "apt" ]; then
         apt-get update -y || apt-get update --allow-releaseinfo-change -y || {
             Echo_Red "apt-get update failed"
             exit 1
         }
-        for packages in build-essential gcc g++ make openssl libssl-dev bzip2;
-        do apt-get --no-install-recommends install -y $packages; done
+        for packages in build-essential gcc g++ make openssl libssl-dev bzip2; do apt-get --no-install-recommends install -y $packages; done
     else
         Echo_Red "Unsupported package manager: ${PM:-unknown}. Install build deps manually."
         exit 1
@@ -178,8 +173,6 @@ Install_Pureftpd()
     # Open FTP ports 20, 21 and 20000-30000 for passive mode if firewalld or ufw is active
     Open_FTP_Ports
 
-
-
     if [[ -s /usr/local/pureftpd/sbin/pure-ftpd && -s /usr/local/pureftpd/etc/pure-ftpd.conf && -s /etc/systemd/system/pureftpd.service ]]; then
         if ! id -u www >/dev/null 2>&1; then
             echo "Creating www user and group for pureftpd..."
@@ -208,8 +201,7 @@ Install_Pureftpd()
     fi
 }
 
-Uninstall_Pureftpd()
-{
+Uninstall_Pureftpd() {
     if [ ! -f /usr/local/pureftpd/sbin/pure-ftpd ]; then
         Echo_Red "Pureftpd was not installed!"
         exit 1
@@ -230,7 +222,7 @@ Uninstall_Pureftpd()
     if [ -s /usr/local/pureftpd/etc/pureftpd.passwd ] || [ -s /usr/local/pureftpd/etc/pureftpd.pdb ]; then
         mkdir -p "/root/pureftpd_backup_${ts}"
         \cp -a /usr/local/pureftpd/etc/pureftpd.passwd "/root/pureftpd_backup_${ts}/" 2>/dev/null
-        \cp -a /usr/local/pureftpd/etc/pureftpd.pdb    "/root/pureftpd_backup_${ts}/" 2>/dev/null
+        \cp -a /usr/local/pureftpd/etc/pureftpd.pdb "/root/pureftpd_backup_${ts}/" 2>/dev/null
         Echo_Yellow "FTP user database backed up to /root/pureftpd_backup_${ts}"
     fi
     rm -rf /usr/local/pureftpd
@@ -238,10 +230,10 @@ Uninstall_Pureftpd()
 }
 
 case "${action}" in
-    ""|install) Install_Pureftpd 2>&1 | tee /root/pureftpd-install.log ;;
-    uninstall)  Uninstall_Pureftpd ;;
-    *)
-        echo "Usage: ./pureftpd.sh {install|uninstall}"
-        exit 1
-        ;;
+"" | install) Install_Pureftpd 2>&1 | tee /root/pureftpd-install.log ;;
+uninstall) Uninstall_Pureftpd ;;
+*)
+    echo "Usage: ./pureftpd.sh {install|uninstall}"
+    exit 1
+    ;;
 esac

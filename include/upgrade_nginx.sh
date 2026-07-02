@@ -16,13 +16,13 @@ Upgrade_Nginx() {
     echo "You can get version number from https://nginx.org/en/download.html"
     echo "Nginx version format must be like: 1.22.1, 1.23.3, 1.24.0, 1.28.1 etc"
     echo "Minor version (the middle number) must be 22 or higher."
-    read -r -p "Please enter nginx version you want, (example: 1.28.1): " Nginx_Version
+    read -r -p "Please enter nginx version you want, (example: 1.30.3): " Nginx_Version
     if [ "${Nginx_Version}" = "" ]; then
         Echo_Red "Error: You must enter a nginx version!!"
         exit 1
     fi
     if ! [[ "${Nginx_Version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        Echo_Red "Error: enter a version like 1.28.1"
+        Echo_Red "Error: enter a version like 1.30.3"
         exit 1
     fi
     Nginx_First_Digit="${Nginx_Version%%.*}"

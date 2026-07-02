@@ -28,7 +28,7 @@ LuaNginxModule='lua-nginx-module-0.10.28'
 LuaRestyCore='lua-resty-core-0.1.31'
 LuaRestyLrucache='lua-resty-lrucache-0.15'
 NgxDevelKit='ngx_devel_kit-0.3.3'
-Nginx_Ver='nginx-1.30.1'
+Nginx_Ver='nginx-1.30.3'
 NgxFancyIndex_Ver='ngx-fancyindex-0.5.2'
 # DBSelect/PHPSelect are empty when this file is sourced in interactive mode
 # (they are set later by Display_Selection), so wrap the selection-dependent
@@ -43,7 +43,7 @@ Set_Selected_Versions() {
     elif [ "${DBSelect}" = "4" ]; then
         Mysql_Ver='mysql-8.0.46'
     elif [ "${DBSelect}" = "5" ]; then
-        Mysql_Ver='mysql-8.4.9'
+        Mysql_Ver='mysql-8.4.10'
     elif [ "${DBSelect}" = "6" ]; then
         Mariadb_Ver='mariadb-5.5.68'
     elif [ "${DBSelect}" = "7" ]; then

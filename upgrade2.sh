@@ -58,6 +58,7 @@ Load_Includes() {
 Detect_System() {
     Get_Dist_Name
     Get_Dist_Version
+    Check_Special_Distro
     MemTotal=$(awk '/MemTotal/ {printf( "%d\n", $2 / 1024 )}' /proc/meminfo)
 }
 

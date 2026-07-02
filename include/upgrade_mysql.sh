@@ -117,9 +117,9 @@ Upgrade_MySQL57() {
         fi
         Tar_Cd ${mysql_src} mysql-${mysql_version}
         #Install_Boost
-        if echo "${Rocky_Version}" | grep -Eqi "^9"; then
-            sed -i 's@^INCLUDE(cmake/abi_check.cmake)@#INCLUDE(cmake/abi_check.cmake)@' CMakeLists.txt
-        fi
+        # if echo "${Rocky_Version}" | grep -Eqi "^9"; then
+        #     sed -i 's@^INCLUDE(cmake/abi_check.cmake)@#INCLUDE(cmake/abi_check.cmake)@' CMakeLists.txt
+        # fi
         mkdir -p mysql-build && cd mysql-build
         cmake .. \
             -DCMAKE_INSTALL_PREFIX=/usr/local/mysql \
@@ -664,7 +664,7 @@ Upgrade_MySQL() {
     echo "You can get version number from http://dev.mysql.com/downloads/mysql/"
     echo "We only support upgrade MySQL to 8.0.x and 8.4.x"
     Echo_Yellow "Please input MySQL Version you want."
-    read -r -p "(example: 8.4.7 ): " mysql_version
+    read -r -p "(example: 8.4.10 ): " mysql_version
     if [ "${mysql_version}" = "" ]; then
         Echo_Red "Error: You must input MySQL Version!!"
         exit 1
@@ -679,6 +679,11 @@ Upgrade_MySQL() {
     #    Echo_Red "Refusing downgrade from ${cur_mysql_version} to ${mysql_version}."
     #    exit 1
     #fi
+
+    # Check MySQL version compatibility when ubuntu is 26 LTS
+    if echo "${mysql_version}" | grep -Eqi '^(5\.7\.)'; then
+        Check_MySQL57_CMPT
+    fi
 
     if echo "${mysql_version}" | grep -Eqi '^(5\.7\.|8\.0\.|8\.4\.)'; then
         echo "You will upgrade MySQL to version:$mysql_version"
