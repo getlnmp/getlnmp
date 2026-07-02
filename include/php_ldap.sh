@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-Install_PHP_Ldap()
-{
-    cd ${cur_dir}/src
+Install_PHP_Ldap() {
+    cd "${cur_dir}/src"
     echo "====== Installing PHP Ldap ======"
     Press_Start
 
@@ -30,7 +29,7 @@ Install_PHP_Ldap()
     rm -rf php-"${Cur_PHP_Version}"
 
     if [ -s "${zend_ext}" ]; then
-        cat >${PHP_Path}/conf.d/009-ldap.ini<<EOF
+        cat >${PHP_Path}/conf.d/009-ldap.ini <<EOF
 extension = "ldap.so"
 EOF
         Restart_PHP
@@ -43,8 +42,7 @@ EOF
     fi
 }
 
-Uninstall_PHP_Ldap()
-{
+Uninstall_PHP_Ldap() {
     echo "You will uninstall PHP Ldap..."
     Press_Start
     rm -f ${PHP_Path}/conf.d/009-ldap.ini

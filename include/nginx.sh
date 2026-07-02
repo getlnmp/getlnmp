@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ngx_http_v3_module require the OpenSSL library version 1.1.1 or higher, and the OpenSSL library version 3.0.0 or higher is recommended for better performance and security. 
+# ngx_http_v3_module require the OpenSSL library version 1.1.1 or higher, and the OpenSSL library version 3.0.0 or higher is recommended for better performance and security.
 # http_v3_module's 0-RTT support requires the OpenSSL library version 3.5.1 or higher
 # The OpenSSL library version 3.5.1 or higher is recommended to build nginx with QUIC support
 # for best compability, if system openssl version is 1.1.1, compile nginx with openssl 3.5 if nginx version is 1.29 or higher, otherwise compile nginx with openssl 3.0
@@ -7,17 +7,17 @@ Install_Nginx_Openssl() {
     Check_Openssl
     if [ "${isOpenSSL111}" = 'y' ]; then
         if [[ "${Nginx_Version}" =~ ^1\.(29|[3-5][0-9])\. ]]; then
-            Custom_Openssl_Ver=${Openssl_35_Ver}
-            Custom_Openssl_DL=${Openssl_35_DL}
+            Custom_Openssl_Ver="${Openssl_35_Ver}"
+            Custom_Openssl_DL="${Openssl_35_DL}"
         else
-            Custom_Openssl_Ver=${Openssl_3_Ver}
-            Custom_Openssl_DL=${Openssl_3_DL}
-        fi  
+            Custom_Openssl_Ver="${Openssl_3_Ver}"
+            Custom_Openssl_DL="${Openssl_3_DL}"
+        fi
         echo "System uses OpenSSL 1.1.1, compile nginx with custom OpenSSL version: ${Custom_Openssl_Ver}"
-        cd ${cur_dir}/src
-        Download_Files_Exit ${Custom_Openssl_DL} ${Custom_Openssl_Ver}.tar.gz
-        rm -rf ${Custom_Openssl_Ver}
-        tar zxf ${Custom_Openssl_Ver}.tar.gz
+        cd "${cur_dir}/src" || exit
+        Download_Files_Exit "${Custom_Openssl_DL}" "${Custom_Openssl_Ver}.tar.gz"
+        rm -rf "${Custom_Openssl_Ver}"
+        tar zxf "${Custom_Openssl_Ver}.tar.gz"
         Nginx_With_Openssl="--with-openssl=${cur_dir}/src/${Custom_Openssl_Ver}"
     else
         echo "System uses OpenSSL 3.*, compile nginx with system OpenSSL."
@@ -54,10 +54,10 @@ Install_Nginx_Pcre2() {
         Nginx_With_Pcre="--with-pcre-jit"
     else
         echo "OS has no PCRE2 installed, compile nginx with custom PCRE2"
-        cd ${cur_dir}/src
-        Download_Files_Exit ${Pcre2_DL} ${Pcre2_Ver}.tar.bz2
-        rm -rf ${Pcre2_Ver}
-        tar jxf ${Pcre2_Ver}.tar.bz2
+        cd "${cur_dir}"/src || exit
+        Download_Files_Exit "${Pcre2_DL}" "${Pcre2_Ver}.tar.bz2"
+        rm -rf "${Pcre2_Ver}"
+        tar jxf "${Pcre2_Ver}.tar.bz2"
         Nginx_With_Pcre="--with-pcre=${cur_dir}/src/${Pcre2_Ver} --with-pcre-jit"
     fi
 }
@@ -65,13 +65,13 @@ Install_Nginx_Pcre2() {
 Install_Nginx_Lua() {
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
         echo "Installing Lua for Nginx..."
-        cd ${cur_dir}/src
-       
+        cd "${cur_dir}/src"
+
         # build and install LuaJIT if not already installed
         if [[ ! -d "/usr/local/luajit/lib/" ]] && [[ ! -f "/etc/ld.so.conf.d/luajit.conf" ]]; then
             Echo_Blue "[+] Installing Luajit... "
-            cd ${cur_dir}/src
-            rm -rf ${cur_dir}/src/luajit
+            cd "${cur_dir}/src"
+            rm -rf "${cur_dir}"/src/luajit
             git clone --depth 1 --branch v2.1 https://luajit.org/git/luajit.git || {
                 Echo_Red "Luajit download failed!"
                 exit 1
@@ -84,8 +84,8 @@ Install_Nginx_Lua() {
             make install PREFIX=/usr/local/luajit || {
                 Echo_Red "Luajit install failed!"
                 exit 1
-             }
-            cd ${cur_dir}/src
+            }
+            cd "${cur_dir}/src"
 
             # add Luajit library path to ldconfig runtime linker
             cat >/etc/ld.so.conf.d/luajit.conf <<EOF
@@ -95,15 +95,15 @@ EOF
         else
             echo "LuaJIT is already installed, skipping LuaJIT installation."
         fi
-        
+
         # build time environment variables for LuaJIT
         # LUAJIT_LIB for compile-time headers
         # LUAJIT_INC for compile-time linking
         # tells lua-nginx-mobule where to find LuaJIT's headers and libraries during the nginx build process
         export LUAJIT_LIB=/usr/local/luajit/lib
         export LUAJIT_INC=/usr/local/luajit/include/luajit-2.1
-        
-        cd ${cur_dir}/src
+
+        cd "${cur_dir}/src"
         # download and prepare lua-nginx-module and ngx_devel_kit
         Download_O_Files_Exit ${LuaNginxModule_DL} ${LuaNginxModule}.tar.gz
         Download_O_Files_Exit ${NgxDevelKit_DL} ${NgxDevelKit}.tar.gz
@@ -147,7 +147,8 @@ Install_Ngx_FancyIndex() {
 }
 
 Validate_Nginx_Modules_Options() {
-    if [[ "${Nginx_Modules_Options}" =~ [^A-Za-z0-9_=,/.+\-[:space:]] ]]; then
+    # Notice the hyphen is now safely at the very end, right before the closing bracket
+    if [[ "${Nginx_Modules_Options}" =~ [^A-Za-z0-9_=,/.+[:space:]-] ]]; then
         Echo_Red "Nginx_Modules_Options contains characters not allowed in configure flags. Please check lnmp.conf."
         exit 1
     fi
@@ -164,30 +165,31 @@ Install_Nginx() {
 
     Nginx_Version="${Nginx_Ver#nginx-}"
 
-    cd ${cur_dir}/src
+    cd "${cur_dir}/src" || exit
     Install_Nginx_Openssl
     Install_Nginx_Pcre2
     Install_Nginx_Lua
     Install_Ngx_FancyIndex
-    rm -rf ${Nginx_Ver}
-    Tar_Cd ${Nginx_Ver}.tar.gz ${Nginx_Ver}
-    Nginx_Ver_Com=$(${cur_dir}/include/version_compare 1.14.2 ${Nginx_Version})
-    if gcc -dumpversion | grep -q "^[78\.]" && [ "${Nginx_Ver_Com}" == "1" ]; then
-        patch -p1 <${cur_dir}/src/patch/nginx-gcc8.patch
-    fi
+    rm -rf "${Nginx_Ver}"
+    Tar_Cd "${Nginx_Ver}.tar.gz" "${Nginx_Ver}"
+    # Nginx Version 1.14.2 is too old, therefore we dropped this patch.
+    # Nginx_Ver_Com=$(${cur_dir}/include/version_compare 1.14.2 ${Nginx_Version})
+    #if gcc -dumpversion | grep -q "^[78\.]" && [ "${Nginx_Ver_Com}" == "1" ]; then
+    #    patch -p1 <${cur_dir}/src/patch/nginx-gcc8.patch
+    #fi
     Validate_Nginx_Modules_Options
     NGINX_LD_OPT='-Wl,-z,relro -Wl,-z,now -pie'
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
         NGINX_LD_OPT="${NGINX_LD_OPT} -Wl,-rpath,/usr/local/luajit/lib"
     fi
     case "${NginxMAOpt}" in
-        *ljemalloc*)
-            NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/jemalloc/lib -ljemalloc"
-            NginxMAOpt=""
-            ;;
-        *google_perftools*)
-            NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/tcmalloc/lib"
-            ;;
+    *ljemalloc*)
+        NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/jemalloc/lib -ljemalloc"
+        NginxMAOpt=""
+        ;;
+    *google_perftools*)
+        NGINX_LD_OPT="${NGINX_LD_OPT} -L/usr/local/tcmalloc/lib"
+        ;;
     esac
     echo "Starting configure nginx..."
     # -fPIC for dynamic modules
@@ -225,23 +227,25 @@ Install_Nginx() {
         ${Ngx_FancyIndex} \
         ${Nginx_Modules_Options} \
         --with-ld-opt="${NGINX_LD_OPT}" \
-        --with-cc-opt="-O2 -g -fstack-protector-strong -Wp,-D_FORTIFY_SOURCE=2 -fPIC"
+        --with-cc-opt="-O2 -g -fstack-protector-strong -fPIC"
+    # remove "-Wp,-D_FORTIFY_SOURCE=2" as modern gcc (like gcc15) will inject _FORTIFY_SOURCE=3 automatically
+    #--with-cc-opt="-O2 -g -fstack-protector-strong -Wp,-D_FORTIFY_SOURCE=2 -fPIC"
 
     Make_Install_Exit "Nginx"
-    
+
     # unset LuaJIT environment variables to avoid potential conflicts with other software
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then
         unset LUAJIT_LIB
         unset LUAJIT_INC
     fi
-    
-    cd ${cur_dir}/src
+
+    cd "${cur_dir}/src"
 
     ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx
-    
+
     # fresh install, we don't need to back up any .conf files
     rm -f /usr/local/nginx/conf/nginx.conf
-    cd ${cur_dir}
+    cd "${cur_dir}"
     if [ "${Stack}" = "lnmpa" ]; then
         \cp conf/nginx_a.conf /usr/local/nginx/conf/nginx.conf
         \cp conf/proxy.conf /usr/local/nginx/conf/proxy.conf
@@ -302,13 +306,13 @@ google_perftools_profiles /tmp/tcmalloc;' /usr/local/nginx/conf/nginx.conf
     if [ "${Stack}" != "lamp" ]; then
         KMAJ=$(uname -r | cut -d. -f1)
         KMIN=$(uname -r | cut -d. -f2 | cut -d- -f1)
-        if [ "${KMAJ}" -gt 3 ] 2>/dev/null || { [ "${KMAJ}" -eq 3 ] && [ "${KMIN}" -ge 9 ] ; }; then
+        if [ "${KMAJ}" -gt 3 ] 2>/dev/null || { [ "${KMAJ}" -eq 3 ] && [ "${KMIN}" -ge 9 ]; }; then
             sed -i 's/listen 80 default_server;/listen 80 default_server reuseport;/g' /usr/local/nginx/conf/nginx.conf
         fi
     fi
 
     ## cleaning
-    cd ${cur_dir}/src && rm -rf ${cur_dir}/src/${Nginx_Ver}
+    cd "${cur_dir}/src" && rm -rf "${cur_dir}/src/${Nginx_Ver}"
     [[ -d "${Custom_Openssl_Ver}" ]] && rm -rf "${Custom_Openssl_Ver}"
     [[ -d "${Pcre2_Ver}" ]] && rm -rf "${Pcre2_Ver}"
     if [ "${Enable_Nginx_Lua}" = 'y' ]; then

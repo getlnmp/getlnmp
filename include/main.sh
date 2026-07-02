@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #DB_Info=('MySQL 5.1.73' 'MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.37' 'MariaDB 5.5.68' 'MariaDB 10.4.33' 'MariaDB 10.5.24' 'MariaDB 10.6.17' 'MariaDB 10.11.7' 'MySQL 8.4.0')
-DB_Info=('MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.46' 'MySQL 8.4.9' 'MariaDB 5.5.68' 'MariaDB 10.4.34' 'MariaDB 10.5.29' 'MariaDB 10.6.27' 'MariaDB 10.11.18' 'MariaDB 11.4.12' 'MariaDB 11.8.8')
+DB_Info=('MySQL 5.5.62' 'MySQL 5.6.51' 'MySQL 5.7.44' 'MySQL 8.0.46' 'MySQL 8.4.10' 'MariaDB 5.5.68' 'MariaDB 10.4.34' 'MariaDB 10.5.29' 'MariaDB 10.6.27' 'MariaDB 10.11.18' 'MariaDB 11.4.12' 'MariaDB 11.8.8')
 PHP_Info=('PHP 5.2.17' 'PHP 5.3.29' 'PHP 5.4.45' 'PHP 5.5.38' 'PHP 5.6.40' 'PHP 7.0.33' 'PHP 7.1.33' 'PHP 7.2.34' 'PHP 7.3.33' 'PHP 7.4.33' 'PHP 8.0.30' 'PHP 8.1.34' 'PHP 8.2.31' 'PHP 8.3.31' 'PHP 8.4.22' 'PHP 8.5.7')
 Apache_Info=('Apache 2.2.34' 'Apache 2.4.66')
 
@@ -30,59 +30,60 @@ Database_Selection() {
     fi
 
     case "${DBSelect}" in
-    1)
-        echo "You will install ${DB_Info[0]}"
-        if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
-            fi
-            case "${Bin}" in
-            [yY][eE][sS] | [yY])
-                echo "You will install ${DB_Info[0]} Using Generic Binaries."
-                Bin="y"
-                ;;
-            [nN][oO] | [nN])
-                echo "You will install ${DB_Info[0]} from Source."
-                Bin="n"
-                ;;
-            *)
-                Bin="n"
-                ;;
-            esac
-        else
-            echo "Default install ${DB_Info[0]} from Source."
-            Bin="n"
-        fi
-        ;;
-    2)
-        echo "You will install ${DB_Info[1]}"
-        if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
-            fi
-            case "${Bin}" in
-            [yY][eE][sS] | [yY])
-                echo "You will install ${DB_Info[1]} Using Generic Binaries."
-                Bin="y"
-                ;;
-            [nN][oO] | [nN])
-                echo "You will install ${DB_Info[1]} from Source."
-                Bin="n"
-                ;;
-            *)
-                Bin="n"
-                ;;
-            esac
-        else
-            echo "Default install ${DB_Info[1]} from Source."
-            Bin="n"
-        fi
-        ;;
+    # 1)
+    #     echo "You will install ${DB_Info[0]}"
+    #     if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
+    #         if [ -z ${Bin} ]; then
+    #             read -r -p "Using Generic Binaries [y/n]: " Bin
+    #         fi
+    #         case "${Bin}" in
+    #         [yY][eE][sS] | [yY])
+    #             echo "You will install ${DB_Info[0]} Using Generic Binaries."
+    #             Bin="y"
+    #             ;;
+    #         [nN][oO] | [nN])
+    #             echo "You will install ${DB_Info[0]} from Source."
+    #             Bin="n"
+    #             ;;
+    #         *)
+    #             Bin="n"
+    #             ;;
+    #         esac
+    #     else
+    #         echo "Default install ${DB_Info[0]} from Source."
+    #         Bin="n"
+    #     fi
+    #     ;;
+    # 2)
+    #     echo "You will install ${DB_Info[1]}"
+    #     if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
+    #         if [ -z ${Bin} ]; then
+    #             read -r -p "Using Generic Binaries [y/n]: " Bin
+    #         fi
+    #         case "${Bin}" in
+    #         [yY][eE][sS] | [yY])
+    #             echo "You will install ${DB_Info[1]} Using Generic Binaries."
+    #             Bin="y"
+    #             ;;
+    #         [nN][oO] | [nN])
+    #             echo "You will install ${DB_Info[1]} from Source."
+    #             Bin="n"
+    #             ;;
+    #         *)
+    #             Bin="n"
+    #             ;;
+    #         esac
+    #     else
+    #         echo "Default install ${DB_Info[1]} from Source."
+    #         Bin="n"
+    #     fi
+    #     ;;
     3)
         echo "You will install ${DB_Info[2]}"
+        Check_MySQL57_CMPT
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -110,8 +111,8 @@ Database_Selection() {
     4)
         echo "You will install ${DB_Info[3]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -139,8 +140,8 @@ Database_Selection() {
     5)
         echo "You will install ${DB_Info[4]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -168,8 +169,8 @@ Database_Selection() {
     6)
         echo "You will install ${DB_Info[5]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -197,8 +198,8 @@ Database_Selection() {
     7)
         echo "You will install ${DB_Info[6]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -226,8 +227,8 @@ Database_Selection() {
     8)
         echo "You will install ${DB_Info[7]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -255,8 +256,8 @@ Database_Selection() {
     9)
         echo "You will install ${DB_Info[8]}"
         if [[ "${DB_ARCH}" = "x86_64" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -284,8 +285,8 @@ Database_Selection() {
     10)
         echo "You will install ${DB_Info[9]}"
         if [[ "${DB_ARCH}" = "x86_64" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -313,8 +314,8 @@ Database_Selection() {
     11)
         echo "You will install ${DB_Info[10]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -342,8 +343,8 @@ Database_Selection() {
     12)
         echo "You will install ${DB_Info[11]}"
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            if [ -z ${Bin} ]; then
-                read -r -p "Using Generic Binaries [y/n]: " Bin
+            if [ -z "${Bin}" ]; then
+                read -r -p "Using Generic Binaries [Y/n]: " Bin
             fi
             case "${Bin}" in
             [yY][eE][sS] | [yY])
@@ -461,6 +462,9 @@ PHP_Selection() {
         echo "16: Install ${PHP_Info[15]}"
         read -r -p "Enter your choice (8, 9, 10, 11, 12, 13, 14, 15, 16): " PHPSelect
     fi
+
+    # Check PHP version compatibility when ubuntu is 26 LTS
+    Check_PHP_CMPT
 
     case "${PHPSelect}" in
     1)
@@ -990,8 +994,8 @@ Tar_Cd() {
     local FileName=$1
     local DirName=$2
     local extension=${FileName##*.}
-    cd ${cur_dir}/src
-    [[ -d "${DirName}" ]] && rm -rf ${DirName}
+    cd "${cur_dir}/src"
+    [[ -d "${DirName}" ]] && rm -rf "${DirName}"
     echo "Uncompress ${FileName}..."
     if [ "$extension" == "gz" ] || [ "$extension" == "tgz" ]; then
         tar zxf "${FileName}"
@@ -1206,24 +1210,57 @@ Check_Mirror() {
     fi
 }
 
-Check_CMPT() {
-    if [[ "${DBSelect}" =~ ^[45]$ && "${Bin}" != "y" ]]; then
-        if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-7]" || echo "${RHEL_Version}" | grep -Eqi "^[4-7]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
-            Echo_Red "MySQL 8.0 please use latest linux distributions!"
+# Check_CMPT() {
+#     if [[ "${php_version}" =~ ^(7\.[34]\.|8\.0\.) ]] || [[ "${Php_Ver}" =~ (php-7\.[34]\.|php-8\.0\.) ]]; then
+#         if [[ "${Is_Ubuntu26}" = "y" ]]; then
+#             Echo_Red "Error: Ubuntu 26 only supports PHP 8.1+"
+#             exit 1
+#         fi
+
+#     fi
+# if [[ "${DBSelect}" =~ ^[45]$ && "${Bin}" != "y" ]]; then
+#     if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-7]" || echo "${RHEL_Version}" | grep -Eqi "^[4-7]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
+#         Echo_Red "MySQL 8.0 please use latest linux distributions!"
+#         exit 1
+#     fi
+# fi
+# if [[ "${PHPSelect}" =~ ^1[0-6]$ ]]; then
+#     if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-6]" || echo "${RHEL_Version}" | grep -Eqi "^[4-6]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
+#         Echo_Red "PHP 7.4 and PHP 8.* please use latest linux distributions!"
+#         exit 1
+#     fi
+# fi
+# if [[ "${PHPSelect}" = "1" ]]; then
+#     if echo "${Ubuntu_Version}" | grep -Eqi "^(19\.|2[0-7]\.)" || echo "${Debian_Version}" | grep -Eqi "^1[0-9]" || echo "${Raspbian_Version}" | grep -Eqi "^1[0-9]" || echo "${Deepin_Version}" | grep -Eqi "^2[0-9]" || echo "${UOS_Version}" | grep -Eqi "^2[0-9]" || echo "${Fedora_Version}" | grep -Eqi "^(29|3[0-9])"; then
+#         Echo_Red "PHP 5.2 is not supported on very new linux versions such as Ubuntu 19+, Debian 10, Deepin 20+, Fedora 29+ etc."
+#         exit 1
+#     fi
+# fi
+#}
+
+# Ubuntu 26 only supports PHP 8.1+
+Check_PHP_CMPT() {
+    if [[ "${PHPSelect}" =~ ^(9|10|11)$ ]] || [[ "${php_version}" =~ ^(7\.[34]\.|8\.0\.) ]] || [[ "${Php_Ver}" =~ (php-7\.[34]\.|php-8\.0\.) ]]; then
+        if [[ "${Is_Ubuntu26}" = "y" ]]; then
+            Echo_Red "Error: Ubuntu 26 only supports PHP 8.1+"
             exit 1
         fi
     fi
-    if [[ "${PHPSelect}" =~ ^1[0-6]$ ]]; then
-        if echo "${Ubuntu_Version}" | grep -Eqi "^1[0-7]\." || echo "${Debian_Version}" | grep -Eqi "^[4-8]" || echo "${Raspbian_Version}" | grep -Eqi "^[4-8]" || echo "${CentOS_Version}" | grep -Eqi "^[4-6]" || echo "${RHEL_Version}" | grep -Eqi "^[4-6]" || echo "${Fedora_Version}" | grep -Eqi "^2[0-3]"; then
-            Echo_Red "PHP 7.4 and PHP 8.* please use latest linux distributions!"
+}
+# Multiple PHP version of Check_CMPT
+Check_MPHP_CMPT() {
+    if [[ "${MPHP_Path}" =~ ^/usr/local/php(7\.[34]|8\.0)$ ]] || [[ "${php_version}" =~ ^(7\.[34]\.|8\.0\.) ]]; then
+        if [[ "${Is_Ubuntu26}" = "y" ]]; then
+            Echo_Red "Error: Ubuntu 26 only supports PHP 8.1+"
             exit 1
         fi
     fi
-    if [[ "${PHPSelect}" = "1" ]]; then
-        if echo "${Ubuntu_Version}" | grep -Eqi "^(19\.|2[0-7]\.)" || echo "${Debian_Version}" | grep -Eqi "^1[0-9]" || echo "${Raspbian_Version}" | grep -Eqi "^1[0-9]" || echo "${Deepin_Version}" | grep -Eqi "^2[0-9]" || echo "${UOS_Version}" | grep -Eqi "^2[0-9]" || echo "${Fedora_Version}" | grep -Eqi "^(29|3[0-9])"; then
-            Echo_Red "PHP 5.2 is not supported on very new linux versions such as Ubuntu 19+, Debian 10, Deepin 20+, Fedora 29+ etc."
-            exit 1
-        fi
+}
+
+Check_MySQL57_CMPT() {
+    if [[ "${Is_Ubuntu26}" = "y" ]]; then
+        Echo_Red "Error: Ubuntu 26 only supports MySQL 8.0+"
+        exit 1
     fi
 }
 
@@ -1453,6 +1490,21 @@ Get_ICU_Version() {
     local_icu_version=${local_icu_version:-0}
 }
 
+# Oracle Mysql 8.0 and 8.4 hardcodes GCC12 requirementsfor RHEL8/9
+RHEL89_GCC12_Check() {
+    if [ "${PM}" = "yum" ]; then
+        if grep -Eqi "release 8." /etc/redhat-release || grep -Eqi "release 9." /etc/redhat-release; then
+            echo "Checking GCC-toolset-12..."
+            if [ -x /opt/rh/gcc-toolset-12/root/usr/bin/gcc ]; then
+                echo "GCC-toolset-12 exists"
+            else
+                echo "Installing GCC-toolset-12..."
+                dnf install gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-binutils gcc-toolset-12-annobin-annocheck gcc-toolset-12-annobin-plugin-gcc -y
+            fi
+        fi
+    fi
+}
+
 Gcc14_Check() {
     if ! command -v gcc >/dev/null 2>&1; then
         case "${PM}" in
@@ -1460,6 +1512,7 @@ Gcc14_Check() {
         yum | dnf) ${PM} install -y gcc gcc-c++ ;;
         esac
     fi
+    local gcc_major_version
     gcc_major_version=$(gcc -dumpversion | cut -f1 -d.)
     if [ "${gcc_major_version}" -eq "14" ]; then
         case "${PM}" in
@@ -1491,10 +1544,17 @@ PHP-FPM_notify_support() {
         grep -qx 'enabled'
 }
 
-Block_Dist_Name() {
+Block_Unsupported_Distro() {
     if [[ $PM = "yum" ]]; then
         if [[ ${DISTRO} != "RHEL" && ${DISTRO} != "Rocky" && ${DISTRO} != "Alma" && ${DISTRO} != "Oracle" ]]; then
             Echo_Red "Only RHEL/Rocky Linux/AlmaLinux/Oracle Linux are supported!"
+            Echo_Red "Exit"
+            exit 1
+        fi
+        local RHEL_Major_Version
+        RHEL_Major_Version=$(grep '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"' | cut -d. -f1)
+        if [[ ! $RHEL_Major_Version =~ ^(8|9|10)$ ]]; then
+            Echo_Red "Only RHEL/Rocky Linux/AlmaLinux/Oracle Linux 8, 9, 10 are supported!"
             Echo_Red "Exit"
             exit 1
         fi
@@ -1504,10 +1564,41 @@ Block_Dist_Name() {
             Echo_Red "Exit"
             exit 1
         fi
+        if [[ ${DISTRO} = "Debian" ]]; then
+            local Debian_Major_Version
+            Debian_Major_Version=$(grep '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"' | cut -d. -f1)
+            if [[ ! $Debian_Major_Version =~ ^(11|12|13)$ ]]; then
+                Echo_Red "Only Debian 11, 12, 13 are supported!"
+                Echo_Red "Exit"
+                exit 1
+            fi
+        elif [[ ${DISTRO} = "Ubuntu" ]]; then
+            local Ubuntu_Major_Version
+            Ubuntu_Major_Version=$(grep '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"' | cut -d. -f1)
+            if [[ ! $Ubuntu_Major_Version =~ ^(22|24|26)$ ]]; then
+                Echo_Red "Only Ubuntu 22, 24, 26 are supported!"
+                Echo_Red "Exit"
+                exit 1
+            fi
+        fi
     else
         Echo_Red "GetLNMP does not support your OS!"
         Echo_Red "Exit"
         exit 1
+    fi
+}
+
+# Special Distro Check
+# Currently we need to check Ubuntu 26 LTS as its using GCC 15 and CMake 4, only supports PHP 8.1+ and MySQL 8.0+ and MariaDB 10.6+
+Check_Special_Distro() {
+    if [[ "${DISTRO}" = "Ubuntu" ]]; then
+        local Ubuntu_Major_Version
+        Ubuntu_Major_Version=$(grep '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"' | cut -d. -f1)
+        if [[ $Ubuntu_Major_Version == 26 ]]; then
+            Is_Ubuntu26='y'
+        else
+            Is_Ubuntu26='n'
+        fi
     fi
 }
 
@@ -1560,11 +1651,20 @@ Install_Ncurses5_Compat() {
         --without-manpages \
         --without-progs
     Make_Install
-    if [ -f /usr/local/ncurses5/lib/libncurses.so.5 ] && [ ! -e /usr/lib/x86_64-linux-gnu/libncurses.so.5 ]; then
-        ln -sf /usr/local/ncurses5/lib/libncurses.so.5 /usr/lib/x86_64-linux-gnu/libncurses.so.5
-        ln -sf /usr/local/ncurses5/lib/libtinfo.so.5 /usr/lib/x86_64-linux-gnu/libtinfo.so.5
-        echo "ncurses5 compatibility library installed successfully."
+    if [ "${PM}" = "yum" ] || [ "${PM}" = "dnf" ]; then
+        if [ -f /usr/local/ncurses5/lib/libncurses.so.5 ] && [ ! -e /usr/lib64/libncurses.so.5 ]; then
+            ln -sf /usr/local/ncurses5/lib/libncurses.so.5 /usr/lib64/libncurses.so.5
+            ln -sf /usr/local/ncurses5/lib/libtinfo.so.5 /usr/lib64/libtinfo.so.5
+            echo "ncurses5 compatibility library installed successfully."
+        fi
+    elif [ "${PM}" = "apt" ]; then
+        if [ -f /usr/local/ncurses5/lib/libncurses.so.5 ] && [ ! -e /usr/lib/x86_64-linux-gnu/libncurses.so.5 ]; then
+            ln -sf /usr/local/ncurses5/lib/libncurses.so.5 /usr/lib/x86_64-linux-gnu/libncurses.so.5
+            ln -sf /usr/local/ncurses5/lib/libtinfo.so.5 /usr/lib/x86_64-linux-gnu/libtinfo.so.5
+            echo "ncurses5 compatibility library installed successfully."
+        fi
     fi
+
 }
 
 # mysql 5.7 and before BIN is built with libncurses.so.5, but most OS use libncurses.so.6 now.
@@ -1572,7 +1672,7 @@ Install_Ncurses5_Compat() {
 # So we need to install ncurses5 compatibility library for mysql 5.7 BIN package
 Ncurses5_Compat_Check() {
     if [[ $Bin = "y" ]]; then
-        if [ -f /usr/lib/x86_64-linux-gnu/libncurses.so.5 ] || [ -f /usr/lib/i386-linux-gnu/libncurses.so.5 ]; then
+        if [ -f /usr/lib/x86_64-linux-gnu/libncurses.so.5 ] || [ -f /usr/lib64/libncurses.so.5 ]; then
             echo "ncurses5 compatibility library found."
         else
             echo "ncurses5 compatibility library not found."

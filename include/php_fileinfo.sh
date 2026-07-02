@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-Install_PHP_Fileinfo()
-{
-    cd ${cur_dir}/src
+Install_PHP_Fileinfo() {
+    cd "${cur_dir}"/src || exit
     echo "====== Installing PHP Fileinfo ======"
 
     local MemTotal SwapTotal
@@ -35,7 +34,7 @@ Install_PHP_Fileinfo()
     rm -rf php-"${Cur_PHP_Version}"
 
     if [ -s "${zend_ext}" ]; then
-        cat >${PHP_Path}/conf.d/009-fileinfo.ini<<EOF
+        cat >${PHP_Path}/conf.d/009-fileinfo.ini <<EOF
 extension = "fileinfo.so"
 EOF
         Restart_PHP
@@ -48,8 +47,7 @@ EOF
     fi
 }
 
-Uninstall_PHP_Fileinfo()
-{
+Uninstall_PHP_Fileinfo() {
     echo "You will uninstall PHP Fileinfo..."
     Press_Start
     rm -f "${PHP_Path}"/conf.d/009-fileinfo.ini

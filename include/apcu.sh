@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-Install_Apcu()
-{
+Install_Apcu() {
     echo "You will install apcu..."
     apcu_pass=""
     for _ in 1 2 3; do
@@ -29,7 +28,7 @@ Install_Apcu()
         rm -f "${zend_ext}"
     fi
 
-    cd ${cur_dir}/src
+    cd "${cur_dir}/src" || exit
 
     if echo "${Cur_PHP_Version}" | grep -Eqi '^(7\.|8\.|9\.)'; then
         Download_Files ${PHPNewApcu_DL} ${PHPNewApcu_Ver}.tgz
@@ -60,7 +59,7 @@ Install_Apcu()
         rm -rf ${cur_dir}/src/${PHPOldApcu_Ver} ${cur_dir}/src/${PHPNewApcu_Ver}
     fi
 
-    cat >${PHP_Path}/conf.d/009-apcu.ini<<EOF
+    cat >${PHP_Path}/conf.d/009-apcu.ini <<EOF
 [APCu]
 extension=apcu.so
 apc.enabled=1
@@ -86,8 +85,7 @@ EOF
     fi
 }
 
-Uninstall_Apcu()
-{
+Uninstall_Apcu() {
     echo "You will uninstall apcu..."
     Press_Start
     rm -f ${Default_Website_Dir}/apc.php

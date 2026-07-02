@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-Install_PHP_Bz2()
-{
-    cd ${cur_dir}/src
+Install_PHP_Bz2() {
+    cd "${cur_dir}"/src || exit
     echo "====== Installing PHP Bz2 ======"
     Press_Start
 
@@ -30,7 +29,7 @@ Install_PHP_Bz2()
     rm -rf php-"${Cur_PHP_Version}"
 
     if [ -s "${zend_ext}" ]; then
-        cat >${PHP_Path}/conf.d/009-bz2.ini<<EOF
+        cat >${PHP_Path}/conf.d/009-bz2.ini <<EOF
 extension = "bz2.so"
 EOF
         Restart_PHP
@@ -43,8 +42,7 @@ EOF
     fi
 }
 
-Uninstall_PHP_Bz2()
-{
+Uninstall_PHP_Bz2() {
     echo "You will uninstall PHP Bz2..."
     Press_Start
     rm -f ${PHP_Path}/conf.d/009-bz2.ini

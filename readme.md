@@ -6,16 +6,17 @@ GetLNMP is a Linux Shell-based installer for deploying production LNMP (Nginx/My
 
 ## Supported Versions
 
-| Distribution  |  EOL   | kernel | glibc | OpenSSL | GCC  | ICU  |
-| :-----------: | :----: | :----: | :---: | :-----: | :--: | :--: |
-|   Debian 11   | 2026.8 |  5.1   | 2.31  |  1.1.1  | 10.2 | 67.1 |
-|   Debian 12   | 2028.6 |  6.1   | 2.36  | 3.0.\*  | 12.2 | 72.1 |
-|   Debian 13   | 2030.6 |  6.8   | 2.41  | 3.5.\*  |  14  | 74.1 |
-| Ubuntu 22 LTS | 2027.4 |  5.15  | 2.35  | 3.0.\*  | 11.2 | 70.1 |
-| Ubuntu 24 LTS | 2029.5 |  6.8   | 2.39  | 3.0.\*  | 13.2 | 74.2 |
-|    RHEL 8     | 2029.5 |  4.1   | 2.28  |  1.1.1  | 8.3  | 60.3 |
-|    RHEL 9     | 2032.5 |  5.1   | 2.34  | 3.0.\*  | 11.2 | 67.1 |
-|    RHEL 10    | 2035.5 |  6.1   | 2.39  | 3.5.\*  |  14  | 74.2 |
+| Distribution  |  EOL   | kernel | glibc | OpenSSL |  GCC  | ICU  |
+| :-----------: | :----: | :----: | :---: | :-----: | :---: | :--: |
+|   Debian 11   | 2026.8 |  5.1   | 2.31  |  1.1.1  | 10.2  | 67.1 |
+|   Debian 12   | 2028.6 |  6.1   | 2.36  | 3.0.\*  | 12.2  | 72.1 |
+|   Debian 13   | 2030.6 |  6.8   | 2.41  | 3.5.\*  |  14   | 74.1 |
+| Ubuntu 22 LTS | 2027.4 |  5.15  | 2.35  | 3.0.\*  | 11.4  | 70.1 |
+| Ubuntu 24 LTS | 2029.5 |  6.8   | 2.39  | 3.0.\*  | 13.3  | 74.2 |
+| Ubuntu 26 LTS | 2031.4 |  7.0   | 2.43  | 3.5.\*  | 15.2  | 78.2 |
+|    RHEL 8     | 2029.5 |  4.1   | 2.28  |  1.1.1  | 8.\*  | 60.3 |
+|    RHEL 9     | 2032.5 |  5.1   | 2.34  | 3.5.\*  | 11.\* | 67.1 |
+|    RHEL 10    | 2035.5 |  6.1   | 2.39  | 3.5.\*  |  14   | 74.2 |
 
 ## Installation Recommendations
 
@@ -24,6 +25,8 @@ The system OpenSSL version has a large impact on which PHP versions can be used.
 Systems with OpenSSL 1.1.1: install PHP 7.3-8.\*  
 Systems with OpenSSL 3.\*: install PHP 8.1+
 
+- **Ubuntu 26 LTS uses GCC 15 and CMake 4, only supports PHP 8.1+, MySQL 8.0+ and MariaDB 10.6+**
+
 In other words:
 
 - Debian 11: PHP 7.3+
@@ -31,6 +34,7 @@ In other words:
 - Debian 13: PHP 8.1+
 - Ubuntu 22 LTS: PHP 8.1+
 - Ubuntu 24 LTS: PHP 8.1+
+- **Ubuntu 26 LTS: ONLY support PHP 8.1+**
 - RHEL 8/Rocky 8/AlmaLinux 8: PHP 7.3+
 - RHEL 9/Rocky 9/AlmaLinux 9: PHP 8.1+
 - RHEL 10/Rocky 10/AlmaLinux 10: PHP 8.1+
@@ -38,7 +42,9 @@ In other words:
 ## Software Versions
 
 - PHP currently supports PHP 7.3-7.4 and PHP 8.0-8.5.
-- MySQL supports 5.7, 8.0, and 8.4. RHEL 10 series supports only MySQL 8.4.
+- **Ubuntu 26 LTS: ONLY support PHP 8.1+**
+- MySQL supports 5.7, 8.0, and 8.4.
+- **Ubuntu 26 LTS: ONLY support MySQL 8.0 and 8.4**
 - MariaDB supports 10.6, 10.11, 11.4, and 11.8.
 - Nginx installs the latest stable version by default.
 - Apache currently supports only 2.4.
@@ -52,16 +58,16 @@ GetLNMP supports custom Nginx and PHP compile options, custom website and databa
 
 ## Installing GetLNMP
 
-Before installation, make sure `wget` and `git` are installed.
+Before installation, update system first (`apt update && apt upgrade` or `dnf clean all && dnf update`) and make sure `wget` and `git` are installed.
 
 If you see `wget: command not found`, install it with `yum install wget` or `apt-get install wget`.
 If you see `git: command not found`, install it with `yum install git` or `apt-get install git`.
 
-To avoid interruption from disconnected SSH sessions, `screen` is recommended. You can run `screen -S lnmp` first, then run the GetLNMP installation command:
+To avoid interruption from disconnected SSH sessions, `screen` is recommended. You can run `screen -S getlnmp` first, then run the GetLNMP installation command:
 
-`wget http://soft.lnmp.com/lnmp/lnmp2.1.tar.gz -cO lnmp2.1.tar.gz && tar zxf lnmp2.1.tar.gz && cd lnmp2.1 && ./install.sh {lnmp|lnmpa|lamp}`
+`git clone https://github.com/getlnmp/getlnmp.git && cd getlnmp && ./install.sh {lnmp|lnmpa|lamp}`
 
-If the connection drops, use `screen -r lnmp` to reconnect.
+If the connection drops, use `screen -r getlnmp` to reconnect.
 
 ## Common Usage
 
@@ -203,7 +209,7 @@ The interactive installer defaults to MariaDB 11.4 (`DBSelect=11`) and PHP 8.3 (
 
 Example: in LNMP mode, install MariaDB 11.4, set the database root password to `getlnmp.com`, enable InnoDB, install PHP 8.3, and use no memory allocator. First run screen if needed, then download and extract the LNMP package:
 
-`wget http://soft.getlnmp.com/lnmp/lnmp2.1.tar.gz -cO lnmp2.1.tar.gz && tar zxf lnmp2.1.tar.gz && cd lnmp2.1`
+`git clone https://github.com/getlnmp/getlnmp.git && cd getlnmp && ./install.sh {lnmp|lnmpa|lamp}`
 
 Then set unattended parameters and install:
 

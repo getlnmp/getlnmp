@@ -58,6 +58,7 @@ Load_Includes() {
 Detect_System() {
     Get_Dist_Name
     Get_Dist_Version
+    Check_Special_Distro
     MemTotal=$(awk '/MemTotal/ {printf( "%d\n", $2 / 1024 )}' /proc/meminfo)
 }
 
@@ -67,7 +68,7 @@ Detect_System() {
 Display_Banner() {
     clear
     echo "+-----------------------------------------------------------------------+"
-    echo "|            Upgrade script for LNMP V2.1, Written by Licess            |"
+    echo "|                    Upgrade script for GetLNMP                         |"
     echo "+-----------------------------------------------------------------------+"
     echo "|     A tool to upgrade Nginx,MySQL/Mariadb,PHP for LNMP/LNMPA/LAMP     |"
     echo "+-----------------------------------------------------------------------+"

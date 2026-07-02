@@ -76,7 +76,7 @@ Upgrade_MariaDB() {
     echo "You can get version number from https://downloads.mariadb.org/"
     echo "We only support upgrading MariaDB to LTS version like 10.6.x, 10.11.x, 11.4.x and 11.8.x"
     Echo_Yellow "Please enter MariaDB Version you want."
-    read -r -p "(example: 11.8.7 ): " mariadb_version
+    read -r -p "(example: 11.8.8 ): " mariadb_version
 
     if echo "${mariadb_version}" | grep -Eqi '^(10\.6\.|10\.11\.|11\.4\.|11\.8\.)'; then
         echo "You will upgrade MariaDB to version:${mariadb_version}"
@@ -96,14 +96,14 @@ Upgrade_MariaDB() {
         exit 1
     fi
 
-    if [ "$(${cur_dir}/include/version_compare ${cur_mariadb_version} ${mariadb_version})" = "1" ]; then
-        Echo_Red "Refusing downgrade from ${cur_mariadb_version} to ${mariadb_version}."
-        exit 1
-    fi
+    #if [ "$(${cur_dir}/include/version_compare ${cur_mariadb_version} ${mariadb_version})" = "1" ]; then
+    #    Echo_Red "Refusing downgrade from ${cur_mariadb_version} to ${mariadb_version}."
+    #    exit 1
+    #fi
 
     if echo "${mariadb_version}" | grep -Eqi '^10\.6\.'; then
         if [[ "${DB_ARCH}" = "x86_64" ]]; then
-            read -r -p "Using Generic Binaries [y/n]: " Bin
+            read -r -p "Using Generic Binaries [Y/n]: " Bin
             case "${Bin}" in
             [yY][eE][sS] | [yY])
                 echo "You will install mariadb-${mariadb_version} Using Generic Binaries."
@@ -123,7 +123,7 @@ Upgrade_MariaDB() {
         fi
     else
         if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]]; then
-            read -r -p "Using Generic Binaries [y/n]: " Bin
+            read -r -p "Using Generic Binaries [Y/n]: " Bin
             case "${Bin}" in
             [yY][eE][sS] | [yY])
                 echo "You will install mariadb-${mariadb_version} Using Generic Binaries."

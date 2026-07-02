@@ -55,8 +55,10 @@ Start_Upgrade_PHP() {
         Echo_Red "Error: You must enter a corrent php version!!"
         exit 1
     fi
+    # Ubuntu 26 only supports PHP 8.1+
+    Check_PHP_CMPT
     # allow php downgrades
-    if echo "${php_version}" | grep -Eqi '^(7\.[3-4]\.|8\.[0-5]\.)';then
+    if echo "${php_version}" | grep -Eqi '^(7\.[3-4]\.|8\.[0-5]\.)'; then
         echo "You will upgrade PHP to version:${php_version}"
     else
         Echo_Red "Error: You input PHP Version was:${php_version}"
@@ -64,7 +66,7 @@ Start_Upgrade_PHP() {
         exit 1
     fi
     Press_Start
-    cd ${cur_dir}/src
+    cd "${cur_dir}/src"
     if [ -s php-${php_version} ]; then
         echo "Remove old php-${php_version} source code..."
         rm -rf php-${php_version}
@@ -85,14 +87,30 @@ Start_Upgrade_PHP() {
     lnmp stop
 
     if [ "${Stack}" = "lnmp" ]; then
-        mv /usr/local/php /usr/local/oldphp${Upgrade_Date} || { Echo_Red "Error: failed to move aside /usr/local/php."; lnmp start; exit 1; }
+        mv /usr/local/php /usr/local/oldphp${Upgrade_Date} || {
+            Echo_Red "Error: failed to move aside /usr/local/php."
+            lnmp start
+            exit 1
+        }
     else
         if echo "${Cur_PHP_Version}" | grep -Eqi '^8\.'; then
-            mv /usr/local/apache/modules/libphp.so /usr/local/apache/modules/libphp.so.bak.${Upgrade_Date} || { Echo_Red "Error: failed to back up libphp.so."; lnmp start; exit 1; }
+            mv /usr/local/apache/modules/libphp.so /usr/local/apache/modules/libphp.so.bak.${Upgrade_Date} || {
+                Echo_Red "Error: failed to back up libphp.so."
+                lnmp start
+                exit 1
+            }
         elif echo "${Cur_PHP_Version}" | grep -Eqi '^7\.'; then
-            mv /usr/local/apache/modules/libphp7.so /usr/local/apache/modules/libphp7.so.bak.${Upgrade_Date} || { Echo_Red "Error: failed to back up libphp7.so."; lnmp start; exit 1; }
+            mv /usr/local/apache/modules/libphp7.so /usr/local/apache/modules/libphp7.so.bak.${Upgrade_Date} || {
+                Echo_Red "Error: failed to back up libphp7.so."
+                lnmp start
+                exit 1
+            }
         else
-            mv /usr/local/apache/modules/libphp5.so /usr/local/apache/modules/libphp5.so.bak.${Upgrade_Date} || { Echo_Red "Error: failed to back up libphp5.so."; lnmp start; exit 1; }
+            mv /usr/local/apache/modules/libphp5.so /usr/local/apache/modules/libphp5.so.bak.${Upgrade_Date} || {
+                Echo_Red "Error: failed to back up libphp5.so."
+                lnmp start
+                exit 1
+            }
         fi
         mv /usr/local/php /usr/local/oldphp${Upgrade_Date} || {
             Echo_Red "Error: failed to move aside /usr/local/php."
@@ -143,16 +161,16 @@ Install_PHP_Dependent() {
         done
 
         # 3. EL9/EL10+: libidn2 is the preferred replacement for the deprecated libidn
-        if echo "${RHEL_Version}" | grep -Eqi "^(9|10)" || \
-           echo "${Rocky_Version}" | grep -Eqi "^(9|10)" || \
-           echo "${Alma_Version}" | grep -Eqi "^(9|10)"; then
+        if echo "${RHEL_Version}" | grep -Eqi "^(9|10)" ||
+            echo "${Rocky_Version}" | grep -Eqi "^(9|10)" ||
+            echo "${Alma_Version}" | grep -Eqi "^(9|10)"; then
             yum -y install libidn2 libidn2-devel
         fi
 
         # 4. EL8 (RHEL/Rocky/Alma): PowerTools repo for rpcgen, re2c, oniguruma-devel
-        if echo "${RHEL_Version}" | grep -Eqi "^8" || \
-           echo "${Rocky_Version}" | grep -Eqi "^8" || \
-           echo "${Alma_Version}" | grep -Eqi "^8"; then
+        if echo "${RHEL_Version}" | grep -Eqi "^8" ||
+            echo "${Rocky_Version}" | grep -Eqi "^8" ||
+            echo "${Alma_Version}" | grep -Eqi "^8"; then
             Check_PowerTools
             if [ "${repo_id}" != "" ]; then
                 echo "Installing packages in PowerTools repository..."
@@ -164,8 +182,8 @@ Install_PHP_Dependent() {
         fi
 
         # 5. EL9/EL10 (Alma/Rocky): CRB repo for oniguruma-devel, libzip-devel, libtirpc-devel
-        if echo "${Alma_Version}" | grep -Eqi "^(9|10)" || \
-           echo "${Rocky_Version}" | grep -Eqi "^(9|10)"; then
+        if echo "${Alma_Version}" | grep -Eqi "^(9|10)" ||
+            echo "${Rocky_Version}" | grep -Eqi "^(9|10)"; then
             for cs9packages in oniguruma-devel libzip-devel libtirpc-devel; do
                 dnf --enablerepo=crb install ${cs9packages} -y
             done
@@ -209,7 +227,7 @@ Install_PHP_Dependent() {
 }
 
 Check_PHP_Upgrade_Files() {
-    PHP_ENV_UNSET
+    #PHP_ENV_UNSET
     Echo_LNMPA_Upgrade_PHP_Failed() {
         Echo_Red "======== upgrade php failed ======"
         Echo_Red "upgrade php log: /root/upgrade_a_php${Upgrade_Date}.log"

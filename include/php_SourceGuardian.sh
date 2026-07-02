@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-Install_SourceGuardian()
-{
+Install_SourceGuardian() {
     echo "====== Installing SourceGuardian Loader ======"
     Press_Start
 
@@ -14,12 +13,12 @@ Install_SourceGuardian()
         zend_ext="ixed.${PHP_Short_Ver}ts.lin"
     fi
 
-    cd ${cur_dir}/src
+    cd "${cur_dir}/src"
     if [ "${ARCH}" = "x86_64" ]; then
         Download_Files https://www.sourceguardian.com/loaders/download/loaders.linux-${ARCH}.zip loaders.linux-${ARCH}.zip
     elif [ "${ARCH}" = "aarch64" ] || [ "${ARCH}" = "armhf" ]; then
         if echo "${Cur_PHP_Version}" | grep -Eqi '^(7\.4\.*|^8\.[0-5]\.*)'; then
-          Download_Files https://www.sourceguardian.com/loaders/download/loaders.linux-${ARCH}.zip loaders.linux-${ARCH}.zip
+            Download_Files https://www.sourceguardian.com/loaders/download/loaders.linux-${ARCH}.zip loaders.linux-${ARCH}.zip
         else
             Echo_Red "Current PHP version does not support SourceGuardian!"
             exit 1
@@ -38,7 +37,7 @@ Install_SourceGuardian()
         [[ ! -d "${zend_ext_dir}" ]] && mkdir -p "${zend_ext_dir}"
         \cp "loaders.linux-${ARCH}/${zend_ext}" "${zend_ext_dir}"
         echo "Writing SourceGuardian loader to configure files..."
-        cat >${PHP_Path}/conf.d/001-sourceguardian.ini<<EOF
+        cat >${PHP_Path}/conf.d/001-sourceguardian.ini <<EOF
 extension=${zend_ext}
 EOF
     fi
@@ -53,13 +52,12 @@ EOF
         rm -f ${PHP_Path}/conf.d/001-sourceguardian.ini
         Echo_Red "SourceGuardian Loader install failed!"
     fi
- }
+}
 
- Uninstall_SourceGuardian()
- {
+Uninstall_SourceGuardian() {
     echo "You will uninstall SourceGuardian Loader..."
     Press_Start
     rm -f "${PHP_Path}"/conf.d/001-sourceguardian.ini
     Restart_PHP
     Echo_Green "Uninstall SourceGuardian Loader completed."
- }
+}

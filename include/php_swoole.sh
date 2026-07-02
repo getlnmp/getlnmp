@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-Install_PHP_Swoole()
-{
-    cd ${cur_dir}/src
+Install_PHP_Swoole() {
+    cd "${cur_dir}/src"
     echo "====== Installing PHP Swoole ======"
     Press_Start
 
@@ -13,7 +12,7 @@ Install_PHP_Swoole()
         Echo_Yellow "PHP Module 'swoole' already loaded — nothing to do."
         exit 0
     fi
-    
+
     # openssl-devel/libssl-dev has already been installed when compiling PHP, therefore no need to install again and it's safe to enbale-openssl directly
     if echo "${Cur_PHP_Version}" | grep -Eqi '^8\.[0-9]\.'; then
         Download_Files ${PHPSwoole_DL} ${PHPSwoole_Ver}.tgz
@@ -69,7 +68,7 @@ Install_PHP_Swoole()
     fi
 
     if [ -s "${zend_ext}" ]; then
-        cat >${PHP_Path}/conf.d/009-swoole.ini<<EOF
+        cat >${PHP_Path}/conf.d/009-swoole.ini <<EOF
 extension = "swoole.so"
 EOF
         Restart_PHP
@@ -82,8 +81,7 @@ EOF
     fi
 }
 
-Uninstall_PHP_Swoole()
-{
+Uninstall_PHP_Swoole() {
     echo "You will uninstall PHP Swoole..."
     Press_Start
     rm -f ${PHP_Path}/conf.d/009-swoole.ini

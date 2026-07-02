@@ -363,7 +363,7 @@ Install_MySQL_57() {
         else
             MySQL_WITH_SSL='-DWITH_SSL=system'
         fi
-        Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
+        Tar_Cd "${Mysql_Ver}.tar.gz" "${Mysql_Ver}"
         #Install_Boost
         #if echo "${Rocky_Version}${Alma_Version}" | grep -Eqi "^9"; then
         #    sed -i 's@^INCLUDE(cmake/abi_check.cmake)@#INCLUDE(cmake/abi_check.cmake)@' CMakeLists.txt
@@ -499,6 +499,7 @@ Install_MySQL_80() {
         mv ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}/* /usr/local/mysql/
     else
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Source code..."
+        RHEL89_GCC12_Check
         Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
         if [ "${isOpenSSL10}" = "y" ]; then
             Echo_Red "MySQL 8.0 requires OpenSSL 1.1.1 or 3.x; system OpenSSL is older. Aborting."
@@ -646,6 +647,7 @@ Install_MySQL_84() {
         mv ${Mysql_Ver}-linux-glibc2.28-${DB_ARCH}/* /usr/local/mysql/
     else
         Echo_Blue "[+] Installing ${Mysql_Ver} Using Source code..."
+        RHEL89_GCC12_Check
         Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
         if [ "${isOpenSSL10}" = "y" ]; then
             Echo_Red "MySQL 8.4 requires OpenSSL 1.1.1 or 3.x; system OpenSSL is older. Aborting."

@@ -2,9 +2,8 @@
 
 # As of PHP 7.2.0 this extension is bundled with PHP. For older PHP versions this extension is available via PECL.
 # branch on PHP 5.2-7.1 (libsodium PECL) vs PHP 7.2+ (bundled ext/sodium)
-Install_PHP_Sodium()
-{
-    cd ${cur_dir}/src
+Install_PHP_Sodium() {
+    cd "${cur_dir}/src"
     echo "====== Installing PHP Sodium ======"
     Press_Start
 
@@ -67,9 +66,9 @@ Install_PHP_Sodium()
 
     if [ -s "${zend_ext}" ]; then
         if echo "${Cur_PHP_Version}" | grep -Eqi '^(5\.[3-6]\.|7\.[01]\.)'; then
-            echo 'extension = "libsodium.so"' > ${PHP_Path}/conf.d/009-sodium.ini
+            echo 'extension = "libsodium.so"' >${PHP_Path}/conf.d/009-sodium.ini
         else
-            echo 'extension = "sodium.so"' > ${PHP_Path}/conf.d/009-sodium.ini
+            echo 'extension = "sodium.so"' >${PHP_Path}/conf.d/009-sodium.ini
         fi
         Restart_PHP
         Echo_Green "====== PHP Sodium install completed ======"
@@ -81,8 +80,7 @@ Install_PHP_Sodium()
     fi
 }
 
-Uninstall_PHP_Sodium()
-{
+Uninstall_PHP_Sodium() {
     echo "You will uninstall PHP Sodium..."
     Press_Start
     rm -f ${PHP_Path}/conf.d/009-sodium.ini

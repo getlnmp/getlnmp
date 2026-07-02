@@ -14,7 +14,6 @@ Pcre2_Ver='pcre2-10.47'
 Jemalloc_Ver='jemalloc-5.3.1'
 TCMalloc_Ver='gperftools-2.18.1'
 Libunwind_Ver='libunwind-1.2.1'
-#Libicu4c_Ver='icu4c-58_3'
 Boost_Ver='boost_1_59_0'
 Boost_New_Ver='boost_1_67_0'
 Openssl_Ver='openssl-1.0.2u'
@@ -22,14 +21,14 @@ Openssl_New_Ver='openssl-1.1.1w'
 Openssl_3_Ver='openssl-3.0.20'
 Openssl_35_Ver='openssl-3.5.6'
 Nghttp2_Ver='nghttp2-1.52.0'
-Libzip_Ver='libzip-1.5.2'
+Libzip_Ver='libzip-1.10.1'
 Libxml2_Ver='libxml2-2.9.14'
 Luajit_Ver='luajit2-2.1-20230119'
 LuaNginxModule='lua-nginx-module-0.10.28'
 LuaRestyCore='lua-resty-core-0.1.31'
 LuaRestyLrucache='lua-resty-lrucache-0.15'
 NgxDevelKit='ngx_devel_kit-0.3.3'
-Nginx_Ver='nginx-1.30.1'
+Nginx_Ver='nginx-1.30.3'
 NgxFancyIndex_Ver='ngx-fancyindex-0.5.2'
 # DBSelect/PHPSelect are empty when this file is sourced in interactive mode
 # (they are set later by Display_Selection), so wrap the selection-dependent
@@ -44,7 +43,7 @@ Set_Selected_Versions() {
     elif [ "${DBSelect}" = "4" ]; then
         Mysql_Ver='mysql-8.0.46'
     elif [ "${DBSelect}" = "5" ]; then
-        Mysql_Ver='mysql-8.4.9'
+        Mysql_Ver='mysql-8.4.10'
     elif [ "${DBSelect}" = "6" ]; then
         Mariadb_Ver='mariadb-5.5.68'
     elif [ "${DBSelect}" = "7" ]; then

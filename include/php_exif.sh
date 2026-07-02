@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-Install_PHP_Exif()
-{
-    cd ${cur_dir}/src
+Install_PHP_Exif() {
+    cd "${cur_dir}"/src || exit
     echo "====== Installing PHP Exif ======"
     Press_Start
 
@@ -28,7 +27,7 @@ Install_PHP_Exif()
     rm -rf php-"${Cur_PHP_Version}"
 
     if [ -s "${zend_ext}" ]; then
-        cat >"${PHP_Path}"/conf.d/009-exif.ini<<EOF
+        cat >"${PHP_Path}"/conf.d/009-exif.ini <<EOF
 extension = "exif.so"
 EOF
         Restart_PHP
@@ -41,8 +40,7 @@ EOF
     fi
 }
 
-Uninstall_PHP_Exif()
-{
+Uninstall_PHP_Exif() {
     echo "You will uninstall PHP Exif..."
     Press_Start
     rm -f "${PHP_Path}"/conf.d/009-exif.ini

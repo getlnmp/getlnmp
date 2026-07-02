@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-Install_Multiplephp()
-{
+Install_Multiplephp() {
     Get_Dist_Name
     Check_DB
     Check_Stack
@@ -73,7 +72,8 @@ Install_Multiplephp()
         exit 1
         ;;
     esac
-
+    # Ubuntu 26 only supports PHP 8.1+
+    Check_MPHP_CMPT
     # Press_Install sources include/version.sh, which maps the menu choice
     # ${PHPSelect} to the matching ${Php_Ver} (e.g. 9 -> php-7.3.33); the
     # guard below catches the case where that mapping produced nothing.
@@ -119,12 +119,13 @@ MPHP_Get_Files() {
     if [ -n "${php_version}" ] && [ -z "${Php_Ver}" ]; then
         Php_Ver="php-${php_version}"
     fi
-    cd ${cur_dir}/src
+    cd "${cur_dir}"/src || exit
     if [ ! -s "${Php_Ver}.tar.bz2" ]; then
         Download_Files_Exit https://www.php.net/distributions/${Php_Ver}.tar.bz2 ${Php_Ver}.tar.bz2
     fi
     Echo_Blue "[+] Installing ${Php_Ver}"
-    Tar_Cd ${Php_Ver}.tar.bz2 ${Php_Ver}
+    rm -rf "${Php_Ver}"
+    Tar_Cd "${Php_Ver}.tar.bz2" "${Php_Ver}"
     PHP_Patch
 }
 
@@ -155,7 +156,6 @@ MPHP_Cp_Ini() {
     \cp php.ini-production ${MPHP_Path}/etc/php.ini
 }
 
-
 MPHP_Set_Ini() {
     if [ -n "${Cur_MPHP_Path}" ] && [ -z "${MPHP_Path}" ]; then
         local M_Path="${Cur_MPHP_Path}"
@@ -182,7 +182,7 @@ MPHP_U_Set_Ini() {
     if [ -s "${old_ini}" ]; then
         \cp "${old_ini}" "${Cur_MPHP_Path}/etc/php.ini"
     else
-        echo "Copy new php configure file..."        
+        echo "Copy new php configure file..."
         \cp php.ini-production ${Cur_MPHP_Path}/etc/php.ini
         MPHP_Set_Ini
     fi
@@ -200,7 +200,7 @@ MPHP_Set_Conf() {
         exit 1
     fi
     echo "Creating new php-fpm configure file..."
-    cat >${M_Path}/etc/php-fpm.conf<<EOF
+    cat >${M_Path}/etc/php-fpm.conf <<EOF
 [global]
 pid = ${M_Path}/var/run/php-fpm.pid
 error_log = ${M_Path}/var/log/php-fpm.log
@@ -229,7 +229,7 @@ EOF
 MPHP_Cp_Startup() {
     local M_Version="$1"
     echo "Copy php-fpm systemctl file..."
-    \cp ${cur_dir}/src/${Php_Ver}/sapi/fpm/systemd.php-fpm /etc/systemd/system/php-fpm"${M_Version}".service
+    \cp ${cur_dir}/src/${Php_Ver}/sapi/fpm/php-fpm.service /etc/systemd/system/php-fpm"${M_Version}".service
     sed -i "s@# Provides:          php-fpm@# Provides:          php-fpm${M_Version}@g" "/etc/systemd/system/php-fpm${M_Version}.service"
     systemctl daemon-reload
     systemctl start php-fpm"${M_Version}"
@@ -291,8 +291,7 @@ MPHP_U_Final_Check() {
     fi
 }
 
-Install_MPHP7_3()
-{
+Install_MPHP7_3() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -310,8 +309,7 @@ Install_MPHP7_3()
     MPHP_Final_Check "7.3"
 }
 
-Install_MPHP7_4()
-{
+Install_MPHP7_4() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -329,8 +327,7 @@ Install_MPHP7_4()
     MPHP_Final_Check "7.4"
 }
 
-Install_MPHP8_0()
-{
+Install_MPHP8_0() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -348,8 +345,7 @@ Install_MPHP8_0()
     MPHP_Final_Check "8.0"
 }
 
-Install_MPHP8_1()
-{
+Install_MPHP8_1() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -367,8 +363,7 @@ Install_MPHP8_1()
     MPHP_Final_Check "8.1"
 }
 
-Install_MPHP8_2()
-{
+Install_MPHP8_2() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install
@@ -386,8 +381,7 @@ Install_MPHP8_2()
     MPHP_Final_Check "8.2"
 }
 
-Install_MPHP8_3()
-{
+Install_MPHP8_3() {
     MPHP_Get_Files
     MPHP_Set_Config
     PHP_Make_Install

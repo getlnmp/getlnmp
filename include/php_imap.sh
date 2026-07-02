@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
-Install_PHP_Imap()
-{
+Install_PHP_Imap() {
     # X4: quote and error-check the cd
-    cd "${cur_dir}/src" || { Echo_Red "Cannot enter ${cur_dir}/src"; exit 1; }
+    cd "${cur_dir}/src" || {
+        Echo_Red "Cannot enter ${cur_dir}/src"
+        exit 1
+    }
     echo "====== Installing PHP Imap ======"
     Press_Start
 
@@ -30,12 +32,12 @@ Install_PHP_Imap()
         yum -y install libc-client-devel krb5-devel uw-imap-devel
 
         # EL9/EL10: libc-client dropped from EPEL; fall back to Remi RPMs
-        if echo "${RHEL_Version}" | grep -Eqi "^(9|10)" || \
-           echo "${Alma_Version}" | grep -Eqi "^(9|10)" || \
-           echo "${Rocky_Version}" | grep -Eqi "^(9|10)"; then
-            if echo "${RHEL_Version}" | grep -Eqi "^10" || \
-               echo "${Alma_Version}" | grep -Eqi "^10" || \
-               echo "${Rocky_Version}" | grep -Eqi "^10"; then
+        if echo "${RHEL_Version}" | grep -Eqi "^(9|10)" ||
+            echo "${Alma_Version}" | grep -Eqi "^(9|10)" ||
+            echo "${Rocky_Version}" | grep -Eqi "^(9|10)"; then
+            if echo "${RHEL_Version}" | grep -Eqi "^10" ||
+                echo "${Alma_Version}" | grep -Eqi "^10" ||
+                echo "${Rocky_Version}" | grep -Eqi "^10"; then
                 libc_client_rpm="libc-client-2007f-32.el10.remi.${ARCH}.rpm"
                 uw_imap_devel_rpm="uw-imap-devel-2007f-32.el10.remi.${ARCH}.rpm"
                 libc_client_DL="${libc_client_2007f_el10_DL}"
@@ -46,11 +48,11 @@ Install_PHP_Imap()
                 libc_client_DL="${libc_client_2007f_el9_DL}"
                 uw_imap_devel_DL="${uw_imap_devel_2007f_el9_DL}"
             fi
-            if ! rpm -q libc-client >/dev/null 2>&1 || \
-               ! rpm -q uw-imap-devel >/dev/null 2>&1; then
+            if ! rpm -q libc-client >/dev/null 2>&1 ||
+                ! rpm -q uw-imap-devel >/dev/null 2>&1; then
                 if [ "${CheckMirror}" = "n" ]; then
                     rpm -Uvh "${cur_dir}/src/${libc_client_rpm}" \
-                             "${cur_dir}/src/${uw_imap_devel_rpm}" || {
+                        "${cur_dir}/src/${uw_imap_devel_rpm}" || {
                         Echo_Red "Failed to install libc-client RPMs from local src/."
                         exit 1
                     }
@@ -89,20 +91,23 @@ Install_PHP_Imap()
     else
         Download_PHP_Src
         Tar_Cd php-${Cur_PHP_Version}.tar.bz2 php-${Cur_PHP_Version}/ext/imap
-        ${PHP_Path}/bin/phpize || { Echo_Red "phpize failed for PHP Imap."; exit 1; }
+        ${PHP_Path}/bin/phpize || {
+            Echo_Red "phpize failed for PHP Imap."
+            exit 1
+        }
         ./configure --with-php-config=${PHP_Path}/bin/php-config \
             --with-imap --with-imap-ssl --with-kerberos || {
             Echo_Red "configure failed for PHP Imap."
             exit 1
         }
         Make_Install_Exit "Imap"
-        cd "${cur_dir}/src"
+        cd "${cur_dir}/src" || exit
         rm -rf php-"${Cur_PHP_Version}"
     fi
 
     # X2: write ini and restart only after confirming the .so exists
     if [ -s "${zend_ext}" ]; then
-        cat > "${PHP_Path}/conf.d/009-imap.ini" <<EOF
+        cat >"${PHP_Path}/conf.d/009-imap.ini" <<EOF
 extension = "imap.so"
 EOF
         Restart_PHP
@@ -116,8 +121,7 @@ EOF
     fi
 }
 
-Uninstall_PHP_Imap()
-{
+Uninstall_PHP_Imap() {
     echo "You will uninstall PHP Imap..."
     Press_Start
     rm -f "${PHP_Path}/conf.d/009-imap.ini"

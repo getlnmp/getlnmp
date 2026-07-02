@@ -117,9 +117,9 @@ Upgrade_MySQL57() {
         fi
         Tar_Cd ${mysql_src} mysql-${mysql_version}
         #Install_Boost
-        if echo "${Rocky_Version}" | grep -Eqi "^9"; then
-            sed -i 's@^INCLUDE(cmake/abi_check.cmake)@#INCLUDE(cmake/abi_check.cmake)@' CMakeLists.txt
-        fi
+        # if echo "${Rocky_Version}" | grep -Eqi "^9"; then
+        #     sed -i 's@^INCLUDE(cmake/abi_check.cmake)@#INCLUDE(cmake/abi_check.cmake)@' CMakeLists.txt
+        # fi
         mkdir -p mysql-build && cd mysql-build
         cmake .. \
             -DCMAKE_INSTALL_PREFIX=/usr/local/mysql \
@@ -256,7 +256,7 @@ Upgrade_MySQL80() {
         if [ -d ${Mysql_Ver} ]; then
             rm -rf ${Mysql_Ver}
         fi
-        Tar_Cd ${Mysql_Ver}.tar.gz ${Mysql_Ver}
+        Tar_Cd "${Mysql_Ver}.tar.gz" "${Mysql_Ver}"
         #Install_Boost
         mkdir -p mysql-build && cd mysql-build
         cmake .. \
@@ -664,7 +664,7 @@ Upgrade_MySQL() {
     echo "You can get version number from http://dev.mysql.com/downloads/mysql/"
     echo "We only support upgrade MySQL to 8.0.x and 8.4.x"
     Echo_Yellow "Please input MySQL Version you want."
-    read -r -p "(example: 8.4.7 ): " mysql_version
+    read -r -p "(example: 8.4.10 ): " mysql_version
     if [ "${mysql_version}" = "" ]; then
         Echo_Red "Error: You must input MySQL Version!!"
         exit 1
@@ -675,12 +675,17 @@ Upgrade_MySQL() {
         exit 1
     fi
 
-    if [ "$(${cur_dir}/include/version_compare ${cur_mysql_version} ${mysql_version})" = "1" ]; then
-        Echo_Red "Refusing downgrade from ${cur_mysql_version} to ${mysql_version}."
-        exit 1
+    #if [ "$(${cur_dir}/include/version_compare ${cur_mysql_version} ${mysql_version})" = "1" ]; then
+    #    Echo_Red "Refusing downgrade from ${cur_mysql_version} to ${mysql_version}."
+    #    exit 1
+    #fi
+
+    # Check MySQL version compatibility when ubuntu is 26 LTS
+    if echo "${mysql_version}" | grep -Eqi '^(5\.7\.)'; then
+        Check_MySQL57_CMPT
     fi
 
-    if echo "${mysql_version}" | grep -Eqi '^(8\.0\.|8\.4\.)'; then
+    if echo "${mysql_version}" | grep -Eqi '^(5\.7\.|8\.0\.|8\.4\.)'; then
         echo "You will upgrade MySQL to version:$mysql_version"
     else
         Echo_Red "Error: You input MySQL Version was:${mysql_version}"
@@ -689,7 +694,7 @@ Upgrade_MySQL() {
     fi
 
     if [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" ]] && echo "${mysql_version}" | grep -Eqi '^5\.[5-7].'; then
-        read -r -p "Using Generic Binaries [y/n]: " Bin
+        read -r -p "Using Generic Binaries [Y/n]: " Bin
         case "${Bin}" in
         [yY][eE][sS] | [yY])
             echo "You will install MySQL ${mysql_version} Using Generic Binaries."
@@ -705,7 +710,7 @@ Upgrade_MySQL() {
             ;;
         esac
     elif [[ "${DB_ARCH}" = "x86_64" || "${DB_ARCH}" = "i686" || "${DB_ARCH}" = "aarch64" ]] && echo "${mysql_version}" | grep -Eqi '^8\.'; then
-        read -r -p "Using Generic Binaries [y/n]: " Bin
+        read -r -p "Using Generic Binaries [Y/n]: " Bin
         case "${Bin}" in
         [yY][eE][sS] | [yY])
             echo "You will install MySQL ${mysql_version} Using Generic Binaries."
@@ -785,6 +790,11 @@ Upgrade_MySQL() {
         Echo_Blue "Install dependent packages..."
         . ${cur_dir}/include/only.sh
         DB_Dependent
+
+        # Check GCC12 for RHEL8/9
+        if [ "${mysql_short_version}" = "8.0" ] || [ "${mysql_short_version}" = "8.0" ]; then
+            RHEL89_GCC12_Check
+        fi
     fi
     echo "============================check files=================================="
 
@@ -793,6 +803,8 @@ Upgrade_MySQL() {
         Upgrade_MySQL80
     elif [ "${mysql_short_version}" = "8.4" ]; then
         Upgrade_MySQL84
+    elif [ "${mysql_short_version}" = "5.7" ]; then
+        Upgrade_MySQL57
     else
         Echo_Red "We only support to upgrade MySQL to 8.0.x and 8.4.x"
         exit 1
