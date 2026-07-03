@@ -2,7 +2,7 @@
 
 ## What is GetLNMP?
 
-GetLNMP is a Linux Shell-based installer for deploying production LNMP (Nginx/MySQL/PHP), LNMPA (Nginx/MySQL/PHP/Apache), and LAMP (Apache/MySQL/PHP) environments on Debian, Ubuntu, RHEL, Rocky Linux, AlmaLinux VPSes, or dedicated servers.
+GetLNMP is a Linux Shell-based installer for deploying production LNMP (Nginx/MySQL/PHP), LNMPA (Nginx/MySQL/PHP/Apache), and LAMP (Apache/MySQL/PHP) environments on Debian, Ubuntu, RHEL, Rocky Linux, AlmaLinux virtual servers, or dedicated servers.
 
 ## Supported Versions
 

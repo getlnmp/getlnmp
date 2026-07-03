@@ -2,7 +2,7 @@
 
 ## GetLNMP一键安装包是什么?
 
-LNMP一键安装包是一个用Linux Shell编写的可以为Debian/Ubuntu/RHEL/Rocky/AlmaLinux VPS或独立主机安装LNMP(Nginx/MySQL/PHP)、LNMPA(Nginx/MySQL/PHP/Apache)、LAMP(Apache/MySQL/PHP)生产环境的Shell程序。
+LNMP一键安装包是一个用Linux Shell编写的可以为Debian/Ubuntu/RHEL/Rocky/AlmaLinux虚拟服务器或独立主机安装LNMP(Nginx/MySQL/PHP)、LNMPA(Nginx/MySQL/PHP/Apache)、LAMP(Apache/MySQL/PHP)生产环境的Shell程序。
 
 ## 支持版本
 
@@ -11,16 +11,19 @@ LNMP一键安装包是一个用Linux Shell编写的可以为Debian/Ubuntu/RHEL/R
 | Debian 11 | 2026.8 | 5.1 | 2.31 | 1.1.1 | 10.2 | 67.1 |
 | Debian 12 | 2028.6 | 6.1 | 2.36 | 3.0.* | 12.2 | 72.1 |
 | Debian 13 | 2030.6 | 6.8 | 2.41 | 3.5.* | 14 | 74.1 |
-| Ubuntu 22 LTS | 2027.4 | 5.15 | 2.35 | 3.0.* | 11.2 | 70.1 |
-| Ubuntu 24 LTS | 2029.5 | 6.8 | 2.39 | 3.0.* | 13.2 | 74.2 |
-| RHEL 8 | 2029.5 | 4.1 | 2.28 | 1.1.1 | 8.3 | 60.3 |
-| RHEL 9 | 2032.5 | 5.1 | 2.34 | 3.0.* | 11.2 | 67.1 |
-| RHEL 10 | 2035.5 | 6.1 | * | * | * | * |
+| Ubuntu 22 LTS | 2027.4 | 5.15 | 2.35 | 3.0.* | 11.4 | 70.1 |
+| Ubuntu 24 LTS | 2029.5 | 6.8 | 2.39 | 3.0.* | 13.3 | 74.2 |
+| Ubuntu 26 LTS | 2031.4 | 7.0 | 2.43 | 3.5.* | 15.2 | 78.2 |
+| RHEL 8 | 2029.5 | 4.1 | 2.28 | 1.1.1 | 8.* | 60.3 |
+| RHEL 9 | 2032.5 | 5.1 | 2.34 | 3.5.* | 11.* | 67.1 |
+| RHEL 10 | 2035.5 | 6.1 | 2.39 | 3.5.* | 14 | 74.2 |
 
 ## 安装建议
 由于系统自带的OPENSSL版本对可使用的PHP版本影响很大，为了保证最大的稳定性，我们建议:  
 系统自带的OPENSSL版本为1.1.1的，建议安装PHP7.3-8.*  
 系统自带的OPENSSL版本为3.*的，建议安装PHP8.1+  
+
+* **Ubuntu 26 LTS使用GCC 15和CMake 4，仅支持PHP 8.1+、MySQL 8.0+和MariaDB 10.6+**
 
 换句话说:
 * Debian 11 建议安装PHP 7.3+
@@ -28,14 +31,17 @@ LNMP一键安装包是一个用Linux Shell编写的可以为Debian/Ubuntu/RHEL/R
 * Debian 13 建议安装PHP 8.1+
 * Ubuntu 22 LTS 建议安装 PHP 8.1+
 * Ubuntu 24 LTS 建议安装 PHP 8.1+
+* **Ubuntu 26 LTS 仅支持 PHP 8.1+**
 * RHEL 8/Rocky 8/AlmaLinux 8 建议安装 PHP 7.3+
 * RHEL 9/Rocky 9/AlmaLinux 9 建议安装 PHP 8.1+
 * RHEL 10/Rocky 10/AlmaLinux 10 建议安装 PHP 8.1+
 
 ## 软件版本
-* PHP目前支持PHP 7.2-7.4, PHP 8.0-8.5
-* MySQL支持5.7, 8.0和8.4，RHEL 10系列只支持MySQL 8.4
-* MariaDB支持10.4, 10.5, 10.6, 10.11, 11.4, 11.8
+* PHP目前支持PHP 7.3-7.4, PHP 8.0-8.5
+* **Ubuntu 26 LTS 仅支持 PHP 8.1+**
+* MySQL支持5.7, 8.0和8.4
+* **Ubuntu 26 LTS 仅支持 MySQL 8.0 和 8.4**
+* MariaDB支持10.6, 10.11, 11.4, 11.8
 * Nginx默认安装最新的稳定版
 * Apache目前只支持2.4
 
@@ -50,13 +56,14 @@ LNMP一键安装包是一个用Linux Shell编写的可以为Debian/Ubuntu/RHEL/R
 
 ## GetLNMP安装
 
-安装前确认已经安装wget和git命令
+安装前请先更新系统（`apt update && apt upgrade` 或 `dnf clean all && dnf update`），并确认已经安装wget和git命令。
 如提示wget: command not found ，使用`yum install wget` 或 `apt-get install wget` 命令安装。
 如提示git: command not found ，使用`yum install git` 或 `apt-get install git` 命令安装。
-为防止掉线等情况，建议使用screen，可以先执行：screen -S lnmp 命令后，再执行LNMP安装命令：
-`wget http://soft.lnmp.com/lnmp/lnmp2.1.tar.gz -cO lnmp2.1.tar.gz && tar zxf lnmp2.1.tar.gz && cd lnmp2.1 && ./install.sh {lnmp|lnmpa|lamp}`
+为防止SSH断线中断安装，建议使用screen，可以先执行：`screen -S getlnmp` 命令后，再执行GetLNMP安装命令：
 
-如断线可使用`screen -r lnmp` 恢复。
+`git clone https://github.com/getlnmp/getlnmp.git && cd getlnmp && ./install.sh {lnmp|lnmpa|lamp}`
+
+如断线可使用`screen -r getlnmp` 恢复。
 
 ## 常用功能说明
 
@@ -147,7 +154,6 @@ lnmp.conf配置文件，可以修改lnmp.conf自定义下载服务器地址、�
 LNMP_Auto | 启用无人值守自动安装
 DBSelect | 数据库版本序号
 DB_Root_Password | 数据库root密码（不可为空），不安装数据库时可不加该参数
-InstallInnodb | 是否安装Innodb引擎，y 或 n ，不安装数据库时可不加该参数
 PHPSelect | PHP版本序号
 SelectMalloc | 内存分配器版本序号
 ServerAdmin | 管理员邮箱，仅LNMPA和LAMP模式需添加该参数
@@ -174,13 +180,13 @@ MariaDB 11.8 | 12 | PHP 8.5 | 16 | |
 
 交互式安装默认使用MariaDB 11.4 (`DBSelect=11`) 和 PHP 8.3 (`PHPSelect=14`)。
 
-* 以LNMP模式安装MariaDB 11.4、数据库root密码设置为getlnmp.com、启用InnoDB、PHP 8.3、不安装内存分配器为例，先执行([建议先运行screen](https://www.vpser.net/manage/run-screen-lnmp.html))，再下载解压LNMP安装包：
+* 以LNMP模式安装MariaDB 11.4、数据库root密码设置为getlnmp.com、启用InnoDB、PHP 8.3、不安装内存分配器为例，先按需运行screen，再下载GetLNMP安装包：
 
-`wget http://soft.getlnmp.com/lnmp/lnmp2.1.tar.gz -cO lnmp2.1.tar.gz && tar zxf lnmp2.1.tar.gz && cd lnmp2.1`
+`git clone https://github.com/getlnmp/getlnmp.git && cd getlnmp && ./install.sh {lnmp|lnmpa|lamp}`
 
 然后设置无人值守参数并安装：
 
-`LNMP_Auto="y" DBSelect="11" DB_Root_Password="getlnmp.com" InstallInnodb="y" PHPSelect="14" SelectMalloc="1" ./install.sh lnmp`
+`LNMP_Auto="y" DBSelect="11" DB_Root_Password="getlnmp.com" PHPSelect="14" SelectMalloc="1" ./install.sh lnmp`
 
 (如果缺失参数的话还是会有要求选择缺失选项的提示)。
 
