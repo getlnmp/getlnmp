@@ -218,7 +218,7 @@ Install_PHP_Dependent() {
             libicu-dev e2fsprogs libxslt1.1 libxslt1-dev xz-utils \
             libexpat1-dev bzip2 libbz2-dev libsqlite3-dev libonig-dev \
             libwebp-dev libsystemd-dev libgd-dev lsb-release \
-            libgnutls28-dev systemd-dev libfreetype6-dev libsodium-dev; do
+            libgnutls28-dev libfreetype6-dev libsodium-dev; do
             apt-get --no-install-recommends install -y $packages
         done
     fi

@@ -28,7 +28,7 @@ LuaNginxModule='lua-nginx-module-0.10.28'
 LuaRestyCore='lua-resty-core-0.1.31'
 LuaRestyLrucache='lua-resty-lrucache-0.15'
 NgxDevelKit='ngx_devel_kit-0.3.3'
-Nginx_Ver='nginx-1.30.3'
+Nginx_Ver='nginx-1.30.6'
 NgxFancyIndex_Ver='ngx-fancyindex-0.5.2'
 # DBSelect/PHPSelect are empty when this file is sourced in interactive mode
 # (they are set later by Display_Selection), so wrap the selection-dependent
@@ -51,13 +51,13 @@ Set_Selected_Versions() {
     elif [ "${DBSelect}" = "8" ]; then
         Mariadb_Ver='mariadb-10.5.29'
     elif [ "${DBSelect}" = "9" ]; then
-        Mariadb_Ver='mariadb-10.6.27'
+        Mariadb_Ver='mariadb-10.6.28'
     elif [ "${DBSelect}" = "10" ]; then
-        Mariadb_Ver='mariadb-10.11.18'
+        Mariadb_Ver='mariadb-10.11.19'
     elif [ "${DBSelect}" = "11" ]; then
-        Mariadb_Ver='mariadb-11.4.12'
+        Mariadb_Ver='mariadb-11.4.13'
     elif [ "${DBSelect}" = "12" ]; then
-        Mariadb_Ver='mariadb-11.8.8'
+        Mariadb_Ver='mariadb-11.8.9'
     fi
     if [ "${PHPSelect}" = "1" ]; then
         Php_Ver='php-5.2.17'
@@ -84,13 +84,13 @@ Set_Selected_Versions() {
     elif [ "${PHPSelect}" = "12" ]; then
         Php_Ver='php-8.1.34'
     elif [ "${PHPSelect}" = "13" ]; then
-        Php_Ver='php-8.2.31'
+        Php_Ver='php-8.2.35'
     elif [ "${PHPSelect}" = "14" ]; then
-        Php_Ver='php-8.3.31'
+        Php_Ver='php-8.3.36'
     elif [ "${PHPSelect}" = "15" ]; then
-        Php_Ver='php-8.4.22'
+        Php_Ver='php-8.4.27'
     elif [ "${PHPSelect}" = "16" ]; then
-        Php_Ver='php-8.5.7'
+        Php_Ver='php-8.5.12'
     fi
     if [[ "${PHPSelect}" =~ ^[123]$ ]]; then
         PhpMyAdmin_Ver='phpMyAdmin-4.0.10.20-all-languages'
